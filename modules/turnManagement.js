@@ -1,7 +1,7 @@
 // modules/turnManagement.js
 // 回合管理逻辑
 
-function createTurnManager(state) {
+export function createTurnManager(state) {
     const { currentPhase, hasPlacedBond, isMyTurn, socket, PHASES } = state;
 
     const phaseOrder = ['BEGINNING', 'BOND', 'DEPLOY', 'ATTACK', 'END'];

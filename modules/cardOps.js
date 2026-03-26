@@ -1,7 +1,7 @@
 // modules/cardOps.js
 // 卡片操作逻辑
 
-function createCardOperations(state) {
+export function createCardOperations(state) {
     const {
         hand, fieldFront, fieldRear, bonds, jewels, graveyard, boundless, deck,
         undoStack, selectedCard, hasPlacedBond, socket
@@ -126,7 +126,39 @@ function createCardOperations(state) {
             socket.emit('sync-card-move', { card, to: last.from, from: last.to });
         }
     };
+    // ⚔️ 发起攻击的核心逻辑
+    const initiateAttack = (state, attackerCard, defenderCard) => {
+        state.attacker.value = attackerCard;
+        state.defender.value = defenderCard;
+        state.combatStats.value = {
+            myTotalPower: attackerCard.attack || 0,
+            oppTotalPower: defenderCard.attack || 0
+        };
+        state.isCombatActive.value = true;
+        
+        setTimeout(() => {
+            if (state.deck.value.length > 0) {
+                const mySupport = state.deck.value.pop();
+                state.mySupportCard.value = mySupport;
+                state.combatStats.value.myTotalPower += (mySupport.support || 0);
+            }
+            if (state.deck.value.length > 0) {
+                const oppSupport = state.deck.value.pop(); 
+                state.oppSupportCard.value = oppSupport;
+                state.combatStats.value.oppTotalPower += (oppSupport.support || 0);
+            }
+            setTimeout(() => { resolveCombat(state); }, 2000);
+        }, 800);
+    };
 
+    const resolveCombat = (state) => {
+        if (state.mySupportCard.value) state.graveyard.value.push(state.mySupportCard.value);
+        state.isCombatActive.value = false;
+        state.attacker.value = null;
+        state.defender.value = null;
+        state.mySupportCard.value = null;
+        state.oppSupportCard.value = null;
+    };
     return {
         getArea,
         getAreaArray,
@@ -137,6 +169,10 @@ function createCardOperations(state) {
         returnToHandFromBoard,
         drawCard,
         toggleBondFace,
-        undoLastMove
+        undoLastMove,
+        initiateAttack,
+        resolveCombat
     };
 }
+// modules/cardOps.js
+

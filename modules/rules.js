@@ -1,7 +1,7 @@
 // modules/rules.js
 // 游戏规则判定
 
-function createRulesEngine(state) {
+export function createRulesEngine(state) {
     const { isDevMode, currentPhase, hasPlacedBond, isMyTurn } = state;
 
     /**

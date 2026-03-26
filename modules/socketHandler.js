@@ -1,7 +1,7 @@
 // modules/socketHandler.js
 // Socket.IO 事件处理
 
-function createSocketHandler(state, cardOps) {
+export function createSocketHandler(state, cardOps) {
     const {
         socket, oppStats, oppGraveyard, oppJewels, oppBonds,
         opponentFront, opponentRear, hand

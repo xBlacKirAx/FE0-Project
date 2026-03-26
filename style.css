@@ -45,13 +45,15 @@ html, body {
 }
 
 .battle-row {
-    flex: 1;
+    flex: 1 1 0%;       /* 强制四个区域均分剩余空间，取代原来的 flex: 1 */
+    min-height: 0;      /* 🔑 核心修复：防止内部大图片撑开 Flex 容器 */
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
     position: relative;
-    background-color: #050505; /* 极深黑 */
+    background-color: #050505;
+    overflow: hidden;   /* 确保超出部分被隐藏，绝不挤压其他行 */
 }
 /* 1. 战场行：保持极深基色 */
 .row-opp-rear { background-color: rgba(10, 5, 5, 0.9); }
@@ -260,4 +262,80 @@ html, body {
     opacity: 0.3;
     filter: grayscale(1);
     pointer-events: none !important;
+}
+/* ========================================= */
+/* ⚔️ 战斗与支援对决动画 (Combat & Support) ⚔️ */
+/* ========================================= */
+
+/* 1. 3D 景深容器 */
+.perspective-1000 {
+    perspective: 1000px;
+}
+
+/* 2. 战力数字的发光阴影 */
+.text-shadow-glow-blue {
+    text-shadow: 0 0 10px rgba(59, 130, 246, 0.8), 0 0 30px rgba(59, 130, 246, 0.6);
+}
+
+.text-shadow-glow-red {
+    text-shadow: 0 0 10px rgba(239, 68, 68, 0.8), 0 0 30px rgba(239, 68, 68, 0.6);
+}
+
+.text-shadow-vs {
+    text-shadow: 6px 6px 0 #000, -2px -2px 0 rgba(255,255,255,0.3), 0 0 25px rgba(250, 204, 21, 0.8);
+}
+
+/* 3. 支援卡翻开的 Vue 过渡动画 */
+.flip-enter-active {
+    transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-style: preserve-3d;
+}
+.flip-leave-active {
+    transition: all 0.3s ease-in;
+    transform-style: preserve-3d;
+}
+/* 初始状态：卡背朝向屏幕（这里用负角度），且放大 */
+.flip-enter-from, .flip-leave-to {
+    transform: rotateY(-90deg) scale(1.2) translateY(-20px);
+    opacity: 0;
+}
+/* 结束状态：平躺 */
+.flip-enter-to, .flip-leave-from {
+    transform: rotateY(0deg) scale(1) translateY(0);
+    opacity: 1;
+}
+
+/* 4. 战斗角色进场冲撞动画 */
+@keyframes slide-in-left {
+    0% { transform: translateX(-150px) skewX(15deg); opacity: 0; }
+    70% { transform: translateX(10px) skewX(-5deg); opacity: 1; }
+    100% { transform: translateX(0) skewX(0); opacity: 1; }
+}
+.animate-slide-in-left {
+    animation: slide-in-left 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+@keyframes slide-in-right {
+    0% { transform: translateX(150px) skewX(-15deg); opacity: 0; }
+    70% { transform: translateX(-10px) skewX(5deg); opacity: 1; }
+    100% { transform: translateX(0) skewX(0); opacity: 1; }
+}
+.animate-slide-in-right {
+    animation: slide-in-right 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+/* 5. VS 标志的心跳闪烁 */
+@keyframes pulse-fast {
+    0%, 100% { transform: skewX(-12deg) scale(1); }
+    50% { transform: skewX(-12deg) scale(1.15); filter: brightness(1.2); }
+}
+.animate-pulse-fast {
+    animation: pulse-fast 1s infinite ease-in-out;
+}
+/* 当拖拽的卡片悬停在敌方卡片上时 */
+[data-enemy-id]:hover,
+.card-adaptive[data-enemy-id]:active {
+    box-shadow: 0 0 15px 5px rgba(220, 38, 38, 0.8) !important;
+    transform: scale(1.05);
+    transition: all 0.2s;
 }

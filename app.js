@@ -1,6 +1,13 @@
 // app.js
 // 主应用文件 - 组装所有模块
 
+import { createGameState } from './modules/state.js';
+import { createRulesEngine } from './modules/rules.js';
+import { createCardOperations } from './modules/cardOps.js';
+import { createDragDropHandler } from './modules/dragDrop.js';
+import { createTurnManager } from './modules/turnManagement.js';
+import { createSocketHandler } from './modules/socketHandler.js';
+
 const { createApp, onMounted } = Vue;
 
 createApp({

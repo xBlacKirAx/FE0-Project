@@ -1,7 +1,7 @@
 // modules/dragDrop.js
 // 拖拽和触摸交互
 
-function createDragDropHandler(state, cardOps, rules) {
+export function createDragDropHandler(state, cardOps, rules) {
     const { draggedCard, isDraggingOver } = state;
     const { moveTo } = cardOps;
     const { canPerformAction, getActionByArea } = rules;

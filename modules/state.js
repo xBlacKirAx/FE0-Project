@@ -3,7 +3,7 @@
 
 const { ref } = Vue;
 
-function createGameState() {
+export function createGameState() {
     // ===== 我方区域 =====
     const hand = ref([]);
     const fieldFront = ref([]);
