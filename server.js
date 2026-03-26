@@ -34,6 +34,35 @@ io.on('connection', (socket) => {
 	socket.on('sync-bond-flip', (data) => {
 		socket.broadcast.emit('opponent-bond-flipped', data);
 	});
+    // server.js 中的 io.on('connection', (socket) => { ... }) 内部
+
+    // 监听：攻击方发起攻击
+    socket.on('sync-attack', (data) => {
+        socket.broadcast.emit('opponent-attack', data);
+    });
+
+    // 监听：防守方翻开支援卡
+    socket.on('sync-defense-support', (data) => {
+        socket.broadcast.emit('opponent-defense-support', data);
+    });
+    // server.js 中的 io.on('connection', (socket) => { ... }) 内部
+
+    // ... (保留你之前的 sync-attack 等监听) ...
+
+    // 1. 玩家请求同步全场状态（比如刚刷新网页进入时）
+    socket.on('request-sync', () => {
+        socket.broadcast.emit('request-sync');
+    });
+
+    // 2. 玩家发送自己的全场状态给别人
+    socket.on('full-state-sync', (data) => {
+        socket.broadcast.emit('full-state-sync', data);
+    });
+
+    // 3. 玩家点击了“一键重置”，通知对手也重置
+    socket.on('sync-reset', () => {
+        socket.broadcast.emit('sync-reset');
+    });
 });
 
 const PORT = 3000;

@@ -126,7 +126,7 @@ export function createCardOperations(state) {
             socket.emit('sync-card-move', { card, to: last.from, from: last.to });
         }
     };
-    // ⚔️ 发起攻击的核心逻辑
+    // 发起攻击 (主动方)
     const initiateAttack = (state, attackerCard, defenderCard) => {
         state.attacker.value = attackerCard;
         state.defender.value = defenderCard;
@@ -135,30 +135,157 @@ export function createCardOperations(state) {
             oppTotalPower: defenderCard.attack || 0
         };
         state.isCombatActive.value = true;
-        
+
         setTimeout(() => {
+            // 1. 我方翻开支援卡
+            let mySupport = null;
             if (state.deck.value.length > 0) {
-                const mySupport = state.deck.value.pop();
+                mySupport = state.deck.value.pop();
                 state.mySupportCard.value = mySupport;
                 state.combatStats.value.myTotalPower += (mySupport.support || 0);
             }
-            if (state.deck.value.length > 0) {
-                const oppSupport = state.deck.value.pop(); 
-                state.oppSupportCard.value = oppSupport;
-                state.combatStats.value.oppTotalPower += (oppSupport.support || 0);
-            }
-            setTimeout(() => { resolveCombat(state); }, 2000);
+
+            // 2. 告诉网络对面的对手：“我打你了，这是我的支援牌”
+            state.socket.emit('sync-attack', {
+                attacker: attackerCard,
+                defender: defenderCard,
+                supportCard: mySupport
+            });
+            
+            // 注意：这里不再自动执行 resolveCombat。
+            // 我们必须耐心等待对手通过网络把他的防守支援牌发过来！
         }, 800);
     };
 
+    // 结算战斗 (清理UI)
+    // ⚔️ 终极版：结算战斗 (判定击破与清理战场)
     const resolveCombat = (state) => {
-        if (state.mySupportCard.value) state.graveyard.value.push(state.mySupportCard.value);
-        state.isCombatActive.value = false;
-        state.attacker.value = null;
-        state.defender.value = null;
-        state.mySupportCard.value = null;
-        state.oppSupportCard.value = null;
+        // 1. 智能判定：我是不是发起攻击的那个人？
+        // 如果发起攻击的卡片存在于我的前卫或后卫数组中，那我就是攻击方
+        const isMyAttacker = ['fieldFront', 'fieldRear'].some(area =>
+            state[area].value.some(c => c.instanceId === state.attacker.value.instanceId)
+        );
+
+        // 2. 战力比拼 (FE0规则：攻击力 >= 对方防守力，则判定击破)
+        const attackerWins = state.combatStats.value.myTotalPower >= state.combatStats.value.oppTotalPower;
+
+        // 3. 击破结算
+        if (attackerWins) {
+            console.log("💥 战斗结算: 击破对手！");
+            const targetId = state.defender.value.instanceId;
+
+            // 无差别扫描：无论防守卡在谁的场上，统统找出来送进对应主人的弃牌区
+            ['fieldFront', 'fieldRear'].forEach(area => {
+                const idx = state[area].value.findIndex(c => c.instanceId === targetId);
+                if (idx > -1) state.graveyard.value.push(state[area].value.splice(idx, 1)[0]); // 进我的弃牌区
+            });
+            ['opponentFront', 'opponentRear'].forEach(area => {
+                const idx = state[area].value.findIndex(c => c.instanceId === targetId);
+                if (idx > -1) state.oppGraveyard.value.push(state[area].value.splice(idx, 1)[0]); // 进对手弃牌区
+            });
+        } else {
+            console.log("🛡️ 战斗结算: 攻击未能击破！");
+        }
+
+        // 4. 支援卡退场 (用完的支援卡必须进各自的弃牌区)
+        if (isMyAttacker) {
+            // 我是攻击方：左侧(mySupport)是我的，右侧(oppSupport)是对手的
+            if (state.mySupportCard.value) state.graveyard.value.push(state.mySupportCard.value);
+            if (state.oppSupportCard.value) state.oppGraveyard.value.push(state.oppSupportCard.value);
+        } else {
+            // 我是防守方：左侧(mySupport)是对手的（攻击方），右侧(oppSupport)是我的
+            if (state.mySupportCard.value) state.oppGraveyard.value.push(state.mySupportCard.value);
+            if (state.oppSupportCard.value) state.graveyard.value.push(state.oppSupportCard.value);
+        }
+
+        // 5. 稍微延迟 0.5 秒关闭面板，给玩家看清数字的缓冲时间
+        setTimeout(() => {
+            state.isCombatActive.value = false;
+            state.attacker.value = null;
+            state.defender.value = null;
+            state.mySupportCard.value = null;
+            state.oppSupportCard.value = null;
+        }, 500); 
     };
+    // modules/cardOps.js
+// 在 createCardOperations 内部追加：
+
+    // 获取我方完整状态（用于发送给刚进入房间的对手）
+    const getMySyncData = () => {
+        return {
+            front: state.fieldFront.value,
+            rear: state.fieldRear.value,
+            bonds: state.bonds.value,
+            jewels: state.jewels.value,
+            graveyard: state.graveyard.value,
+            handCount: state.hand.value.length,
+            bondsCount: state.bonds.value.length
+        };
+    };
+
+    // 一键重置牌局
+    const resetGame = async (isRemote = false) => {
+        // 1. 清空全场
+        state.hand.value = [];
+        state.fieldFront.value = [];
+        state.fieldRear.value = [];
+        state.bonds.value = [];
+        state.jewels.value = [];
+        state.graveyard.value = [];
+        state.boundless.value = [];
+        state.deck.value = [];
+        state.currentPhase.value = 'BEGINNING';
+        state.hasPlacedBond.value = false;
+
+        // 2. 重新获取卡牌并洗牌
+        try {
+            const res = await fetch('/api/cards');
+            const data = await res.json();
+            state.deck.value = data.map(c => ({ 
+                ...c, 
+                instanceId: Math.random() + Date.now(), 
+                isFaceDown: false 
+            })).sort(() => Math.random() - 0.5); // 洗牌
+
+            // 3. 选出主人公 (牌堆顶第一张)，直接出击到前卫区
+            if (state.deck.value.length > 0) {
+                state.fieldFront.value.push(state.deck.value.pop());
+            }
+
+            // 4. 分配 5 张宝玉 (默认背面朝上)
+            for(let i = 0; i < 5; i++) {
+                if (state.deck.value.length > 0) {
+                    const jewel = state.deck.value.pop();
+                    jewel.isFaceDown = true;
+                    state.jewels.value.push(jewel);
+                }
+            }
+
+            // 5. 初始抽取 6 张手牌
+            for(let i = 0; i < 6; i++) {
+                if (state.deck.value.length > 0) {
+                    state.hand.value.push(state.deck.value.pop());
+                }
+            }
+        } catch (err) {
+            console.error("加载卡牌失败", err);
+        }
+
+        // 6. 如果是我主动点击的重置，才通知全服一起重置
+        if (!isRemote && state.socket) {
+            state.socket.emit('sync-reset');
+        }
+
+        // 7. 🔑 核心修复：无论主动还是被动（包括刚进房间初始化），
+        // 只要我自己的场面布置好了，就必须强制把我的场面发给对手！
+        setTimeout(() => {
+            if (state.socket) {
+                state.socket.emit('full-state-sync', getMySyncData());
+                console.log("已向对手发送我的全量状态！");
+            }
+        }, 600); // 延迟 600ms 确保 Vue 数据已经渲染完毕
+    };
+
     return {
         getArea,
         getAreaArray,
@@ -171,7 +298,9 @@ export function createCardOperations(state) {
         toggleBondFace,
         undoLastMove,
         initiateAttack,
-        resolveCombat
+        resolveCombat,
+        resetGame,
+        getMySyncData
     };
 }
 // modules/cardOps.js

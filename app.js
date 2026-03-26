@@ -100,6 +100,9 @@ createApp({
             // 初始化所有 Socket 监听器
             socketHandler.setupSocketListeners();
             turnMgr.setupTurnListener();
+
+            // 直接调用我们的终极重置函数进行初始化（传入 true 避免刚进房就把别人重置了）
+            await cardOps.resetGame(true);
         });
 
         // ========== 导出所有需要的数据和方法 ==========
