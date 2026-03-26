@@ -1,0 +1,4630 @@
+[
+  {
+    "id": "B01-001",
+    "name": "救国的英雄 马尔斯",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "5",
+    "promoteCost": "4",
+    "attack": 70,
+    "support": 20,
+    "range": "1",
+    "job": "星领主",
+    "traits": [],
+    "ability": {
+      "text": "『英雄的凯歌』【起】[翻面3，从自己的手牌将1张「马尔斯」放置到退避区]直到下个对手的回合结束为止，所有我方单位的战斗力+30。『法尔西昂』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『英雄的凯歌』",
+          "『法尔西昂』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面3</span>，从自己的手牌将1张「马尔斯」放置到退避区",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-001.png"
+  },
+  {
+    "id": "B01-002",
+    "name": "亡国的王子 马尔斯",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 50,
+    "support": 20,
+    "range": "1",
+    "job": "领主",
+    "traits": [],
+    "ability": {
+      "text": "『英雄的资质』【常】我方战场上有2名以上其他<光之剑>势力的单位的场合，这名单位的战斗力+10。",
+      "keywords": {
+        "type": [
+          "【常】"
+        ],
+        "title": [
+          "『英雄的资质』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-002.png"
+  },
+  {
+    "id": "B01-003",
+    "name": "阿利缇亚的王子 马尔斯",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 20,
+    "range": "1",
+    "job": "领主",
+    "traits": [],
+    "ability": {
+      "text": "『年轻的英雄』【起】[横置，将1名其他我方单位转为已行动状态]选择1名敌方单位，将其移动。这个能力仅限这名单位位于前卫区时才可以使用。〖攻击型〗『英雄之纹章』【支】我方的攻击单位是<光之剑>势力的场合，直到战斗结束为止，那名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『年轻的英雄』",
+          "『英雄之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，将1名其他我方单位转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『英雄之纹章』【支】我方的攻击单位是<光之剑>势力的场合，直到战斗结束为止，那名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『英雄之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-003.png"
+  },
+  {
+    "id": "B01-004",
+    "name": "倡爱之翼 希达",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 60,
+    "support": 30,
+    "range": "1",
+    "job": "隼骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『说得』【自】[翻面1]这名单位的攻击击破敌方单位时，你可以支付费用。如果支付，则从自己的卡组中选择1张「希达」以外的<光之剑>势力的卡，将其公开并加入手牌。这之后，切洗卡组。\n『翱翔天空者』【起】〖1回合1次〗将这名单位移动。这个能力只能在这名单位处于未行动状态时使用。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【起】"
+        ],
+        "title": [
+          "『说得』",
+          "『翱翔天空者』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-004.png"
+  },
+  {
+    "id": "B01-005",
+    "name": "愈心之翼 希达",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『翼枪』【常】这名单位攻击<兽马>或<重甲>属性单位的期间，这名单位的战斗力+20。『天空的运送者』【起】[横置]选择1名其他我方单位，将其移动。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【起】"
+        ],
+        "title": [
+          "『翼枪』",
+          "『天空的运送者』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-005.png"
+  },
+  {
+    "id": "B01-006",
+    "name": "塔利斯的王女 希达",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『王女的领袖魅力』【起】[横置，将1名其他我方单位转为已行动状态]选择1名其他我方单位。直到回合结束为止，那名我方单位的战斗力+10。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『王女的领袖魅力』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，将1名其他我方单位转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-006.png"
+  },
+  {
+    "id": "B01-007",
+    "name": "人称猛牛的骑士 卡因",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "圣骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『圣骑士的加护』【常】敌方后卫区上的单位不能攻击这名单位与出击费用2以下的我方单位。\n『赤绿之双击』【自】[将我方的「阿贝尔」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+40。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【自】"
+        ],
+        "title": [
+          "『圣骑士的加护』",
+          "『赤绿之双击』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "将我方的「阿贝尔」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-007.png"
+  },
+  {
+    "id": "B01-008",
+    "name": "赤色骑士 卡因",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "轻骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『赤与绿的羁绊』【常】这名单位被「阿贝尔」支援的期间，这名单位的战斗力+30。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『赤与绿的羁绊』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-008.png"
+  },
+  {
+    "id": "B01-009",
+    "name": "人称黑豹的骑士 阿贝尔",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "圣骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『圣骑士的加护』【常】敌方后卫区上的单位不能攻击这名单位与出击费用2以下的我方单位。\n『绿赤之双击』【自】[将我方的「卡因」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+40。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【自】"
+        ],
+        "title": [
+          "『圣骑士的加护』",
+          "『绿赤之双击』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "将我方的「卡因」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-009.png"
+  },
+  {
+    "id": "B01-010",
+    "name": "绿色骑士 阿贝尔",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "轻骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『绿与赤的羁绊』【常】这名单位被「卡因」支援的期间，这名单位的战斗力+30。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『绿与赤的羁绊』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-010.png"
+  },
+  {
+    "id": "B01-011",
+    "name": "阿利缇亚之盾 杜卡",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 10,
+    "range": "1",
+    "job": "将军",
+    "traits": [
+      "重甲"
+    ],
+    "ability": {
+      "text": "『铁壁之盾』【自】[翻面1]其他我方单位被攻击时，你可以支付费用。如果支付，则这名单位代替那名我方单位被攻击。这个能力仅限这名单位位于前卫区时才能发动。\n『重装的心得』【常】这名单位被<魔法>以外的武器攻击的期间，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『铁壁之盾』",
+          "『重装的心得』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-011.png"
+  },
+  {
+    "id": "B01-012",
+    "name": "护卫骑士 杜卡",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 10,
+    "range": "1",
+    "job": "重甲骑士",
+    "traits": [
+      "重甲"
+    ],
+    "ability": {
+      "text": "『重装的心得』【常】这名单位被<魔法>以外的武器攻击的期间，这名单位的战斗力+20。〖防御型〗『防御之纹章』【支】直到战斗结束为止，自己的防御单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『重装的心得』",
+          "『防御之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖防御型〗『防御之纹章』【支】直到战斗结束为止，自己的防御单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『防御之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-012.png"
+  },
+  {
+    "id": "B01-013",
+    "name": "同盟军的弓骑士 哥顿",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "弓",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 20,
+    "range": "2",
+    "job": "狙击手",
+    "traits": [],
+    "ability": {
+      "text": "『牵制射击』【自】每次出击费用2以下的我方单位出击时，你可以选择1名<飞行>属性的敌方单位，将其移动。\n『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『牵制射击』",
+          "『飞行特效』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-013.png"
+  },
+  {
+    "id": "B01-014",
+    "name": "解放军的弓兵 哥顿",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "弓",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "2",
+    "job": "弓箭手",
+    "traits": [],
+    "ability": {
+      "text": "『钢弓』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位的战斗力+10。\n『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『钢弓』",
+          "『飞行特效』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖1回合1次〗",
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-014.png"
+  },
+  {
+    "id": "B01-015",
+    "name": "治愈的僧侣 里弗",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "杖",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "-",
+    "job": "僧侣",
+    "traits": [],
+    "ability": {
+      "text": "『伤药』【自】[横置，将这名单位击破]其他我方单位被攻击时，你可以支付费用。如果支付，则直到战斗结束为止，那名防御单位的战斗力+20。〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【支】"
+        ],
+        "title": [
+          "『伤药』",
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，将这名单位击破",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-015.png"
+  },
+  {
+    "id": "B01-016",
+    "name": "塔利斯的斗神 奥古玛",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 70,
+    "support": 10,
+    "range": "1",
+    "job": "勇者",
+    "traits": [],
+    "ability": {
+      "text": "『战场的气息』【起】[将1名其他我方单位转为已行动状态]直到回合结束为止，这名单位的战斗力+10。\n『斗神的一击』【自】这名单位攻击时，这名单位的战斗力在100以上的场合，直到回合结束为止，这名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【自】"
+        ],
+        "title": [
+          "『战场的气息』",
+          "『斗神的一击』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "将1名其他我方单位转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-016.png"
+  },
+  {
+    "id": "B01-017",
+    "name": "强劲的剑斗士 奥古玛",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 70,
+    "support": 10,
+    "range": "1",
+    "job": "佣兵",
+    "traits": [],
+    "ability": {
+      "text": "『宿命的好敌手』【常】「希达」和「那巴尔」以外的卡对这名单位的支援将会失败。",
+      "keywords": {
+        "type": [
+          "【常】"
+        ],
+        "title": [
+          "『宿命的好敌手』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-017.png"
+  },
+  {
+    "id": "B01-018",
+    "name": "塔利斯的佣兵 奥古玛",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "佣兵",
+    "traits": [],
+    "ability": {
+      "text": "『佣兵队长』【常】自己的回合中，我方战场上有2名以上其他出击费用2以下的单位的场合，这名单位的战斗力+20。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『佣兵队长』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-018.png"
+  },
+  {
+    "id": "B01-019",
+    "name": "塔利斯的战士 萨基",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "斧",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 10,
+    "range": "1",
+    "job": "战士",
+    "traits": [],
+    "ability": {
+      "text": "『战士的心得』【常】自己的回合中，这名单位的战斗力+20。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『战士的心得』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-019.png"
+  },
+  {
+    "id": "B01-020",
+    "name": "塔利斯的斧手 玛基",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "斧",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 10,
+    "range": "1",
+    "job": "战士",
+    "traits": [],
+    "ability": {
+      "text": "『战士的心得』【常】自己的回合中，这名单位的战斗力+20。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『战士的心得』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-020.png"
+  },
+  {
+    "id": "B01-021",
+    "name": "塔利斯的义勇兵 巴兹",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "斧",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "战士",
+    "traits": [],
+    "ability": {
+      "text": "〖阵型技〗『萨基玛基巴兹』【自】[将我方的「萨基」和「玛基」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+50，这名单位的攻击所将破坏的宝玉变为2颗。\n『战士的心得』【常】自己的回合中，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『萨基玛基巴兹』",
+          "『战士的心得』"
+        ],
+        "timing": [
+          "〖阵型技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "将我方的「萨基」和「玛基」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-021.png"
+  },
+  {
+    "id": "B01-022",
+    "name": "红色死神 那巴尔",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 70,
+    "support": 10,
+    "range": "1",
+    "job": "剑圣",
+    "traits": [],
+    "ability": {
+      "text": "『告死的一闪』【起】[从自己的手牌将1张「那巴尔」放置到退避区]直到回合结束为止，这名单位的攻击不能被神速回避。\n『二刀流』【自】[翻面1]这名单位的攻击击破敌方单位时，你可以支付费用。如果支付，选择1名主人公以外的出击费用2以下的敌方单位，将其击破。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【自】"
+        ],
+        "title": [
+          "『告死的一闪』",
+          "『二刀流』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "从自己的手牌将1张「那巴尔」放置到退避区",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-022.png"
+  },
+  {
+    "id": "B01-023",
+    "name": "卓越的剑客 那巴尔",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 70,
+    "support": 10,
+    "range": "1",
+    "job": "剑士",
+    "traits": [],
+    "ability": {
+      "text": "『宿命的好敌手』【常】「希达」和「奥古玛」以外的卡对这名单位的支援将会失败。",
+      "keywords": {
+        "type": [
+          "【常】"
+        ],
+        "title": [
+          "『宿命的好敌手』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-023.png"
+  },
+  {
+    "id": "B01-024",
+    "name": "红色剑士 那巴尔",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "剑士",
+    "traits": [],
+    "ability": {
+      "text": "『独行之剑』【常】自己的回合中，我方战场上除这名单位和主人公以外没有其他单位的场合，这名单位的战斗力+20。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『独行之剑』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-024.png"
+  },
+  {
+    "id": "B01-025",
+    "name": "慈爱的圣女 蕾娜",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 20,
+    "range": "1-2",
+    "job": "司祭",
+    "traits": [],
+    "ability": {
+      "text": "『圣者的祝福』【自】〖1回合1次〗[翻面1]出击费用2以下的我方单位出击时，你可以支付费用。如果支付，从自己的退避区中选择1张「蕾娜」以外的出击费用1的卡，将其加入手牌。",
+      "keywords": {
+        "type": [
+          "【自】"
+        ],
+        "title": [
+          "『圣者的祝福』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-025.png"
+  },
+  {
+    "id": "B01-026",
+    "name": "边境的圣女 蕾娜",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "杖",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 20,
+    "support": 20,
+    "range": "-",
+    "job": "修女",
+    "traits": [],
+    "ability": {
+      "text": "『回复之杖』【起】[横置，翻面2]从自己的退避区中选择1张「蕾娜」以外的卡，将其加入手牌。\n『与朱利安的羁绊』【常】我方的「朱利安」的战斗力+10。〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『回复之杖』",
+          "『与朱利安的羁绊』",
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-026.png"
+  },
+  {
+    "id": "B01-027",
+    "name": "边境的盗贼 朱利安",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 50,
+    "support": 10,
+    "range": "1",
+    "job": "盗贼",
+    "traits": [],
+    "ability": {
+      "text": "『开锁』【起】[横置]公开对手卡组最上方的1张卡。那张卡的出击费用在3以上的场合，你可以[翻面1]。如果这样做了，则抽1张卡。\n『财宝夺取』【起】[翻面1]将对手卡组最上方的1张卡放置到退避区。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【起】"
+        ],
+        "title": [
+          "『开锁』",
+          "『财宝夺取』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-027.png"
+  },
+  {
+    "id": "B01-028",
+    "name": "疾风之贤者 玛利克",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "魔法",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 60,
+    "support": 20,
+    "range": "1-2",
+    "job": "贤者",
+    "traits": [],
+    "ability": {
+      "text": "『圣风刃』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位获得『飞行特效』。（『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。）\n『风之超魔法』【自】这名单位的攻击击破敌方单位时，如果这名单位在这个回合中使用过『圣风刃』，抽1张卡。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】",
+          "【自】"
+        ],
+        "title": [
+          "『圣风刃』",
+          "『飞行特效』",
+          "『飞行特效』",
+          "『风之超魔法』",
+          "『圣风刃』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-028.png"
+  },
+  {
+    "id": "B01-029",
+    "name": "风之魔法师 玛利克",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "魔法",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "1-2",
+    "job": "魔法师",
+    "traits": [],
+    "ability": {
+      "text": "『圣风刃』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位获得『飞行特效』。（『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。）〖攻击型〗『魔术之纹章』【支】抽1张卡。选择自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『圣风刃』",
+          "『飞行特效』",
+          "『飞行特效』",
+          "『魔术之纹章』"
+        ],
+        "timing": [
+          "〖1回合1次〗",
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『魔术之纹章』【支】抽1张卡。选择自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『魔术之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-029.png"
+  },
+  {
+    "id": "B01-030",
+    "name": "公主 密涅瓦",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "斧",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 50,
+    "support": 30,
+    "range": "1",
+    "job": "龙骑士",
+    "traits": [
+      "飞行",
+      "龙"
+    ],
+    "ability": {
+      "text": "『飞龙之鞭』【常】我方战场上每有1名其他<飞行>属性的单位，这名单位的战斗力+10。\n『艾奥提之盾』【常】所有敌方单位失去『飞行特效』，且不能重新获得。（【常】仅限这张卡作为单位存在于战场上的期间才有效）",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】",
+          "【常】"
+        ],
+        "title": [
+          "『飞龙之鞭』",
+          "『艾奥提之盾』",
+          "『飞行特效』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-030.png"
+  },
+  {
+    "id": "B01-031",
+    "name": "马凯多尼亚的王女 密涅瓦",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『马凯多尼亚之风』【常】我方战场上有2名以上其他<飞行>属性的单位的场合，这名单位的战斗力+10。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『马凯多尼亚之风』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-031.png"
+  },
+  {
+    "id": "B01-032",
+    "name": "天真烂漫的司祭 玛莉娅",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 20,
+    "range": "1-2",
+    "job": "司祭",
+    "traits": [],
+    "ability": {
+      "text": "『生命之杖』【起】[横置，翻面3]从自己的退避区中选择至多2张「玛莉娅」以外的单位名不同的卡，将其加入手牌。",
+      "keywords": {
+        "type": [
+          "【起】"
+        ],
+        "title": [
+          "『生命之杖』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面3</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-032.png"
+  },
+  {
+    "id": "B01-033",
+    "name": "马凯多尼亚的小公主 玛莉娅",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "杖",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 20,
+    "support": 20,
+    "range": "-",
+    "job": "修女",
+    "traits": [],
+    "ability": {
+      "text": "『回复之杖』【起】[横置，翻面2]从自己的退避区中选择1张「玛莉娅」以外的卡，将其加入手牌。\n『玛利娅的心绪』【常】我方的「密涅瓦」和「米歇尔」的战斗力+10。〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『回复之杖』",
+          "『玛利娅的心绪』",
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-033.png"
+  },
+  {
+    "id": "B01-034",
+    "name": "大陆第一的弓骑士 乔治",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "弓",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 20,
+    "range": "2",
+    "job": "狙击手",
+    "traits": [],
+    "ability": {
+      "text": "『无双的射手』【起】[将1名出击费用2以下的我方单位转为已行动状态]直到回合结束为止，这名单位攻击<飞行>属性的单位的期间，这名单位的攻击不能被神速回避。\n『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『无双的射手』",
+          "『飞行特效』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "将1名出击费用2以下的我方单位转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-034.png"
+  },
+  {
+    "id": "B01-035",
+    "name": "圣光的继承者 琳达",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 20,
+    "range": "1-2",
+    "job": "贤者",
+    "traits": [],
+    "ability": {
+      "text": "『睿智之泉』【自】〖1回合1次〗[翻面1]出击费用2以下的我方单位出击时，你可以支付费用。如果支付，则抽1张卡。\n『圣光』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【起】"
+        ],
+        "title": [
+          "『睿智之泉』",
+          "『圣光』"
+        ],
+        "timing": [
+          "〖1回合1次〗",
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-035.png"
+  },
+  {
+    "id": "B01-036",
+    "name": "大司祭米罗亚的女儿 琳达",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "1-2",
+    "job": "魔法师",
+    "traits": [],
+    "ability": {
+      "text": "『闪电』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位的战斗力+10。〖攻击型〗『魔术之纹章』【支】抽1张卡。选择自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『闪电』",
+          "『魔术之纹章』"
+        ],
+        "timing": [
+          "〖1回合1次〗",
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『魔术之纹章』【支】抽1张卡。选择自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『魔术之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-036.png"
+  },
+  {
+    "id": "B01-037",
+    "name": "深情的骑士 米迪娅",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "圣骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『爱之双刃』【自】[将我方的「阿斯特利亚」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+40。\n『杀龙枪』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『爱之双刃』",
+          "『杀龙枪』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "将我方的「阿斯特利亚」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-037.png"
+  },
+  {
+    "id": "B01-038",
+    "name": "天马三姐妹的长女 帕奥拉",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 30,
+    "range": "1",
+    "job": "隼骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "〖阵型技〗『三角攻击』【自】[将我方的「卡秋雅」和「爱丝特」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+50，攻击不能被神速回避。\n『三姐妹的羁绊』【常】这名单位被「卡秋雅」或「爱丝特」支援的期间，这名单位的战斗力+10。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『三角攻击』",
+          "『三姐妹的羁绊』"
+        ],
+        "timing": [
+          "〖阵型技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "将我方的「卡秋雅」和「爱丝特」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-038.png"
+  },
+  {
+    "id": "B01-039",
+    "name": "驾驭天马的姊骑士 帕奥拉",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『天马三姐妹』【起】[横置，翻面2]从自己的卡组中选择1张出击费用2以下的「卡秋雅」或「爱丝特」，将其出击。这之后，切洗卡组。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『天马三姐妹』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-039.png"
+  },
+  {
+    "id": "B01-040",
+    "name": "天马三姐妹的次女 卡秋雅",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 30,
+    "range": "1",
+    "job": "隼骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "〖阵型技〗『三角攻击』【自】[将我方的「帕奥拉」和「爱丝特」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+50，攻击不能被神速回避。\n『三姐妹的羁绊』【常】这名单位被「帕奥拉」或「爱丝特」支援的期间，这名单位的战斗力+10。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『三角攻击』",
+          "『三姐妹的羁绊』"
+        ],
+        "timing": [
+          "〖阵型技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "将我方的「帕奥拉」和「爱丝特」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-040.png"
+  },
+  {
+    "id": "B01-041",
+    "name": "驾驭天马的女骑士 卡秋雅",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『天马三姐妹』【起】[横置，翻面2]从自己的卡组中选择1张出击费用2以下的「帕奥拉」或「爱丝特」，将其出击。这之后，切洗卡组。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『天马三姐妹』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-041.png"
+  },
+  {
+    "id": "B01-042",
+    "name": "天马三姐妹的末女 爱丝特",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 30,
+    "range": "1",
+    "job": "隼骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "〖阵型技〗『三角攻击』【自】[将我方的「帕奥拉」和「卡秋雅」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+50，攻击不能被神速回避。\n『三姐妹的羁绊』【常】这名单位被「帕奥拉」或「卡秋雅」支援的期间，这名单位的战斗力+10。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『三角攻击』",
+          "『三姐妹的羁绊』"
+        ],
+        "timing": [
+          "〖阵型技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "将我方的「帕奥拉」和「卡秋雅」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-042.png"
+  },
+  {
+    "id": "B01-043",
+    "name": "驾驭天马的妹骑士 爱丝特",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『天马三姐妹』【起】[横置，翻面2]从自己的卡组中选择1张出击费用2以下的「帕奥拉」或「卡秋雅」，将其出击。这之后，切洗卡组。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『天马三姐妹』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-043.png"
+  },
+  {
+    "id": "B01-044",
+    "name": "深情的勇者 阿斯特利亚",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "勇者",
+    "traits": [],
+    "ability": {
+      "text": "『爱之双刃』【自】[将我方的「米迪娅」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+40。\n『斩龙剑』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『爱之双刃』",
+          "『斩龙剑』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "将我方的「米迪娅」转为已行动状态",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-044.png"
+  },
+  {
+    "id": "B01-045",
+    "name": "变幻自在 谢尼",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "固定职业",
+    "cost": "3",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 10,
+    "range": "1",
+    "job": "突击者",
+    "traits": [],
+    "ability": {
+      "text": "『变身』【起】[翻面2]选择1名其他我方单位。直到回合结束为止，这名单位复制那名我方单位的除卡名与战斗力以外的信息。",
+      "keywords": {
+        "type": [
+          "【起】"
+        ],
+        "title": [
+          "『变身』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-045.png"
+  },
+  {
+    "id": "B01-046",
+    "name": "龙人公主 芝琪",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "龙石",
+    "rank": "固定职业",
+    "cost": "5",
+    "promoteCost": "N/A",
+    "attack": 60,
+    "support": 20,
+    "range": "1",
+    "job": "龙人",
+    "traits": [
+      "龙"
+    ],
+    "ability": {
+      "text": "『龙姬的微笑』【常】自己的回合中，成功支援这名单位的卡被放置到退避区的场合，你可以改为将其放置到自己的羁绊区。『长寿的龙一族』【常】自己的羁绊卡有8张以上的场合，这名单位的战斗力+30。『神龙石』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】",
+          "【常】"
+        ],
+        "title": [
+          "『龙姬的微笑』",
+          "『长寿的龙一族』",
+          "『神龙石』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-046.png"
+  },
+  {
+    "id": "B01-047",
+    "name": "神龙族的王女 芝琪",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "龙石",
+    "rank": "固定职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "1",
+    "job": "龙人",
+    "traits": [
+      "龙"
+    ],
+    "ability": {
+      "text": "『长寿的龙一族』【常】自己的羁绊卡有4张以上的场合，这名单位的战斗力+30。〖攻击型〗『龙人之纹章』【支】自己的攻击单位是<光之剑>势力的场合，选择自己的1张手牌。你可以将那张卡放置到羁绊区。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『长寿的龙一族』",
+          "『龙人之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『龙人之纹章』【支】自己的攻击单位是<光之剑>势力的场合，选择自己的1张手牌。你可以将那张卡放置到羁绊区。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『龙人之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-047.png"
+  },
+  {
+    "id": "B01-048",
+    "name": "阿利缇亚的王女 爱丽丝",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "杖",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 20,
+    "range": "-",
+    "job": "修女",
+    "traits": [],
+    "ability": {
+      "text": "『复活之杖』【起】[横置，翻面1]从自己的退避区中选择1张出击费用2以下的<光之剑>势力的卡，将其出击。如果这样做了，则直到游戏结束为止，所有我方单位不能使用『复活之杖』。\n『爱丽丝的思绪』【常】我方的「马尔斯」和「玛利克」的战斗力+10。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『复活之杖』",
+          "『复活之杖』",
+          "『爱丽丝的思绪』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-048.png"
+  },
+  {
+    "id": "B01-049",
+    "name": "异邦的剑士 雅典娜",
+    "force": "光之剑",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "剑士",
+    "traits": [],
+    "ability": {
+      "text": "『少女剑士的报恩』【特】这张卡仅限自己的退避区中的卡有5张以上时才能出击。\n『雷之剑』【起】[翻面1]直到回合结束为止，这名单位的战斗力-10，这名单位追加<魔法>武器与射程1-2。",
+      "keywords": {
+        "type": [
+          "【特】",
+          "【起】"
+        ],
+        "title": [
+          "『少女剑士的报恩』",
+          "『雷之剑』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-049.png"
+  },
+  {
+    "id": "B01-050",
+    "name": "黑骑士 卡缪",
+    "force": "光之剑",
+    "gender": "男性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "5",
+    "promoteCost": "4",
+    "attack": 70,
+    "support": 10,
+    "range": "1",
+    "job": "圣骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『神枪 古拉迪乌斯』【起】[翻面4]将出击费用在2以下的所有敌方单位击破。直到回合结束为止，由于这个能力被击破的敌方单位每有1名，这名单位的战斗力+10，这名单位追加射程1-2。",
+      "keywords": {
+        "type": [
+          "【起】"
+        ],
+        "title": [
+          "『神枪 古拉迪乌斯』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面4</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-050.png"
+  },
+  {
+    "id": "B01-051",
+    "name": "新的圣王 库洛姆",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "5",
+    "promoteCost": "4",
+    "attack": 70,
+    "support": 20,
+    "range": "1",
+    "job": "大领主",
+    "traits": [],
+    "ability": {
+      "text": "『圣王的威光』【起】[翻面3，从自己的手牌将1张「库洛姆」放置到退避区]选择任意名敌方单位，将其移动。直到回合结束为止，所有我方单位的战斗力+30。〖转职技〗『神剑 法尔西昂』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+40。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『圣王的威光』",
+          "『神剑 法尔西昂』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面3</span>，从自己的手牌将1张「库洛姆」放置到退避区",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-051.png"
+  },
+  {
+    "id": "B01-052",
+    "name": "英雄王的末裔 库洛姆",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 50,
+    "support": 20,
+    "range": "1",
+    "job": "领主",
+    "traits": [],
+    "ability": {
+      "text": "『勇敢的王子』【起】[翻面2]选择1名敌方单位，将其移动。",
+      "keywords": {
+        "type": [
+          "【起】"
+        ],
+        "title": [
+          "『勇敢的王子』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-052.png"
+  },
+  {
+    "id": "B01-053",
+    "name": "伊利斯圣王国的王子 库洛姆",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 20,
+    "range": "1",
+    "job": "领主",
+    "traits": [],
+    "ability": {
+      "text": "『圣痕的光辉』【常】我方战场上每有1名经过转职后的单位，这名单位的战斗力+10。〖攻击型〗『英雄之纹章』【支】我方的攻击单位是<圣痕>势力的场合，直到战斗结束为止，那名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『圣痕的光辉』",
+          "『英雄之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『英雄之纹章』【支】我方的攻击单位是<圣痕>势力的场合，直到战斗结束为止，那名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『英雄之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-053.png"
+  },
+  {
+    "id": "B01-054",
+    "name": "知晓未来者 露琪娜",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 70,
+    "support": 20,
+    "range": "1",
+    "job": "大领主",
+    "traits": [],
+    "ability": {
+      "text": "『抗争命运者』【起】〖1回合1次〗[翻面1，从自己的手牌将1张「露琪娜」放置到退避区]抽2张卡，选择自己的1张手牌，放置到卡组最上方。这名单位经过转职后的场合，改为抽卡3张，选择自己的2张手牌，按任意顺序放置到卡组最上方。『里剑 法尔西昂』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『抗争命运者』",
+          "『里剑 法尔西昂』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>，从自己的手牌将1张「露琪娜」放置到退避区",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-054.png"
+  },
+  {
+    "id": "B01-055",
+    "name": "圣王之血的继承者 露琪娜",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 50,
+    "support": 20,
+    "range": "1",
+    "job": "领主",
+    "traits": [],
+    "ability": {
+      "text": "『神圣的血脉』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位和我方的「库洛姆」的战斗力+10。这个能力仅限我方战场上存在「库洛姆」时才能使用。",
+      "keywords": {
+        "type": [
+          "【起】"
+        ],
+        "title": [
+          "『神圣的血脉』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-055.png"
+  },
+  {
+    "id": "B01-056",
+    "name": "自称马尔斯的剑士 露琪娜",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 20,
+    "range": "1",
+    "job": "领主",
+    "traits": [],
+    "ability": {
+      "text": "『英雄王之名』【特】这张卡的单位名也当作「马尔斯」。『里剑 法尔西昂』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+20。〖攻击型〗『英雄之纹章』【支】我方的攻击单位是<圣痕>势力的场合，直到战斗结束为止，那名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【特】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『英雄王之名』",
+          "『里剑 法尔西昂』",
+          "『英雄之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『英雄之纹章』【支】我方的攻击单位是<圣痕>势力的场合，直到战斗结束为止，那名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『英雄之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-056.png"
+  },
+  {
+    "id": "B01-057",
+    "name": "圣王的神军师 路弗雷（女）",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 60,
+    "support": 20,
+    "range": "1-2",
+    "job": "神军师",
+    "traits": [],
+    "ability": {
+      "text": "『神军师的指挥』【自】每次其它我方单位转职时，你可以选择1名敌方单位，将其移动。〖转职技〗『这也在计策当中』【起】[翻面3]自己的宝玉数量比对手少的场合，将卡组最上方的1张卡追加到宝玉区。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【起】"
+        ],
+        "title": [
+          "『神军师的指挥』",
+          "『这也在计策当中』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面3</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-057.png"
+  },
+  {
+    "id": "B01-058",
+    "name": "失去记忆的军师 路弗雷（女）",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "1-2",
+    "job": "战术师",
+    "traits": [],
+    "ability": {
+      "text": "『军师之才』【常】自己的宝玉数量比对手少的场合，这名单位的战斗力+10。〖攻击型〗『计略之纹章』【支】自己的攻击单位是<圣痕>势力的场合，选择对手的防御单位以外的1名敌方单位。你可以移动那名敌方单位。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『军师之才』",
+          "『计略之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『计略之纹章』【支】自己的攻击单位是<圣痕>势力的场合，选择对手的防御单位以外的1名敌方单位。你可以移动那名敌方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『计略之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-058.png"
+  },
+  {
+    "id": "B01-059",
+    "name": "伊利斯圣王国的王女 莉兹",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "斧",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "战斗修女",
+    "traits": [],
+    "ability": {
+      "text": "〖转职技〗『战斗的修道女』【自】这名单位的攻击击破敌方单位时，从自己的退避区选择1张「莉兹」以外的出击费用3以下的卡，将其加入手牌。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【自】"
+        ],
+        "title": [
+          "『战斗的修道女』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-059.png"
+  },
+  {
+    "id": "B01-060",
+    "name": "活蹦乱跳的修女 莉兹",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "杖",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "-",
+    "job": "修女",
+    "traits": [],
+    "ability": {
+      "text": "『回复之杖』【起】[横置，翻面2]从自己的退避区中选择1张「莉兹」以外的卡，将其加入手牌。〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『回复之杖』",
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-060.png"
+  },
+  {
+    "id": "B01-061",
+    "name": "温和的骑士团长 弗雷德里克",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "斧",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 70,
+    "support": 20,
+    "range": "1",
+    "job": "重骑士",
+    "traits": [
+      "重甲",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『战场上的教育家』【特】这张卡不能放置到羁绊区。",
+      "keywords": {
+        "type": [
+          "【特】"
+        ],
+        "title": [
+          "『战场上的教育家』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-061.png"
+  },
+  {
+    "id": "B01-062",
+    "name": "罗赞努的侯爵 维奥尔",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "弓",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 20,
+    "range": "2",
+    "job": "狙击手",
+    "traits": [],
+    "ability": {
+      "text": "〖转职技〗『弓之达人』【常】我方战场上每有1名其他<弓>武器的单位，这名单位的战斗力+10。（〖转职技〗仅限这名单位经过转职后才能使用）\n『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】"
+        ],
+        "title": [
+          "『弓之达人』",
+          "『飞行特效』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-062.png"
+  },
+  {
+    "id": "B01-063",
+    "name": "贵族弓箭手 维奥尔",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "弓",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "2",
+    "job": "弓箭手",
+    "traits": [],
+    "ability": {
+      "text": "『钢弓』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位的战斗力+10。『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『钢弓』",
+          "『飞行特效』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖1回合1次〗",
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-063.png"
+  },
+  {
+    "id": "B01-064",
+    "name": "红瞳的猛牛 索瓦蕾",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "圣骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "〖转职技〗『圣盾』【常】敌方后卫区上的<弓>和<魔法>和<龙石>武器的单位不能攻击。（〖转职技〗仅限这名单位经过转职后才能使用）\n『红与碧的羁绊』【常】这名单位被「索尔」支援的期间，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】"
+        ],
+        "title": [
+          "『圣盾』",
+          "『红与碧的羁绊』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-064.png"
+  },
+  {
+    "id": "B01-065",
+    "name": "勇敢的红骑士 索瓦蕾",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "轻骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『红与碧的羁绊』【常】这名单位被「索尔」支援的期间，这名单位的战斗力+30。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『红与碧的羁绊』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-065.png"
+  },
+  {
+    "id": "B01-066",
+    "name": "碧眼的黑豹 索尔",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "圣骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "〖转职技〗『圣盾』【常】敌方后卫区上的<弓>和<魔法>和<龙石>武器的单位不能攻击。（〖转职技〗仅限这名单位经过转职后才能使用）\n『碧与红的羁绊』【常】这名单位被「索瓦蕾」支援的期间，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】"
+        ],
+        "title": [
+          "『圣盾』",
+          "『碧与红的羁绊』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-066.png"
+  },
+  {
+    "id": "B01-067",
+    "name": "忠厚的碧骑士 索尔",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "轻骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『碧与红的羁绊』【常】这名单位被「索瓦蕾」支援的期间，这名单位的战斗力+30。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『碧与红的羁绊』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-067.png"
+  },
+  {
+    "id": "B01-068",
+    "name": "温柔的警卫队之花 丝米娅",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 30,
+    "range": "1",
+    "job": "隼骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "〖转职技〗『天马之呐喊』【常】支援其他我方单位的卡是<飞行>属性的场合，那张卡的支援力+10。（〖转职技〗仅限这名单位经过转职后才能使用）\n『翱翔天空者』【起】〖1回合1次〗将这名单位移动。这个能力只能在这名单位处于未行动状态时使用。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【起】"
+        ],
+        "title": [
+          "『天马之呐喊』",
+          "『翱翔天空者』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗",
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-068.png"
+  },
+  {
+    "id": "B01-069",
+    "name": "花占卜少女 丝米娅",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『天空的运送者』【起】[横置]选择1名其他我方单位，将其移动。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『天空的运送者』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-069.png"
+  },
+  {
+    "id": "B01-070",
+    "name": "孤高之刃 隆库",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 10,
+    "range": "1",
+    "job": "剑圣",
+    "traits": [],
+    "ability": {
+      "text": "〖转职技〗『剑之达人』【常】我方战场上每有1名其他<剑>武器的单位，这名单位的战斗力+10。（〖转职技〗仅限这名单位经过转职后才能使用）\n『必杀刃』【起】[翻面3]直到回合结束为止，这名单位的攻击不能被神速回避。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【起】"
+        ],
+        "title": [
+          "『剑之达人』",
+          "『必杀刃』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面3</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-070.png"
+  },
+  {
+    "id": "B01-071",
+    "name": "讨厌女人的剑士 隆库",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 50,
+    "support": 10,
+    "range": "1",
+    "job": "剑士",
+    "traits": [],
+    "ability": {
+      "text": "『女人不要靠近我』【常】<女性>卡片对这名单位的支援会失败。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『女人不要靠近我』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-071.png"
+  },
+  {
+    "id": "B01-072",
+    "name": "出言不逊的千金小姐 玛丽亚贝尔",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "杖",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 20,
+    "support": 20,
+    "range": "-",
+    "job": "神官骑士",
+    "traits": [
+      "兽马"
+    ],
+    "ability": {
+      "text": "『回复之杖』【起】[横置，翻面2]从自己的退避区中选择1张「玛丽亚贝尔」以外的卡，将其加入手牌。\n『大小姐的用心』【常】自己的回合中，我方的「莉兹」的战斗力+20。〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『回复之杖』",
+          "『大小姐的用心』",
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "〖防御型〗『祈祷之纹章』【支】直到战斗结束为止，对手的攻击单位不能进行必杀攻击。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『祈祷之纹章』"
+        ],
+        "timing": [
+          "〖防御型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-072.png"
+  },
+  {
+    "id": "B01-073",
+    "name": "甜蜜刺客 盖亚",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 10,
+    "range": "1",
+    "job": "刺客",
+    "traits": [],
+    "ability": {
+      "text": "『暗杀』【起】[横置]公开对手卡组最上方的1张卡。那张卡的出击费用在3以上的场合，你可以[翻面2]。如果这样做了，则选择1名敌方单位，将其击破。\n〖转职技〗『报酬是甜食』【自】这名单位的『暗杀』击破敌方单位时，抽1张卡。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【自】"
+        ],
+        "title": [
+          "『暗杀』",
+          "『报酬是甜食』",
+          "『暗杀』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-073.png"
+  },
+  {
+    "id": "B01-074",
+    "name": "喜欢甜食的盗贼 盖亚",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 10,
+    "range": "1",
+    "job": "盗贼",
+    "traits": [],
+    "ability": {
+      "text": "『开锁』【起】[横置]公开对手卡组最上方的1张卡。那张卡的出击费用在3以上的场合，你可以[翻面1]。如果这样做了，则抽1张卡。〖攻击型〗『盗贼之纹章』【支】公开对手卡组最上方的1张卡。你可以将那张卡放置到退避区。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『开锁』",
+          "『盗贼之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『盗贼之纹章』【支】公开对手卡组最上方的1张卡。你可以将那张卡放置到退避区。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『盗贼之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-074.png"
+  },
+  {
+    "id": "B01-075",
+    "name": "完美的天马骑士 缇雅莫",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 30,
+    "range": "1",
+    "job": "暗黑天马",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『疾风迅雷』【自】〖1回合1次〗这名单位的攻击击破敌方单位时，将这名单位转为未行动状态。\n〖转职技〗『自制的投枪』【起】[翻面1]直到回合结束为止，所有<飞行>属性的我方单位追加<枪>武器与射程1-2。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【起】"
+        ],
+        "title": [
+          "『疾风迅雷』",
+          "『自制的投枪』"
+        ],
+        "timing": [
+          "〖1回合1次〗",
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-075.png"
+  },
+  {
+    "id": "B01-076",
+    "name": "年轻的天才骑士 缇雅莫",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "枪",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "天马骑士",
+    "traits": [
+      "飞行",
+      "兽马"
+    ],
+    "ability": {
+      "text": "『天空的运送者』【起】[横置]选择1名其他我方单位，将其移动。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『天空的运送者』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-076.png"
+  },
+  {
+    "id": "B01-077",
+    "name": "无畏的佣兵 古雷格",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "佣兵",
+    "traits": [],
+    "ability": {
+      "text": "『古雷格与幼龙』【常】这名单位被敌方单位的攻击击破的场合，不将这名单位放置到退避区，改为将其放置到自己的羁绊区。",
+      "keywords": {
+        "type": [
+          "【常】"
+        ],
+        "title": [
+          "『古雷格与幼龙』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-077.png"
+  },
+  {
+    "id": "B01-078",
+    "name": "永远的幼子 诺诺",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "龙石",
+    "rank": "固定职业",
+    "cost": "3",
+    "promoteCost": "N/A",
+    "attack": 50,
+    "support": 20,
+    "range": "1-2",
+    "job": "龙人",
+    "traits": [
+      "龙"
+    ],
+    "ability": {
+      "text": "『幼龙』【自】自己的回合结束时，选择自己的1张羁绊卡，将其加入手牌。『长寿的龙一族』【常】自己的羁绊卡有6张以上的场合，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『幼龙』",
+          "『长寿的龙一族』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-078.png"
+  },
+  {
+    "id": "B01-079",
+    "name": "活泼龙人 诺诺",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "龙石",
+    "rank": "固定职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 20,
+    "support": 20,
+    "range": "1-2",
+    "job": "龙人",
+    "traits": [
+      "龙"
+    ],
+    "ability": {
+      "text": "『长寿的龙一族』【常】自己的羁绊卡有4张以上的场合，这名单位的战斗力+30。\n『生物节律·奇数』【常】自己的羁绊卡张数是奇数的场合，这名单位的战斗力+10。〖攻击型〗『龙人之纹章』【支】自己的攻击单位是<圣痕>势力的场合，选择自己的1张手牌。你可以将那张卡放置到羁绊区。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『长寿的龙一族』",
+          "『生物节律·奇数』",
+          "『龙人之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『龙人之纹章』【支】自己的攻击单位是<圣痕>势力的场合，选择自己的1张手牌。你可以将那张卡放置到羁绊区。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『龙人之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-079.png"
+  },
+  {
+    "id": "B01-080",
+    "name": "爱与执念的暗魔法师 萨莉雅",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 60,
+    "support": 20,
+    "range": "1-2",
+    "job": "巫师",
+    "traits": [],
+    "ability": {
+      "text": "『破灭』【起】〖1回合1次〗[翻面3，从自己的手牌将1张「萨莉雅」放置到退避区]对手选择他自己的2张手牌，放置到退避区。这个单位经过转职后的场合，改为对手选择他自己的3张手牌，放置到退避区。『禁断的诅咒』【常】对手没有手牌的场合，这名单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『破灭』",
+          "『禁断的诅咒』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面3</span>，从自己的手牌将1张「萨莉雅」放置到退避区",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-080.png"
+  },
+  {
+    "id": "B01-081",
+    "name": "佩雷吉亚王国的咒术师 萨莉雅",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 20,
+    "range": "1-2",
+    "job": "暗魔法师",
+    "traits": [],
+    "ability": {
+      "text": "『熔流』【起】[横置，翻面2]对手选择他自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【起】"
+        ],
+        "title": [
+          "『熔流』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-081.png"
+  },
+  {
+    "id": "B01-082",
+    "name": "藏身黑暗的暗魔法师 萨莉雅",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "魔法",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "1-2",
+    "job": "暗魔法师",
+    "traits": [],
+    "ability": {
+      "text": "『诅咒』【常】自己的回合中，自己的手牌数量比对手多的场合，这名单位的战斗力+20。〖攻击型〗『黑暗之纹章』【支】对手的手牌有5张以上的场合，对手选择他自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『诅咒』",
+          "『黑暗之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『黑暗之纹章』【支】对手的手牌有5张以上的场合，对手选择他自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『黑暗之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-082.png"
+  },
+  {
+    "id": "B01-083",
+    "name": "害羞的舞者 奥莉薇",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "固定职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 20,
+    "support": 10,
+    "range": "1",
+    "job": "舞者",
+    "traits": [],
+    "ability": {
+      "text": "『舞蹈』【起】[横置，翻面2]选择1名这个回合中攻击过的我方单位，将其转为未行动状态。",
+      "keywords": {
+        "type": [
+          "【起】"
+        ],
+        "title": [
+          "『舞蹈』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-083.png"
+  },
+  {
+    "id": "B01-084",
+    "name": "罗赞努的守护者 塞尔吉",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "斧",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 30,
+    "range": "1",
+    "job": "龙骑统帅",
+    "traits": [
+      "飞行",
+      "龙"
+    ],
+    "ability": {
+      "text": "〖转职技〗『飞龙之呐喊』【常】其他所有<飞行>属性的我方单位的战斗力+10。（〖转职技〗仅限这名单位经过转职后才能使用）\n『翱翔天空者』【起】〖1回合1次〗将这名单位移动。这个能力只能在这名单位处于未行动状态时使用。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【起】"
+        ],
+        "title": [
+          "『飞龙之呐喊』",
+          "『翱翔天空者』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗",
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-084.png"
+  },
+  {
+    "id": "B01-085",
+    "name": "喜欢龙的龙骑士 塞尔吉",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "斧",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 30,
+    "range": "1",
+    "job": "龙骑士",
+    "traits": [
+      "飞行",
+      "龙"
+    ],
+    "ability": {
+      "text": "『天空的运送者』【起】[横置]选择1名其他我方单位，将其移动。〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『天空的运送者』",
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『天空之纹章』【支】选择1名自己的攻击单位以外的我方单位。你可以移动那名我方单位。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『天空之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-085.png"
+  },
+  {
+    "id": "B01-086",
+    "name": "笑颜巫师 亨利",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "魔法",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 50,
+    "support": 20,
+    "range": "1-2",
+    "job": "巫师",
+    "traits": [],
+    "ability": {
+      "text": "『黏液』【自】每次其它我方单位转职时，你和对手分别选择自己的1张手牌，放置到退避区。\n〖转职技〗『死之诅咒』【起】[横置，翻面1]将这名单位击破。对手选择他自己的2张手牌，放置到退避区。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【起】"
+        ],
+        "title": [
+          "『黏液』",
+          "『死之诅咒』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#ca1d1c\">横置</span>，<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 1
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-086.png"
+  },
+  {
+    "id": "B01-087",
+    "name": "心灵崩坏的咒术师 亨利",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "魔法",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "1-2",
+    "job": "暗魔法师",
+    "traits": [],
+    "ability": {
+      "text": "『赤色诅咒』【常】对手的手牌在4张以下的场合，这名单位的战斗力+10。〖攻击型〗『黑暗之纹章』【支】对手的手牌有5张以上的场合，对手选择他自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『赤色诅咒』",
+          "『黑暗之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『黑暗之纹章』【支】对手的手牌有5张以上的场合，对手选择他自己的1张手牌，放置到退避区。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『黑暗之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-087.png"
+  },
+  {
+    "id": "B01-088",
+    "name": "来自异界的男孩子 玛克（男）",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "魔法",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 20,
+    "range": "1-2",
+    "job": "战术师",
+    "traits": [],
+    "ability": {
+      "text": "『军师的系谱』【自】[翻面2]这名单位出击时，自己的宝玉数量比对手少的场合，你可以支付费用。如果支付，则将卡组最上方的1张卡追加到宝玉区。这个能力仅限我方战场上存在「路弗雷（女）」时才能发动。",
+      "keywords": {
+        "type": [
+          "【自】"
+        ],
+        "title": [
+          "『军师的系谱』"
+        ],
+        "timing": []
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-088.png"
+  },
+  {
+    "id": "B01-089",
+    "name": "飞翔的漆黑之翼 杰罗姆",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "斧",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 60,
+    "support": 30,
+    "range": "1",
+    "job": "龙骑统帅",
+    "traits": [
+      "飞行",
+      "龙"
+    ],
+    "ability": {
+      "text": "『弑剑』【常】这名单位与<剑>武器单位战斗的期间，这名单位的战斗力+20。\n〖转职技〗『短斧』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位的战斗力+10，这名单位追加射程1-2。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【起】"
+        ],
+        "title": [
+          "『弑剑』",
+          "『短斧』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖1回合1次〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-089.png"
+  },
+  {
+    "id": "B01-090",
+    "name": "铁面具龙骑士 杰罗姆",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "斧",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 30,
+    "range": "1",
+    "job": "龙骑士",
+    "traits": [
+      "飞行",
+      "龙"
+    ],
+    "ability": {
+      "text": "『天翔的双龙』【常】自己的回合中，这名单位与我方的「塞尔吉」的战斗力+10。这个能力仅限我方战场上存在「塞尔吉」时才有效。",
+      "keywords": {
+        "type": [
+          "【常】"
+        ],
+        "title": [
+          "『天翔的双龙』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-090.png"
+  },
+  {
+    "id": "B01-091",
+    "name": "天选的希望战士 伍德",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "4",
+    "promoteCost": "3",
+    "attack": 70,
+    "support": 10,
+    "range": "1",
+    "job": "剑圣",
+    "traits": [],
+    "ability": {
+      "text": "『圣魔剑 Holy Devil Sword』【起】[从自己的手牌将1张「伍德」放置到退避区]直到回合结束为止，这名单位的战斗力变为2倍。〖转职技〗『古代魔剑 米斯托尔汀』【常】这名单位不能进行必杀攻击，这名单位的攻击所将破坏的宝玉变为2颗。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『圣魔剑 Holy Devil Sword』",
+          "『古代魔剑 米斯托尔汀』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "从自己的手牌将1张「伍德」放置到退避区",
+        "action": "其他",
+        "amount": 0
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-091.png"
+  },
+  {
+    "id": "B01-092",
+    "name": "传说的继承者 伍德",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 50,
+    "support": 10,
+    "range": "1",
+    "job": "剑士",
+    "traits": [],
+    "ability": {
+      "text": "『苍炎剑·Blue Flame Sword』【起】〖1回合1次〗[翻面1]直到回合结束为止，这名单位的战斗力+10。\n『继承的圣痕』【常】这名单位被「莉兹」支援的期间，这名单位的攻击所将破坏的宝玉变为2颗。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『苍炎剑·Blue Flame Sword』",
+          "『继承的圣痕』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-092.png"
+  },
+  {
+    "id": "B01-093",
+    "name": "封印力量者 伍德",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "剑士",
+    "traits": [],
+    "ability": {
+      "text": "『古代魔剑？ 米斯特尔通』【起】[翻面1]直到回合结束为止，这名单位的战斗力-10，这名单位的攻击所将破坏的宝玉变为2颗。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【支】"
+        ],
+        "title": [
+          "『古代魔剑？ 米斯特尔通』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面1</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-093.png"
+  },
+  {
+    "id": "B01-094",
+    "name": "追逐憧憬之刃 赛蕾娜",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "勇者",
+    "traits": [],
+    "ability": {
+      "text": "『弑斧』【常】这名单位与<斧>武器单位战斗的期间，这名单位的战斗力+20。〖转职技〗『诱惑的一面』【常】这名单位被<男性>单位支援的期间，那名单位的支援力+10。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】"
+        ],
+        "title": [
+          "『弑斧』",
+          "『诱惑的一面』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-094.png"
+  },
+  {
+    "id": "B01-095",
+    "name": "暗藏的憧憬 赛蕾娜",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "佣兵",
+    "traits": [],
+    "ability": {
+      "text": "『口是心非』【常】我方战场上存在「缇雅莫」的场合，这名单位的战斗力+10。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【支】"
+        ],
+        "title": [
+          "『口是心非』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-095.png"
+  },
+  {
+    "id": "B01-096",
+    "name": "拥有二重心灵的弓兵 诺瓦尔",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "弓",
+    "rank": "下级职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 20,
+    "range": "2",
+    "job": "弓箭手",
+    "traits": [],
+    "ability": {
+      "text": "『学自母亲的诅咒』【常】自己的回合中，自己的手牌张数比对手多的场合，这名单位的战斗力+20。这个能力仅限我方战场上存在「萨莉雅」时才有效。\n『飞行特效』【常】这名单位攻击<飞行>属性单位的期间，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【常】"
+        ],
+        "title": [
+          "『学自母亲的诅咒』",
+          "『飞行特效』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-096.png"
+  },
+  {
+    "id": "B01-097",
+    "name": "与花相配的男子 阿兹尔",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 60,
+    "support": 10,
+    "range": "1",
+    "job": "勇者",
+    "traits": [],
+    "ability": {
+      "text": "『太阳』【自】这名单位的攻击击破敌方单位时，直到下一次对手的回合结束为止，这名单位的战斗力+20。〖转职技〗『命运的邂逅』【常】这名单位被<女性>单位支援的期间，这名单位的战斗力+10。（〖转职技〗仅限这名单位经过转职后才能使用）",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【常】"
+        ],
+        "title": [
+          "『太阳』",
+          "『命运的邂逅』"
+        ],
+        "timing": [
+          "〖转职技〗",
+          "〖转职技〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-097.png"
+  },
+  {
+    "id": "B01-098",
+    "name": "花开般的笑颜 阿兹尔",
+    "force": "圣痕",
+    "gender": "男性",
+    "weapon": "剑",
+    "rank": "下级职业",
+    "cost": "1",
+    "promoteCost": "N/A",
+    "attack": 40,
+    "support": 10,
+    "range": "1",
+    "job": "佣兵",
+    "traits": [],
+    "ability": {
+      "text": "『爱搭讪的阿兹尔』【自】这名单位攻击时，我方战场上存在<女性>单位的场合，直到回合结束为止，这名单位的战斗力+10。〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【自】",
+          "【支】"
+        ],
+        "title": [
+          "『爱搭讪的阿兹尔』",
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "〖攻击型〗『攻击之纹章』【支】直到战斗结束为止，我方的攻击单位的战斗力+20。",
+      "keywords": {
+        "type": [
+          "【支】"
+        ],
+        "title": [
+          "『攻击之纹章』"
+        ],
+        "timing": [
+          "〖攻击型〗"
+        ]
+      }
+    },
+    "image": "/images/cards/B01-098.png"
+  },
+  {
+    "id": "B01-099",
+    "name": "追忆的神龙族 芝琪",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "龙石",
+    "rank": "固定职业",
+    "cost": "2",
+    "promoteCost": "N/A",
+    "attack": 30,
+    "support": 20,
+    "range": "1-2",
+    "job": "龙人",
+    "traits": [
+      "龙"
+    ],
+    "ability": {
+      "text": "『神龙的巫女』【起】〖1回合1次〗[翻面2]选择自己的1张手牌，放置到羁绊区。『长寿的龙一族』【常】自己的羁绊卡有5张以上的场合，这名单位的战斗力+30。",
+      "keywords": {
+        "type": [
+          "【起】",
+          "【常】"
+        ],
+        "title": [
+          "『神龙的巫女』",
+          "『长寿的龙一族』"
+        ],
+        "timing": [
+          "〖1回合1次〗"
+        ]
+      },
+      "skillCost": {
+        "raw": "<span style=\"color:#6c5782\">翻面2</span>",
+        "action": "翻面",
+        "amount": 6
+      }
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-099.png"
+  },
+  {
+    "id": "B01-100",
+    "name": "秘密的旅行商人 安娜",
+    "force": "圣痕",
+    "gender": "女性",
+    "weapon": "剑",
+    "rank": "上级职业",
+    "cost": "3",
+    "promoteCost": "2",
+    "attack": 20,
+    "support": 10,
+    "range": "1",
+    "job": "诈术师",
+    "traits": [],
+    "ability": {
+      "text": "『安娜姐妹』【常】战场上每有1名其他我方的「安娜」，这名单位的战斗力+10。\n『100名安娜』【特】即便我方战场上存在「安娜」，这张卡也可以出击，我方战场上可以存在2名以上的「安娜」。\n【特】你可以在卡组中加入5张以上的与这张卡的卡名相同的卡。\n【常】「安娜」卡对这名单位的支援将会成功。",
+      "keywords": {
+        "type": [
+          "【常】",
+          "【特】",
+          "【特】",
+          "【常】"
+        ],
+        "title": [
+          "『安娜姐妹』",
+          "『100名安娜』"
+        ],
+        "timing": []
+      },
+      "skillCost": null
+    },
+    "supportAbility": {
+      "text": "",
+      "keywords": {
+        "type": [],
+        "title": [],
+        "timing": []
+      }
+    },
+    "image": "/images/cards/B01-100.png"
+  }
+]

@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FE0 Cipher - 同步对战版</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- 模块加载：需要在 app.js 之前加载 -->
+    <script src="modules/state.js"></script>
+    <script src="modules/rules.js"></script>
+    <script src="modules/cardOps.js"></script>
+    <script src="modules/dragDrop.js"></script>
+    <script src="modules/turnManagement.js"></script>
+    <script src="modules/socketHandler.js"></script>
+</head>
+<body class="text-gray-200 select-none overflow-hidden h-screen">
+
+<div id="app" class="h-full flex flex-col relative">
+
+    <div class="top-bar">
+        <div class="flex w-full justify-between items-center px-4 text-[10px]">
+            <div class="flex gap-3">
+                <span>对手手牌: <b class="text-white">{{oppStats.hand}}</b></span>
+                <span>羁绊: <b class="text-white">{{oppStats.bonds}}</b></span>
+            </div>
+            <div class="text-red-500 font-bold">OPPONENT FIELD</div>
+        </div>
+    </div>
+	<div class="phase-control-bar pointer-events-auto">
+		<div @click="isDevMode = !isDevMode" class="flex items-center gap-2 cursor-pointer">
+			<div :class="isDevMode ? 'bg-red-500' : 'bg-green-500'" class="w-1.5 h-1.5 rounded-full"></div>
+			<span class="text-[9px] font-mono">{{ isDevMode ? 'DEV' : 'PLAY' }}</span>
+		</div>
+
+		<div class="w-[1px] h-3 bg-white/20"></div>
+
+		<div class="flex items-center gap-2">
+			<span class="text-[10px] font-bold text-amber-500 w-16 text-center">
+				{{ PHASES[currentPhase].name }}
+			</span>
+			<button v-if="isMyTurn || isDevMode" @click="nextPhase" class="phase-btn">
+				{{ currentPhase === 'END' ? '结束回合' : 'NEXT' }}
+			</button>
+		</div>
+	</div>
+
+    <button v-if="undoStack.length > 0" @click="undoLastMove" 
+            class="fixed top-12 left-4 z-[70] bg-orange-600 text-[10px] px-3 py-1 rounded-full shadow-lg">
+        ↩ 撤销移动
+    </button>
+	
+    <div class="battle-container">
+        <div class="battle-row row-opp-rear">
+            <div v-for="card in opponentRear" class="card-adaptive"><img :src="card.image"></div>
+        </div>
+        <div class="battle-row row-opp-front">
+            <div v-for="card in opponentFront" class="card-adaptive"><img :src="card.image"></div>
+        </div>
+
+        <div class="battle-row row-my-front overflow-hidden" data-area="front" 
+             :class="{'guide-deploy-active': currentPhase === 'DEPLOY' && !isDevMode,
+			 'dragging-over': isDraggingOver === 'front'}"
+             @dragover.prevent="isDraggingOver = 'front'"
+             @dragleave="isDraggingOver = null"
+             @drop="onDrop('front')">
+            <span class="area-label">Front</span>
+            <div v-for="card in fieldFront" :key="card.instanceId" class="card-adaptive" @click="selectedCard = card">
+                <img :src="card.image">
+            </div>
+        </div>
+        <div class="battle-row row-my-rear overflow-hidden" data-area="rear"
+             :class="{'guide-deploy-active': currentPhase === 'DEPLOY' && !isDevMode,
+			 'dragging-over': isDraggingOver === 'rear'}"
+             @dragover.prevent="isDraggingOver = 'rear'"
+             @dragleave="isDraggingOver = null"
+             @drop="onDrop('rear')">
+            <span class="area-label">Rear</span>
+            <div v-for="card in fieldRear" :key="card.instanceId" class="card-adaptive" @click="selectedCard = card">
+                <img :src="card.image">
+            </div>
+        </div>
+    </div>
+
+    <div class="hand-container-fixed">
+		<div class="h-10 px-2 flex items-center bonds-area" data-area="bonds"
+             :class="{'guide-bond-active': currentPhase === 'BOND' && !hasPlacedBond && !isDevMode,
+			'phase-disabled': currentPhase !== 'BOND' && !isDevMode,
+			'dragging-over': isDraggingOver === 'bonds'}"
+             @dragover.prevent="isDraggingOver = 'bonds'"
+             @drop="onDrop('bonds')"
+			 @click.self="activePanel = 'bonds'">
+            <div v-for="card in bonds" :key="card.instanceId" class="card-base bond-card" @click="selectedCard = card">
+                <img :src="card.isFaceDown ? 'images/card_back.jpg' : card.image" >
+            </div>
+        </div>
+        <div class="flex-1 flex items-center gap-2 px-2 overflow-x-auto">
+            <div v-for="card in hand" :key="card.instanceId" 
+                 class="card-base"
+                 draggable="true"
+                 @dragstart="onDragStart(card)"
+                 @touchstart="onTouchStart($event, card)" 
+                 @touchmove="onTouchMove"
+                 @touchend="onTouchEnd($event, card)"
+                 @click="selectedCard = card">
+                <img :src="card.image">
+            </div>
+        </div>
+
+    <div v-if="selectedCard" class="fixed inset-0 z-detail flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="selectedCard = null"></div>
+        <div class="relative bg-gray-900 border border-blue-600 rounded-2xl w-full max-w-sm overflow-hidden flex flex-col animate-zoom">
+            <div class="flex p-4 gap-4 bg-gray-800/60">
+                <div class="w-20 h-28 flex-shrink-0 shadow-lg" @click="showFullImage = true">
+                    <img :src="selectedCard.image" class="w-full h-full object-cover rounded shadow-md">
+                </div>
+                <div class="flex-1">
+                    <h3 class="font-bold text-white text-sm leading-tight">{{selectedCard.name}}</h3>
+                    <div class="grid grid-cols-2 gap-x-2 mt-2 text-[10px] text-gray-400">
+                        <div>费用: <span class="text-white">{{selectedCard.cost}}</span></div>
+                        <div>射程: <span class="text-white">{{selectedCard.range}}</span></div>
+                        <div>战力: <span class="text-red-500 font-bold">{{selectedCard.attack}}</span></div>
+                        <div>支援: <span class="text-yellow-500">{{selectedCard.support}}</span></div>
+                    </div>
+                </div>
+            </div>
+            <div class="px-4 py-2 bg-black/40 border-y border-white/5 space-y-2">
+			<div class="border-b border-white/5 pb-2">
+				<div class="text-[9px] text-blue-400 font-bold mb-1 uppercase">Unit Ability / 单元能力</div>
+				<div class="max-h-24 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-300 pr-1" 
+					 style="white-space: pre-wrap;" 
+					 v-html="formattedAbility(selectedCard.ability?.text)">
+				</div>
+			</div>
+			
+			<div>
+				<div class="text-[9px] text-yellow-500 font-bold mb-1 uppercase">Support Ability / 支援能力</div>
+				<div class="max-h-20 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-400 pr-1 italic" 
+					 style="white-space: pre-wrap;" 
+					 v-html="formattedSupport(selectedCard.supportAbility?.text)">
+				</div>
+			</div>
+			
+		</div>
+            <div class="p-4 bg-gray-800/20 space-y-2">
+			<div v-if="isMyCard(selectedCard)">
+				<div v-if="isCardInHand(selectedCard)" class="grid grid-cols-3 gap-2">
+					<button @click="playToField(selectedCard, 'front')" class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
+					<button @click="playToField(selectedCard, 'rear')" class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
+					<button @click="playToBond(selectedCard)" class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
+				</div>
+				<button v-else @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
+			</div>
+			<div v-if="isMyCard(selectedCard)" class="grid grid-cols-2 gap-2 mt-2 border-t border-white/5 pt-2">
+				<button v-if="getAreaName(getArea(selectedCard)) === 'bonds'" 
+						@click="toggleBondFace(selectedCard)" 
+						class="py-2 bg-amber-600 rounded text-[10px] col-span-2 font-bold uppercase">
+					{{ selectedCard.isFaceDown ? '翻开 (起立)' : '翻面 (横置/消耗)' }}
+				</button>
+				<button @click="moveTo(selectedCard, 'graveyard')" class="py-1.5 bg-gray-800 text-[9px] rounded border border-white/10">送入弃牌区</button>
+				<button @click="moveTo(selectedCard, 'jewels')" class="py-1.5 bg-purple-900/40 text-[9px] rounded border border-purple-500/50">转为宝玉</button>
+				<button @click="moveTo(selectedCard, 'boundless')" class="py-1.5 bg-blue-900/40 text-[9px] rounded border border-blue-500/50">送入无限区</button>
+				<button @click="moveTo(selectedCard, 'hand')" class="py-1.5 bg-green-900/40 text-[9px] rounded border border-green-500/50">回手牌</button>
+			</div>
+			<button @click="showFullImage = true" class="w-full py-1 text-indigo-400 text-[10px] uppercase font-bold">查看高清大图</button>
+		</div>
+        </div>
+    </div>
+	<div class="fixed right-2 top-24 z-[60] flex flex-col gap-2">
+		<button @click="activePanel = 'jewels'" class="w-10 h-10 bg-purple-900/80 border border-purple-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
+			<span>宝玉</span>
+			<span>{{jewels?.length || 0}}</span>
+		</button>
+		<button @click="activePanel = 'graveyard'" class="w-10 h-10 bg-gray-800/80 border border-gray-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
+			<span>弃牌</span>
+			<span>{{graveyard?.length || 0}}</span>
+		</button>
+		<button @click="activePanel = 'boundless'" class="w-10 h-10 bg-blue-900/80 border border-blue-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
+			<span>无限</span>
+			<span>{{boundless?.length || 0}}</span>
+		</button>
+		<button @click="activePanel = 'deck'" class="w-10 h-10 bg-red-900/80 border border-red-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
+			<span>牌组</span>
+			<span>{{deck?.length || 0}}</span>
+		</button>
+	</div>
+	<div class="fixed left-2 top-20 z-panel flex flex-col gap-3">
+    <div class="text-[8px] text-red-500 font-bold text-center uppercase opacity-50">Enemy</div>
+    <button v-for="type in ['oppJewels','oppGraveyard','oppBonds']" 
+            @click="activePanel = type"
+            class="w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95">
+        <span>{{ {oppJewels:'宝玉',oppGraveyard:'弃牌',oppBonds:'羁绊'}[type] }}</span>
+        <span class="text-red-500 font-mono">{{ this[type]?.length || 0 }}</span>
+    </button>
+</div>
+<div v-if="activePanel" class="fixed inset-0 z-region flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="activePanel = null"></div>
+    
+    <div class="relative bg-neutral-900 border border-white/10 w-full max-w-lg h-[70vh] rounded-xl flex flex-col animate-zoom">
+        <div class="p-3 border-b border-white/10 flex justify-between bg-white/5">
+            <span class="text-sm font-bold uppercase" :class="activePanel.startsWith('opp') ? 'text-red-500' : 'text-blue-400'">
+                {{ activePanel.startsWith('opp') ? '对手的' : '我的' }}
+                {{ {
+                    bonds: '羁绊区 (点击卡牌快速翻面)', 
+                    jewels: '宝玉区', 
+                    graveyard: '弃牌区', 
+                    boundless: '无限区', 
+                    deck: '牌组', 
+                    oppBonds: '羁绊区', 
+                    oppJewels: '宝玉区', 
+                    oppGraveyard: '弃牌区'
+                }[activePanel] }}
+            </span>
+            <button @click="activePanel = null" class="text-white p-1">✕</button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-2">
+            <div v-for="card in this[activePanel]" 
+                 :key="card.instanceId" 
+                 @click="handleMinifiedClick(card)" 
+                 class="aspect-[55/76] relative group">
+                <img :src="card.isFaceDown ? 'images/card_back.jpg' : card.image" 
+                     class="w-full h-full object-cover rounded shadow-md transition-all"
+                     :class="{ 'opacity-50 grayscale': card.isFaceDown }">
+                
+                <div v-if="card.isFaceDown" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="bg-black/60 px-2 py-1 rounded text-[10px] text-amber-500 border border-amber-500/30">已消耗</div>
+                </div>
+            </div>
+            
+            <div v-if="this[activePanel]?.length === 0" class="col-span-4 py-20 text-center text-gray-600 text-xs italic">
+                该区域目前没有卡牌
+            </div>
+        </div>
+    </div>
+</div>
+	
+    <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
+        <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
