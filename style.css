@@ -428,3 +428,50 @@ html, body {
 .card-adaptive {
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+/* ========================================= */
+/* ✨ 抽牌动画效果 (Draw Card Animation) ✨ */
+/* ========================================= */
+
+/* 1. 浮空卡片的初始和结束状态 */
+.draw-card-floating {
+    position: fixed;            /* 绝对定位，不影响布局 */
+    z-index: 999;               /* 在最顶层 */
+    width: var(--card-width, 70px); /* 匹配你 index.html 里定义的变量 */
+    aspect-ratio: 2/3;          /* 保持卡片比例 */
+    border-radius: 4px;         /* 匹配卡片圆角 */
+    pointer-events: none;       /* 避免点击干扰 */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* 增加 3D 悬浮阴影 */
+}
+
+/* 2. 👑 核心动画：从牌库(右下)飞到手牌(底部中央) */
+.draw-animation-flying {
+    /* 调用自定义 Keyframes */
+    animation: drawFlying 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+/* 3. 👑 核心 Keyframes 帧：3D 翻转 + 缩放 + 路径移动 */
+@keyframes drawFlying {
+    0% {
+        /* 起点：牌库位置 (假设在右下) */
+        /* 你可能需要根据你 HTML 里的 .deck 区域微调这些 translate 值 */
+        bottom: 100px;
+        right: 20px;
+        transform: scale(0.6) rotateY(180deg) rotateZ(0deg); /* 牌库背面向下，旋转180度 */
+        opacity: 0;
+    }
+    10% { opacity: 1; } /* 快速淡入 */
+    50% {
+        /* 路径中点：稍微悬浮高一点，产生一个弧度 */
+        bottom: 250px;
+        right: calc(50% - var(--card-width, 70px) / 2); /* 飞到水平中央 */
+        transform: scale(1.1) rotateY(90deg) rotateZ(10deg); /* 飞行时翻转到侧面 */
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8); /* 增加飞行时的阴影 */
+    }
+    100% {
+        /* 终点：手牌位置 (底部中央) */
+        bottom: 5px;
+        right: calc(50% - var(--card-width, 70px) / 2); /* 飞到水平中央 */
+        transform: scale(0.8) rotateY(0deg) rotateZ(0deg); /* 旋转回正、牌面向下，缩放到手牌大小 */
+        opacity: 0; /* 飞入后淡出 */
+    }
+}

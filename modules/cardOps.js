@@ -23,6 +23,7 @@ export function createCardOperations(state) {
         if (area === boundless.value) return 'boundless'; if (area === deck.value) return 'deck'; return 'unknown';
     };
 
+    // 2. 修改移动逻辑
     const moveTo = (card, toAreaName) => {
         const fromArea = getArea(card);
         if (!fromArea) return;
@@ -31,24 +32,75 @@ export function createCardOperations(state) {
 
         const idx = fromArea.findIndex(c => c.instanceId === card.instanceId);
         if (idx > -1) {
-            undoStack.value.push({ card, from: fromAreaName, to: toAreaName });
+            // 📝 核心改动：在撤销栈里存入 previousPhase 和 previousHasPlacedBond
+            undoStack.value.push({ 
+                card, 
+                from: fromAreaName, 
+                to: toAreaName,
+                previousPhase: state.currentPhase.value,
+                previousHasPlacedBond: hasPlacedBond.value
+            });
             if (undoStack.value.length > 10) undoStack.value.shift();
+            
             const targetCard = fromArea.splice(idx, 1)[0];
             getAreaArray(toAreaName).push(targetCard);
-            socket.emit('sync-card-move', { card: targetCard, to: toAreaName, from: fromAreaName });
+            if (socket) socket.emit('sync-card-move', { card: targetCard, to: toAreaName, from: fromAreaName });
             selectedCard.value = null;
         }
-        if (toAreaName === 'bonds') hasPlacedBond.value = true;
+
+        // 🚀 自动过渡：如果把卡片放进了羁绊区
+        if (toAreaName === 'bonds') {
+            hasPlacedBond.value = true;
+            // 如果在 BOND 阶段，放完自动切入 DEPLOY 阶段
+            if (state.currentPhase.value === 'BOND' && !state.isDevMode.value) {
+                state.currentPhase.value = 'DEPLOY';
+            }
+        }
     };
 
     const playToField = (card, pos) => moveTo(card, pos);
     const playToBond = (card) => moveTo(card, 'bonds');
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
 
+    // 1. 修改抽牌逻辑
+    // modules/cardOps.js
+
+    // 🏆 精美动画版抽牌
     const drawCard = () => {
         if (hand.value.length >= 10 || deck.value.length === 0) return;
-        hand.value.push(deck.value.pop());
-        socket.emit('player-draw');
+
+        // 📝 1. 撤销快照（保持不变）
+        undoStack.value.push({ 
+            type: 'draw', 
+            previousPhase: state.currentPhase.value 
+        });
+        if (undoStack.value.length > 10) undoStack.value.shift();
+
+        // 🚀 2. 👑 启动动画！
+        // a. 设置浮空卡片的图片为你的牌组第一张（盲抽模式，默认为背面对手，如果你想显示正面可以改成 nextCard.image）
+        const nextCard = deck.value[deck.value.length - 1]; // 获取牌顶
+        if (nextCard) {
+            // 你可以设置一个背面对手的图，更有盲抽感
+            state.currentDrawCardImage.value = '/images/card_back.jpg'; // 请确保你有这个图
+        }
+        
+        // b. 激活动画状态
+        state.isDrawingAnimationActive.value = true;
+
+        // 🚀 3. 在 800ms 动画飞完后，执行真正的发牌逻辑
+        setTimeout(() => {
+            hand.value.push(deck.value.pop());
+            if (socket) socket.emit('player-draw');
+
+            // c. 飞完后，自动切入羁绊阶段（原有逻辑）
+            if (state.currentPhase.value === 'BEGINNING' && !state.isDevMode.value) {
+                state.currentPhase.value = 'BOND';
+            }
+
+            // d. 💥 核心：飞完后，清理浮空卡片，以免它一直显示在界面中央
+            state.isDrawingAnimationActive.value = false;
+            
+        }, 800); // 800ms 必须匹配 style.css 里 animation 的时长
     };
 
     const toggleBondFace = (card) => {
@@ -57,15 +109,30 @@ export function createCardOperations(state) {
         socket.emit('sync-bond-flip', { instanceId: card.instanceId, isFaceDown: card.isFaceDown });
     };
 
+    // 3. 修改撤销逻辑
     const undoLastMove = () => {
         const last = undoStack.value.pop();
         if (!last) return;
+
+        // ⏪ 第一优先级：时光倒流！不管撤销了什么，先把阶段和羁绊状态退回去！
+        if (last.previousPhase) state.currentPhase.value = last.previousPhase;
+        if (last.previousHasPlacedBond !== undefined) hasPlacedBond.value = last.previousHasPlacedBond;
+
+        // ⏪ 特殊处理：如果是撤销了抽牌
+        if (last.type === 'draw') {
+            const card = hand.value.pop();
+            if (card) deck.value.push(card); // 退回牌顶
+            // (注：完美同步下此处需通知对手手牌减1，但为了流畅单机回退优先)
+            return;
+        }
+
+        // ⏪ 正常处理：卡牌移动的撤销
         const currentArea = getAreaArray(last.to);
         const idx = currentArea.findIndex(c => c.instanceId === last.card.instanceId);
         if (idx > -1) {
             const card = currentArea.splice(idx, 1)[0];
             getAreaArray(last.from).push(card);
-            socket.emit('sync-card-move', { card, to: last.from, from: last.to });
+            if (socket) socket.emit('sync-card-move', { card, to: last.from, from: last.to });
         }
     };
 

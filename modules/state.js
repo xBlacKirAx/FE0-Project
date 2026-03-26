@@ -43,7 +43,10 @@ export function createGameState() {
     
     // ===== Socket 连接 =====
     const socket = io();
-    
+    // 👇 新增：抽牌动画控制 👇
+    const isDrawingAnimationActive = ref(false); // 是否正在播放抽牌动画
+    const currentDrawCardImage = ref('/images/card_back.jpg'); // 抽出的牌的图片（默认背面对手）
+    // 👆 新增代码结束 👆
     // ===== 游戏阶段定义 =====
     const PHASES = {
         BEGINNING: { name: '开始阶段' },
@@ -71,6 +74,8 @@ export function createGameState() {
         // 游戏状态
         isDevMode, currentPhase, isMyTurn, hasPlacedBond,
         oppStats, socket, PHASES,
-        isCombatActive, combatPhase, attacker, defender, mySupportCard, oppSupportCard, combatStats
+        isCombatActive, combatPhase, attacker, defender, mySupportCard, oppSupportCard, combatStats,
+        // 👇 新增：抽牌动画控制 👇
+        isDrawingAnimationActive, currentDrawCardImage
     };
 }
