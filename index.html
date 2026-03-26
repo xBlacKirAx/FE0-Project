@@ -15,9 +15,6 @@
 
 <div id="app" class="h-full flex flex-col relative">
 
-    <div v-if="isDrawingAnimationActive" class="draw-card-floating draw-animation-flying">
-        <img :src="currentDrawCardImage" class="w-full h-full rounded shadow-2xl object-contain border border-white/20">
-    </div>
     <div class="top-bar">
         <div class="flex w-full justify-between items-center px-4 text-[10px]">
             <div class="flex gap-3">
@@ -137,12 +134,20 @@
             </div>
         </div>
     </div>
-    </div> <div class="absolute bottom-[100px] right-2 sm:right-6 scale-[0.6] sm:scale-100 origin-bottom-right z-50" @click="drawCard">
-        <span class="area-label text-[10px] text-white font-bold drop-shadow-md">Deck ({{ deck?.length || 0 }})</span>
-        <div class="relative cursor-pointer hover:scale-105 transition-transform mt-1">
-            <img v-if="!deck || deck.length === 0" src="/images/placeholders/deck.png" class="opacity-50 h-[80px] sm:h-[100px] aspect-[2/3] object-contain">
-            <img v-else src="images/card_back.jpg" class="h-[80px] sm:h-[100px] aspect-[2/3] object-contain rounded shadow-lg border border-white/20">
+    <div class="fixed right-2 sm:right-6 bottom-[130px] sm:bottom-[150px] z-[90] flex flex-col items-center cursor-pointer group" @click="drawCard">
+        
+        <span class="text-[10px] sm:text-xs text-white font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] bg-black/60 px-2 py-0.5 rounded-full mb-1">
+            Deck: {{ deck?.length || 0 }}
+        </span>
+        
+        <div class="relative transition-transform duration-200 group-hover:-translate-y-2 group-active:scale-95">
+            <img v-if="!deck || deck.length === 0" src="images/card_back.jpg" class="opacity-30 grayscale w-12 sm:w-16 aspect-[55/76] object-cover rounded shadow border border-white/10">
+            <img v-else src="images/card_back.jpg" class="w-12 sm:w-16 aspect-[55/76] object-cover rounded shadow-[0_5px_15px_rgba(0,0,0,0.6)] border border-white/30">
+            
+            <div v-if="deck && deck.length > 1" class="absolute inset-0 rounded border-t border-r border-white/30 translate-x-[2px] -translate-y-[2px] -z-10 bg-[#1a1a1a]"></div>
+            <div v-if="deck && deck.length > 10" class="absolute inset-0 rounded border-t border-r border-white/20 translate-x-[4px] -translate-y-[4px] -z-20 bg-[#1a1a1a]"></div>
         </div>
+
     </div>
     <div class="hand-container-fixed">
 		<div class="h-10 px-2 flex items-center bonds-area" data-area="bonds"
