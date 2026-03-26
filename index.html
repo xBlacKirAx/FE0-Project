@@ -52,28 +52,36 @@
     </button>
 	
     <div class="battle-container">
-        <div class="battle-row row-opp-rear">
-            <div v-for="card in opponentRear" :key="card.instanceId" 
-                class="card-adaptive"
-                :data-enemy-id="card.instanceId"
-                @dragover.prevent="isDraggingOver = 'attack-target'"
-                @dragleave="isDraggingOver = null"
-                @drop.stop="onAttackDrop(card)"   @click="selectedCard = card">
-                <img :src="card.image">
-            </div>
-        </div>
-        <div class="battle-row row-opp-front">
-            <div v-for="card in opponentFront" :key="card.instanceId" 
-                class="card-adaptive"
-                :data-enemy-id="card.instanceId"                     
-                @dragover.prevent="isDraggingOver = 'attack-target'" 
-                @dragleave="isDraggingOver = null"
-                @drop.stop="onAttackDrop(card)"   @click="selectedCard = card">
+        <div class="battle-row row-opp-rear overflow-visible"> <div v-for="card in opponentRear" :key="card.instanceId" 
+                 class="card-adaptive"
+                 :class="{'is-mc-card': card.isMainCharacter}" 
+                 :data-enemy-id="card.instanceId"
+                 @dragover.prevent="isDraggingOver = 'attack-target'"
+                 @dragleave="isDraggingOver = null"
+                 @drop.stop="onAttackDrop(card)"
+                 @click="handleMinifiedClick(card)">
+                
+                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
                 <img :src="card.image">
             </div>
         </div>
 
-        <div class="battle-row row-my-front overflow-hidden" data-area="front" 
+        <div class="battle-row row-opp-front overflow-visible">
+            <div v-for="card in opponentFront" :key="card.instanceId" 
+                 class="card-adaptive"
+                 :class="{'is-mc-card': card.isMainCharacter}"
+                 :data-enemy-id="card.instanceId"
+                 @dragover.prevent="isDraggingOver = 'attack-target'"
+                 @dragleave="isDraggingOver = null"
+                 @drop.stop="onAttackDrop(card)"
+                 @click="handleMinifiedClick(card)">
+                
+                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
+                <img :src="card.image">
+            </div>
+        </div>
+
+        <div class="battle-row row-my-front overflow-visible" data-area="front" 
              :class="{'guide-deploy-active': currentPhase === 'DEPLOY' && !isDevMode,
              'dragging-over': isDraggingOver === 'front'}"
              @dragover.prevent="isDraggingOver = 'front'"
@@ -81,18 +89,21 @@
              @drop="onDrop('front')">
             <span class="area-label">Front</span>
             <div v-for="card in fieldFront" :key="card.instanceId" 
-                 class="card-adaptive" 
+                 class="card-adaptive deployable-card" 
+                 :class="{'is-mc-card': card.isMainCharacter}" 
                  draggable="true" 
                  @dragstart="onDragStart(card)"
                  @touchstart="onTouchStart($event, card)" 
                  @touchmove="onTouchMove"
                  @touchend="onTouchEnd($event, card)"
-                 @click="selectedCard = card">
+                 @click="handleMinifiedClick(card)">
+                
+                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
                 <img :src="card.image">
             </div>
         </div>
 
-        <div class="battle-row row-my-rear overflow-hidden" data-area="rear"
+        <div class="battle-row row-my-rear overflow-visible" data-area="rear"
              :class="{'guide-deploy-active': currentPhase === 'DEPLOY' && !isDevMode,
              'dragging-over': isDraggingOver === 'rear'}"
              @dragover.prevent="isDraggingOver = 'rear'"
@@ -100,13 +111,16 @@
              @drop="onDrop('rear')">
             <span class="area-label">Rear</span>
             <div v-for="card in fieldRear" :key="card.instanceId" 
-                 class="card-adaptive" 
+                 class="card-adaptive deployable-card" 
+                 :class="{'is-mc-card': card.isMainCharacter}"
                  draggable="true" 
                  @dragstart="onDragStart(card)"
                  @touchstart="onTouchStart($event, card)" 
                  @touchmove="onTouchMove"
                  @touchend="onTouchEnd($event, card)"
-                 @click="selectedCard = card">
+                 @click="handleMinifiedClick(card)">
+                
+                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
                 <img :src="card.image">
             </div>
         </div>

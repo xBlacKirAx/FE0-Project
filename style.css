@@ -339,3 +339,77 @@ html, body {
     transform: scale(1.05);
     transition: all 0.2s;
 }
+/* ========================================= */
+/* 👑 主人公专属标记 (Main Character Marker) 👑 */
+/* ========================================= */
+
+/* 1. 全局定义标记的样式 */
+.mc-crown-marker {
+    position: absolute; /* 相对于卡片定位 */
+    top: -6px;          /* 稍微悬浮在卡片上方 */
+    right: -6px;         /* 稍微悬浮在卡片右侧 */
+    z-index: 50;        /* 确保在所有内容之上 */
+    
+    /* 核心视觉设计：金色、圆形、黑字 */
+    width: 20px;
+    height: 20px;
+    background-color: #EAB308; /* Tailwind yellow-500 */
+    color: #000;              /* 黑字 */
+    font-size: 11px;
+    font-weight: 900;          /* 最粗字体 */
+    font-family: 'Noto Sans SC', sans-serif; /* 匹配项目字体 */
+    
+    /* 对齐 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;      /* 完美圆形 */
+    
+    /* 极致的视觉质感 */
+    border: 2px solid #FFF;    /* 白边框，增加反差 */
+    box-shadow: 
+        0 4px 6px -1px rgba(0, 0, 0, 0.5), /* 阴影增加悬浮感 */
+        0 0 15px rgba(234, 179, 8, 0.8),   /* 金色光晕 */
+        0 0 5px #FFF;                      /* 内光晕 */
+    
+    /* 避免点击时干扰卡片详情 */
+    pointer-events: none;
+    user-select: none;
+}
+
+/* 2. 👑 主人公卡片整体高亮 (可选，推荐) */
+/* 当一张卡是主人公时，可以给它一个金色的、呼吸感的外发光 */
+.is-mc-card {
+    position: relative; /* 确保 marker 定位准确 */
+    overflow: visible !important; /* 允许 marker 悬浮出去 */
+}
+
+/* 用伪元素做呼吸光，避免影响卡片本身的 scale 动画 */
+.is-mc-card::after {
+    content: '';
+    position: absolute;
+    inset: -3px; /* 比卡片大一圈 */
+    border-radius: 6px; /* 匹配卡片圆角 */
+    background: radial-gradient(circle, rgba(234, 179, 8, 0.6) 0%, rgba(234, 179, 8, 0) 70%);
+    filter: blur(4px);
+    z-index: -1; /* 在卡片下方 */
+    animation: mc-pulse 2s infinite ease-in-out;
+}
+
+/* 呼吸动画 */
+@keyframes mc-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.02); }
+}
+
+/* 移动端适配：缩小标记尺寸 */
+@media (max-width: 640px) {
+    .mc-crown-marker {
+        width: 16px;
+        height: 16px;
+        font-size: 9px;
+        top: -4px;
+        right: -4px;
+        border-width: 1.5px;
+    }
+}

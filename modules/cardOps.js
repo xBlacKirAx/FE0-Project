@@ -87,16 +87,47 @@ export function createCardOperations(state) {
         }, 800);
     };
 
+    // ⚔️ 终极判决版：结算战斗
     const resolveCombat = (state) => {
         const isMyAttacker = ['fieldFront', 'fieldRear'].some(area => state[area].value.some(c => c.instanceId === state.attacker.value.instanceId));
         const attackerWins = state.combatStats.value.myTotalPower >= state.combatStats.value.oppTotalPower;
 
         if (attackerWins) {
             const targetId = state.defender.value.instanceId;
-            ['fieldFront', 'fieldRear'].forEach(area => { const idx = state[area].value.findIndex(c => c.instanceId === targetId); if (idx > -1) state.graveyard.value.push(state[area].value.splice(idx, 1)[0]); });
-            ['opponentFront', 'opponentRear'].forEach(area => { const idx = state[area].value.findIndex(c => c.instanceId === targetId); if (idx > -1) state.oppGraveyard.value.push(state[area].value.splice(idx, 1)[0]); });
+            const isTargetMC = state.defender.value.isMainCharacter; // 👈 检查是否是主人公
+
+            if (isTargetMC) {
+                console.log("👑 主人公被击破！");
+                if (isMyAttacker) {
+                    // 【我是攻击方】：我打爆了对面的主人公！
+                    if (state.oppJewels.value.length > 0) {
+                        state.oppJewels.value.pop(); // 对方扣除一颗宝玉
+                        state.oppStats.value.hand++; // 对方手牌+1
+                    } else {
+                        // 对方没宝玉了，我赢了！
+                        setTimeout(() => alert("🏆 决杀！你击破了对手没有宝玉的主人公，获得胜利！"), 600);
+                    }
+                } else {
+                    // 【我是防守方】：我的主人公被打爆了...
+                    if (state.jewels.value.length > 0) {
+                        const brokenJewel = state.jewels.value.pop(); // 拿走我的一颗宝玉
+                        brokenJewel.isFaceDown = false; // 翻开它
+                        state.hand.value.push(brokenJewel); // 加入我的手牌
+                    } else {
+                        // 我没宝玉了，我输了...
+                        setTimeout(() => alert("💀 败北... 你的主人公在没有宝玉的情况下被击破。"), 600);
+                    }
+                }
+                // 注意：主人公不进弃牌区，继续留在场上
+            } else {
+                // 如果不是主人公，正常送入弃牌区
+                console.log("💥 普通单位被击破！");
+                ['fieldFront', 'fieldRear'].forEach(area => { const idx = state[area].value.findIndex(c => c.instanceId === targetId); if (idx > -1) state.graveyard.value.push(state[area].value.splice(idx, 1)[0]); });
+                ['opponentFront', 'opponentRear'].forEach(area => { const idx = state[area].value.findIndex(c => c.instanceId === targetId); if (idx > -1) state.oppGraveyard.value.push(state[area].value.splice(idx, 1)[0]); });
+            }
         }
 
+        // 支援卡退场 (逻辑不变)
         if (isMyAttacker) {
             if (state.mySupportCard.value) state.graveyard.value.push(state.mySupportCard.value);
             if (state.oppSupportCard.value) state.oppGraveyard.value.push(state.oppSupportCard.value);
@@ -129,7 +160,14 @@ export function createCardOperations(state) {
             const data = await res.json();
             deck.value = data.map(c => ({ ...c, instanceId: Math.random() + Date.now(), isFaceDown: false })).sort(() => Math.random() - 0.5);
 
-            if (deck.value.length > 0) fieldFront.value.push(deck.value.pop());
+            // 👇 修改这里：给选出的第一张牌加上 isMainCharacter 标记
+            if (deck.value.length > 0) {
+                const mc = deck.value.pop();
+                mc.isMainCharacter = true; // 👑 核心标记：这是主人公！
+                fieldFront.value.push(mc);
+            }
+            // 👆 修改结束
+
             for(let i=0; i<5; i++) { if(deck.value.length > 0) { const j = deck.value.pop(); j.isFaceDown = true; jewels.value.push(j); } }
             for(let i=0; i<6; i++) { if(deck.value.length > 0) hand.value.push(deck.value.pop()); }
         } catch (err) { console.error("加载失败", err); }
