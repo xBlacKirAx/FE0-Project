@@ -110,16 +110,10 @@ createApp({
             
             // 卡片操作
             ...cardOps,
-            
+            ...rules,
             // 拖拽交互
-            onDragStart: dragDrop.onDragStart,
-            onDragOver: dragDrop.onDragOver,
-            onDrop: dragDrop.onDrop,
-            onDropMouse: dragDrop.onDropMouse,
-            onTouchStart: dragDrop.onTouchStart,
-            onTouchMove: dragDrop.onTouchMove,
-            onTouchEnd: dragDrop.onTouchEnd,
-            
+            // 拖拽交互 (这一句顶替了你原来写的 onDragStart, onDrop 等一长串)
+            ...dragDrop,
             // 回合管理
             nextPhase: turnMgr.nextPhase,
             

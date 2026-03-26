@@ -52,7 +52,13 @@ export function createGameState() {
         ATTACK:    { name: '攻击阶段' },
         END:       { name: '结束阶段' }
     };
-
+    const isCombatActive = ref(false);
+    const combatPhase = ref('NONE');
+    const attacker = ref(null);
+    const defender = ref(null);
+    const mySupportCard = ref(null);
+    const oppSupportCard = ref(null);
+    const combatStats = ref({ myTotalPower: 0, oppTotalPower: 0 });
     return {
         // 我方区域
         hand, fieldFront, fieldRear, bonds, jewels, graveyard, boundless, deck,
@@ -64,6 +70,7 @@ export function createGameState() {
         isDraggingOver, draggedCard, undoStack,
         // 游戏状态
         isDevMode, currentPhase, isMyTurn, hasPlacedBond,
-        oppStats, socket, PHASES
+        oppStats, socket, PHASES,
+        isCombatActive, combatPhase, attacker, defender, mySupportCard, oppSupportCard, combatStats
     };
 }

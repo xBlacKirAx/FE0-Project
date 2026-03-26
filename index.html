@@ -59,7 +59,14 @@
             </div>
         </div>
         <div class="battle-row row-opp-front">
-            <div v-for="card in opponentFront" class="card-adaptive"><img :src="card.image"></div>
+            <div v-for="card in opponentFront" :key="card.instanceId" 
+                class="card-adaptive"
+                :data-enemy-id="card.instanceId"                     
+                @dragover.prevent="isDraggingOver = 'attack-target'" 
+                @dragleave="isDraggingOver = null"
+                @drop.stop="onAttackDrop(card)"   @click="selectedCard = card">
+                <img :src="card.image">
+            </div>
         </div>
 
         <div class="battle-row row-my-front overflow-hidden" data-area="front" 
@@ -211,54 +218,7 @@
         <span>{{ {oppJewels:'宝玉',oppGraveyard:'弃牌',oppBonds:'羁绊'}[type] }}</span>
         <span class="text-red-500 font-mono">{{ this[type]?.length || 0 }}</span>
     </button>
-</div>
-<div v-if="activePanel" class="fixed inset-0 z-region flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="activePanel = null"></div>
-    
-    <div class="relative bg-neutral-900 border border-white/10 w-full max-w-lg h-[70vh] rounded-xl flex flex-col animate-zoom">
-        <div class="p-3 border-b border-white/10 flex justify-between bg-white/5">
-            <span class="text-sm font-bold uppercase" :class="activePanel.startsWith('opp') ? 'text-red-500' : 'text-blue-400'">
-                {{ activePanel.startsWith('opp') ? '对手的' : '我的' }}
-                {{ {
-                    bonds: '羁绊区 (点击卡牌快速翻面)', 
-                    jewels: '宝玉区', 
-                    graveyard: '弃牌区', 
-                    boundless: '无限区', 
-                    deck: '牌组', 
-                    oppBonds: '羁绊区', 
-                    oppJewels: '宝玉区', 
-                    oppGraveyard: '弃牌区'
-                }[activePanel] }}
-            </span>
-            <button @click="activePanel = null" class="text-white p-1">✕</button>
-        </div>
-        
-        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-2">
-            <div v-for="card in this[activePanel]" 
-                 :key="card.instanceId" 
-                 @click="handleMinifiedClick(card)" 
-                 class="aspect-[55/76] relative group">
-                <img :src="card.isFaceDown ? 'images/card_back.jpg' : card.image" 
-                     class="w-full h-full object-cover rounded shadow-md transition-all"
-                     :class="{ 'opacity-50 grayscale': card.isFaceDown }">
-                
-                <div v-if="card.isFaceDown" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div class="bg-black/60 px-2 py-1 rounded text-[10px] text-amber-500 border border-amber-500/30">已消耗</div>
-                </div>
-            </div>
-            
-            <div v-if="this[activePanel]?.length === 0" class="col-span-4 py-20 text-center text-gray-600 text-xs italic">
-                该区域目前没有卡牌
-            </div>
-        </div>
-    </div>
-</div>
-	
-    <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
-        <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">
-    </div>
-</div>
-<div v-if="isCombatActive" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
+    <div v-if="isCombatActive" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
         <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
         
         <div class="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
@@ -335,6 +295,55 @@
             </div>
         </div>
     </div>
+</div>
+<div v-if="activePanel" class="fixed inset-0 z-region flex items-center justify-center p-4">
+    <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="activePanel = null"></div>
+    
+    <div class="relative bg-neutral-900 border border-white/10 w-full max-w-lg h-[70vh] rounded-xl flex flex-col animate-zoom">
+        <div class="p-3 border-b border-white/10 flex justify-between bg-white/5">
+            <span class="text-sm font-bold uppercase" :class="activePanel.startsWith('opp') ? 'text-red-500' : 'text-blue-400'">
+                {{ activePanel.startsWith('opp') ? '对手的' : '我的' }}
+                {{ {
+                    bonds: '羁绊区 (点击卡牌快速翻面)', 
+                    jewels: '宝玉区', 
+                    graveyard: '弃牌区', 
+                    boundless: '无限区', 
+                    deck: '牌组', 
+                    oppBonds: '羁绊区', 
+                    oppJewels: '宝玉区', 
+                    oppGraveyard: '弃牌区'
+                }[activePanel] }}
+            </span>
+            <button @click="activePanel = null" class="text-white p-1">✕</button>
+        </div>
+        
+        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-2">
+            <div v-for="card in this[activePanel]" 
+                 :key="card.instanceId" 
+                 @click="handleMinifiedClick(card)" 
+                 class="aspect-[55/76] relative group">
+                <img :src="card.isFaceDown ? 'images/card_back.jpg' : card.image" 
+                     class="w-full h-full object-cover rounded shadow-md transition-all"
+                     :class="{ 'opacity-50 grayscale': card.isFaceDown }">
+                
+                <div v-if="card.isFaceDown" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <div class="bg-black/60 px-2 py-1 rounded text-[10px] text-amber-500 border border-amber-500/30">已消耗</div>
+                </div>
+            </div>
+            
+            <div v-if="this[activePanel]?.length === 0" class="col-span-4 py-20 text-center text-gray-600 text-xs italic">
+                该区域目前没有卡牌
+            </div>
+        </div>
+    </div>
+</div>
+	
+    <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
+        <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">
+    </div>
+    
+</div>
+
 <script src="/socket.io/socket.io.js"></script>
 <script type="module" src="app.js"></script>
 </body>

@@ -3,7 +3,8 @@
 
 export function createDragDropHandler(state, cardOps, rules) {
     const { draggedCard, isDraggingOver } = state;
-    const { moveTo } = cardOps;
+    // 确保从 cardOps 中提取了 initiateAttack
+    const { moveTo, initiateAttack } = cardOps; 
     const { canPerformAction, getActionByArea } = rules;
 
     /**
@@ -11,12 +12,11 @@ export function createDragDropHandler(state, cardOps, rules) {
      */
     const onDragStart = (card) => {
         draggedCard.value = card;
-        // 振动反馈
         if (window.navigator.vibrate) window.navigator.vibrate(10);
     };
 
     /**
-     * 鼠标拖拽中（用于标记目标区域）
+     * 鼠标拖拽中
      */
     const onDragOver = (e, areaName) => {
         e.preventDefault();
@@ -24,15 +24,33 @@ export function createDragDropHandler(state, cardOps, rules) {
     };
 
     /**
-     * 鼠标拖拽结束
+     * ⚔️ 新增：PC端 拖拽到敌方卡片上松开 (发起攻击)
+     */
+    const onAttackDrop = (enemyCard) => {
+        isDraggingOver.value = null;
+        if (!draggedCard.value) return;
+
+        // 🔑 增加 !state.isDevMode.value 判定
+        if (state.currentPhase.value !== 'ATTACK' && !state.isDevMode.value) {
+            console.warn("[规则拦截] 只能在【攻击阶段】发起攻击！");
+            draggedCard.value = null;
+            return;
+        }
+
+        if (initiateAttack) {
+            initiateAttack(state, draggedCard.value, enemyCard);
+        }
+        draggedCard.value = null;
+    };
+
+    /**
+     * 鼠标拖拽到区域结束 (出击/移动)
      */
     const onDropMouse = (toAreaName) => {
         isDraggingOver.value = null;
         if (!draggedCard.value) return;
 
         const actionType = getActionByArea(toAreaName);
-        
-        // 规则检查
         if (actionType && !canPerformAction(actionType)) {
             console.warn(`[规则拦截] 无法执行 ${actionType}`);
             draggedCard.value = null;
@@ -52,7 +70,7 @@ export function createDragDropHandler(state, cardOps, rules) {
     };
 
     /**
-     * 触摸移动（实时更新高亮区域）
+     * 触摸移动（实时更新高亮或锁定敌方）
      */
     const onTouchMove = (e) => {
         if (!draggedCard.value) return;
@@ -60,9 +78,13 @@ export function createDragDropHandler(state, cardOps, rules) {
 
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        const enemyCardEl = element?.closest('[data-enemy-id]');
         const area = element?.closest('[data-area]');
         
-        if (area) {
+        if (enemyCardEl && (state.currentPhase.value === 'ATTACK' || state.isDevMode.value)) {
+            isDraggingOver.value = 'attack-target';
+        } else if (area) {
             isDraggingOver.value = area.getAttribute('data-area');
         } else {
             isDraggingOver.value = null;
@@ -70,18 +92,33 @@ export function createDragDropHandler(state, cardOps, rules) {
     };
 
     /**
-     * 触摸结束
+     * 触摸结束 (移动端自动判定)
      */
     const onTouchEnd = (e, card) => {
         if (!draggedCard.value) return;
 
         const touch = e.changedTouches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        const areaElement = element?.closest('[data-area]');
         
+        // 1. 优先判定是否放在了敌方卡片上
+        const enemyCardEl = element?.closest('[data-enemy-id]');
+        if (enemyCardEl && (state.currentPhase.value === 'ATTACK' || state.isDevMode.value)) {
+            const enemyId = enemyCardEl.getAttribute('data-enemy-id');
+            const allEnemyCards = [...state.opponentFront.value, ...state.opponentRear.value];
+            const targetCard = allEnemyCards.find(c => String(c.instanceId) === enemyId);
+            
+            if (targetCard && initiateAttack) {
+                initiateAttack(state, draggedCard.value, targetCard);
+            }
+            draggedCard.value = null;
+            isDraggingOver.value = null;
+            return;
+        }
+
+        // 2. 否则判定是否放在了己方区域
+        const areaElement = element?.closest('[data-area]');
         if (areaElement) {
             const areaName = areaElement.getAttribute('data-area');
-            
             const actionType = getActionByArea(areaName);
             if (actionType && !canPerformAction(actionType)) {
                 console.warn(`[规则拦截] 无法执行 ${actionType}`);
@@ -89,7 +126,6 @@ export function createDragDropHandler(state, cardOps, rules) {
                 isDraggingOver.value = null;
                 return;
             }
-
             moveTo(draggedCard.value, areaName);
         }
         
@@ -97,22 +133,13 @@ export function createDragDropHandler(state, cardOps, rules) {
         isDraggingOver.value = null;
     };
 
+    // 暴露给 Vue 的方法
     return {
-        onDrop: (toAreaName) => {
-            isDraggingOver.value = null;
-            if (!draggedCard.value) return;
-            const actionType = getActionByArea(toAreaName);
-            if (actionType && !canPerformAction(actionType)) {
-                console.warn(`[规则拦截] 无法执行 ${actionType}`);
-                draggedCard.value = null;
-                return;
-            }
-            moveTo(draggedCard.value, toAreaName);
-            draggedCard.value = null;
-        },
+        onDrop: onDropMouse, // 兼容 index.html 里的 @drop="onDrop('front')"
+        onDropMouse,
+        onAttackDrop,        // 👈 这次绝对把它暴露出去了！
         onDragStart,
         onDragOver,
-        onDropMouse,
         onTouchStart,
         onTouchMove,
         onTouchEnd
