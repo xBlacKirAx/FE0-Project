@@ -3,36 +3,34 @@
 
 export function createDragDropHandler(state, cardOps, rules) {
     const { draggedCard, isDraggingOver } = state;
-    // 确保从 cardOps 中提取了 initiateAttack
-    const { moveTo, initiateAttack } = cardOps; 
+    const { moveTo, initiateAttack } = cardOps;
     const { canPerformAction, getActionByArea } = rules;
-
-    /**
-     * 鼠标拖拽开始
-     */
+    // 👇 1. 新增：用来区分是“点击”还是“拖拽”
+    let hasMoved = false;
     const onDragStart = (card) => {
         draggedCard.value = card;
         if (window.navigator.vibrate) window.navigator.vibrate(10);
     };
 
-    /**
-     * 鼠标拖拽中
-     */
     const onDragOver = (e, areaName) => {
         e.preventDefault();
         isDraggingOver.value = areaName;
     };
 
-    /**
-     * ⚔️ 新增：PC端 拖拽到敌方卡片上松开 (发起攻击)
-     */
     const onAttackDrop = (enemyCard) => {
         isDraggingOver.value = null;
         if (!draggedCard.value) return;
 
-        // 🔑 增加 !state.isDevMode.value 判定
+        // 【规则拦截】非攻击阶段
         if (state.currentPhase.value !== 'ATTACK' && !state.isDevMode.value) {
             console.warn("[规则拦截] 只能在【攻击阶段】发起攻击！");
+            draggedCard.value = null;
+            return;
+        }
+
+        // 【规则拦截】已横置卡牌
+        if (draggedCard.value.isTapped && !state.isDevMode.value) {
+            console.warn("[规则拦截] 已横置的卡牌无法再次攻击！");
             draggedCard.value = null;
             return;
         }
@@ -43,9 +41,6 @@ export function createDragDropHandler(state, cardOps, rules) {
         draggedCard.value = null;
     };
 
-    /**
-     * 鼠标拖拽到区域结束 (出击/移动)
-     */
     const onDropMouse = (toAreaName) => {
         isDraggingOver.value = null;
         if (!draggedCard.value) return;
@@ -61,29 +56,30 @@ export function createDragDropHandler(state, cardOps, rules) {
         draggedCard.value = null;
     };
 
-    /**
-     * 触摸开始
-     */
+    let touchMoved = false; // 区分是“点击”还是“拖拽”
+
     const onTouchStart = (e, card) => {
         draggedCard.value = card;
+        touchMoved = false; // 每次触摸重置
         if (window.navigator.vibrate) window.navigator.vibrate(10);
     };
 
-    /**
-     * 触摸移动（实时更新高亮或锁定敌方）
-     */
     const onTouchMove = (e) => {
         if (!draggedCard.value) return;
+        touchMoved = true; // 只要手指滑动了，就是真正的拖拽
         e.preventDefault();
 
         const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        
         const enemyCardEl = element?.closest('[data-enemy-id]');
         const area = element?.closest('[data-area]');
         
         if (enemyCardEl && (state.currentPhase.value === 'ATTACK' || state.isDevMode.value)) {
-            isDraggingOver.value = 'attack-target';
+             if (draggedCard.value.isTapped && !state.isDevMode.value) {
+                 isDraggingOver.value = null; 
+             } else {
+                 isDraggingOver.value = 'attack-target';
+             }
         } else if (area) {
             isDraggingOver.value = area.getAttribute('data-area');
         } else {
@@ -91,31 +87,44 @@ export function createDragDropHandler(state, cardOps, rules) {
         }
     };
 
-    /**
-     * 触摸结束 (移动端自动判定)
-     */
     const onTouchEnd = (e, card) => {
         if (!draggedCard.value) return;
 
-        const touch = e.changedTouches[0];
-        const element = document.elementFromPoint(touch.clientX, touch.clientY);
-        
-        // 1. 优先判定是否放在了敌方卡片上
-        const enemyCardEl = element?.closest('[data-enemy-id]');
-        if (enemyCardEl && (state.currentPhase.value === 'ATTACK' || state.isDevMode.value)) {
-            const enemyId = enemyCardEl.getAttribute('data-enemy-id');
-            const allEnemyCards = [...state.opponentFront.value, ...state.opponentRear.value];
-            const targetCard = allEnemyCards.find(c => String(c.instanceId) === enemyId);
-            
-            if (targetCard && initiateAttack) {
-                initiateAttack(state, draggedCard.value, targetCard);
-            }
+        // 🛡️ 核心机制：记录拖拽结束的时间戳到全局
+        window.lastDragEndTime = Date.now();
+
+        if (!touchMoved) {
+            // 如果没移动过，这是纯点击，直接清理拖拽状态，让 click 事件去接管
             draggedCard.value = null;
             isDraggingOver.value = null;
             return;
         }
 
-        // 2. 否则判定是否放在了己方区域
+        // --- 下面是原有的真实拖拽判定逻辑 ---
+        const touch = e.changedTouches[0];
+        const element = document.elementFromPoint(touch.clientX, touch.clientY);
+        
+        // 1. 尝试攻击
+        const enemyCardEl = element?.closest('[data-enemy-id]');
+        if (enemyCardEl && (state.currentPhase.value === 'ATTACK' || state.isDevMode.value)) {
+            if (draggedCard.value.isTapped && !state.isDevMode.value) {
+                console.warn("[规则拦截] 已横置的卡牌无法再次攻击！");
+                draggedCard.value = null;
+                isDraggingOver.value = null;
+                return;
+            }
+            const enemyId = enemyCardEl.getAttribute('data-enemy-id');
+            const allEnemyCards = [...state.opponentFront.value, ...state.opponentRear.value];
+            const targetCard = allEnemyCards.find(c => String(c.instanceId) === enemyId);
+            
+            if (targetCard && initiateAttack) initiateAttack(state, draggedCard.value, targetCard);
+            
+            draggedCard.value = null;
+            isDraggingOver.value = null;
+            return;
+        }
+
+        // 2. 尝试移动/出击
         const areaElement = element?.closest('[data-area]');
         if (areaElement) {
             const areaName = areaElement.getAttribute('data-area');
@@ -133,11 +142,10 @@ export function createDragDropHandler(state, cardOps, rules) {
         isDraggingOver.value = null;
     };
 
-    // 暴露给 Vue 的方法
     return {
-        onDrop: onDropMouse, // 兼容 index.html 里的 @drop="onDrop('front')"
+        onDrop: onDropMouse,
         onDropMouse,
-        onAttackDrop,        // 👈 这次绝对把它暴露出去了！
+        onAttackDrop,
         onDragStart,
         onDragOver,
         onTouchStart,

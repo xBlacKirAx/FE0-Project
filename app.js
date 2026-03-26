@@ -23,8 +23,17 @@ createApp({
         const formattedSupport = (t) => t ? t.replace(/支援技能：/g, '<span class="text-yellow-500">【支援】</span>') : "无支援";
 
         const handleMinifiedClick = (card) => {
-            if (state.activePanel.value === 'bonds') { cardOps.toggleBondFace(card); } 
-            else { state.selectedCard.value = card; }
+            // 🛡️ 终极拦截：如果距离上次手指离开屏幕不到 300 毫秒，绝对是幽灵点击，直接无视！
+            if (window.lastDragEndTime && Date.now() - window.lastDragEndTime < 300) {
+                console.log("👻 拦截到移动端幽灵点击");
+                return;
+            }
+
+            if (state.activePanel.value === 'bonds') {
+                cardOps.toggleBondFace(card);
+            } else {
+                state.selectedCard.value = card;
+            }
         };
 
         const updateHeight = () => { document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`); };

@@ -18,7 +18,21 @@ export function createSocketHandler(state, cardOps) {
         });
 
         // ====== ⚔️ 战斗系统联机同步 ======
+        // 1. 接收对手攻击
         socket.on('opponent-attack', ({ attacker, defender, supportCard }) => {
+            const oppAttacker = [...state.opponentFront.value, ...state.opponentRear.value]
+                                .find(c => c.instanceId === attacker.instanceId);
+            if (oppAttacker) oppAttacker.isTapped = true;
+            // 💥 强制刷新对手的数组，让移动端立刻看到横置
+            ['opponentFront', 'opponentRear'].forEach(areaName => {
+                const area = state[areaName];
+                const idx = area.value.findIndex(c => c.instanceId === attacker.instanceId);
+                if (idx > -1) {
+                    area.value[idx].isTapped = true;
+                    area.value = [...area.value]; // 强制刷新
+                }
+            });
+            
             state.attacker.value = attacker;
             state.mySupportCard.value = supportCard; 
             state.defender.value = defender;
@@ -37,6 +51,20 @@ export function createSocketHandler(state, cardOps) {
             }, 800);
         });
 
+        // 2. 接收对手恢复直立
+        socket.on('opponent-card-untap', ({ instanceId }) => {
+            const oppCard = [...state.opponentFront.value, ...state.opponentRear.value]
+                            .find(c => c.instanceId === instanceId);
+            if (oppCard) oppCard.isTapped = false;
+            ['opponentFront', 'opponentRear'].forEach(areaName => {
+                const area = state[areaName];
+                const idx = area.value.findIndex(c => c.instanceId === instanceId);
+                if (idx > -1) {
+                    area.value[idx].isTapped = false;
+                    area.value = [...area.value]; // 强制刷新
+                }
+            });
+        });
         socket.on('opponent-defense-support', ({ supportCard }) => {
             state.oppSupportCard.value = supportCard; 
             state.combatStats.value.oppTotalPower += (supportCard?.support || 0);

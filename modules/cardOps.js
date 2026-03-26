@@ -71,6 +71,14 @@ export function createCardOperations(state) {
 
     // ⚔️ 战斗逻辑
     const initiateAttack = (state, attackerCard, defenderCard) => {
+        if (attackerCard.isTapped && !state.isDevMode.value) {
+            console.warn("[规则拦截] 底层已拒绝：已横置的卡牌无法再次攻击！");
+            return;
+        }
+
+        // ✨ 直接修改属性，不用 splice！这样 DOM 就不会重建，动画就不会重播！
+        attackerCard.isTapped = true; 
+
         state.attacker.value = attackerCard;
         state.defender.value = defenderCard;
         state.combatStats.value = { myTotalPower: attackerCard.attack || 0, oppTotalPower: defenderCard.attack || 0 };
@@ -83,10 +91,21 @@ export function createCardOperations(state) {
                 state.mySupportCard.value = mySupport;
                 state.combatStats.value.myTotalPower += (mySupport.support || 0);
             }
-            socket.emit('sync-attack', { attacker: attackerCard, defender: defenderCard, supportCard: mySupport });
+            state.socket.emit('sync-attack', { attacker: attackerCard, defender: defenderCard, supportCard: mySupport });
         }, 800);
     };
 
+    const untapCard = (card) => {
+        if (!card) return;
+        
+        // ✨ 直接修改属性，不用 splice
+        card.isTapped = false; 
+
+        if (state.socket) {
+            state.socket.emit('sync-card-untap', { instanceId: card.instanceId });
+        }
+        state.selectedCard.value = null; 
+    };
     // ⚔️ 终极判决版：结算战斗
     const resolveCombat = (state) => {
         const isMyAttacker = ['fieldFront', 'fieldRear'].some(area => state[area].value.some(c => c.instanceId === state.attacker.value.instanceId));
@@ -158,8 +177,13 @@ export function createCardOperations(state) {
         try {
             const res = await fetch('/api/cards');
             const data = await res.json();
-            deck.value = data.map(c => ({ ...c, instanceId: Math.random() + Date.now(), isFaceDown: false })).sort(() => Math.random() - 0.5);
-
+            // 👇 修改这里：加上 isTapped: false
+            deck.value = data.map(c => ({ 
+                ...c, 
+                instanceId: Math.random() + Date.now(), 
+                isFaceDown: false, 
+                isTapped: false 
+            })).sort(() => Math.random() - 0.5);
             // 👇 修改这里：给选出的第一张牌加上 isMainCharacter 标记
             if (deck.value.length > 0) {
                 const mc = deck.value.pop();
@@ -179,6 +203,6 @@ export function createCardOperations(state) {
     return {
         getArea, getAreaArray, getAreaName, moveTo, playToField, playToBond, returnToHandFromBoard,
         drawCard, toggleBondFace, undoLastMove, initiateAttack, resolveCombat,
-        getMySyncData, resetGame
+        getMySyncData, resetGame,untapCard
     };
 }

@@ -53,8 +53,11 @@
 	
     <div class="battle-container">
         <div class="battle-row row-opp-rear overflow-visible"> <div v-for="card in opponentRear" :key="card.instanceId" 
-                 class="card-adaptive"
-                 :class="{'is-mc-card': card.isMainCharacter}" 
+                class="card-adaptive deployable-card" 
+                :class="{
+                    'is-mc-card': card.isMainCharacter, 
+                    'card-tapped': card.isTapped   }" 
+                draggable="true"
                  :data-enemy-id="card.instanceId"
                  @dragover.prevent="isDraggingOver = 'attack-target'"
                  @dragleave="isDraggingOver = null"
@@ -68,8 +71,11 @@
 
         <div class="battle-row row-opp-front overflow-visible">
             <div v-for="card in opponentFront" :key="card.instanceId" 
-                 class="card-adaptive"
-                 :class="{'is-mc-card': card.isMainCharacter}"
+                class="card-adaptive deployable-card" 
+                :class="{
+                    'is-mc-card': card.isMainCharacter, 
+                    'card-tapped': card.isTapped   }" 
+                draggable="true"
                  :data-enemy-id="card.instanceId"
                  @dragover.prevent="isDraggingOver = 'attack-target'"
                  @dragleave="isDraggingOver = null"
@@ -89,9 +95,11 @@
              @drop="onDrop('front')">
             <span class="area-label">Front</span>
             <div v-for="card in fieldFront" :key="card.instanceId" 
-                 class="card-adaptive deployable-card" 
-                 :class="{'is-mc-card': card.isMainCharacter}" 
-                 draggable="true" 
+                class="card-adaptive deployable-card" 
+                :class="{
+                    'is-mc-card': card.isMainCharacter, 
+                    'card-tapped': card.isTapped   }" 
+                draggable="true"
                  @dragstart="onDragStart(card)"
                  @touchstart="onTouchStart($event, card)" 
                  @touchmove="onTouchMove"
@@ -102,8 +110,7 @@
                 <img :src="card.image">
             </div>
         </div>
-
-        <div class="battle-row row-my-rear overflow-visible" data-area="rear"
+         <div class="battle-row row-my-rear overflow-visible" data-area="rear"
              :class="{'guide-deploy-active': currentPhase === 'DEPLOY' && !isDevMode,
              'dragging-over': isDraggingOver === 'rear'}"
              @dragover.prevent="isDraggingOver = 'rear'"
@@ -112,8 +119,10 @@
             <span class="area-label">Rear</span>
             <div v-for="card in fieldRear" :key="card.instanceId" 
                  class="card-adaptive deployable-card" 
-                 :class="{'is-mc-card': card.isMainCharacter}"
-                 draggable="true" 
+                :class="{
+                    'is-mc-card': card.isMainCharacter, 
+                    'card-tapped': card.isTapped   }" 
+                draggable="true"
                  @dragstart="onDragStart(card)"
                  @touchstart="onTouchStart($event, card)" 
                  @touchmove="onTouchMove"
@@ -196,7 +205,12 @@
 				<button v-else @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
 			</div>
 			<div v-if="isMyCard(selectedCard)" class="grid grid-cols-2 gap-2 mt-2 border-t border-white/5 pt-2">
-				<button v-if="getAreaName(getArea(selectedCard)) === 'bonds'" 
+				<button v-if="isDevMode && selectedCard.isTapped" 
+                        @click="untapCard(selectedCard)" 
+                        class="col-span-2 py-2 mb-1 bg-green-600 hover:bg-green-500 rounded text-[10px] font-bold shadow-[0_0_10px_rgba(22,163,74,0.5)] transition-all">
+                    【DEV】恢复直立
+                </button>
+                <button v-if="getAreaName(getArea(selectedCard)) === 'bonds'" 
 						@click="toggleBondFace(selectedCard)" 
 						class="py-2 bg-amber-600 rounded text-[10px] col-span-2 font-bold uppercase">
 					{{ selectedCard.isFaceDown ? '翻开 (起立)' : '翻面 (横置/消耗)' }}
