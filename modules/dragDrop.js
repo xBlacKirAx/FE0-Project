@@ -2,23 +2,36 @@
 // 拖拽和触摸交互
 
 export function createDragDropHandler(state, cardOps, rules) {
-    const { draggedCard, isDraggingOver } = state;
+    const { draggedCard, isDraggingOver, hoveredAttackTargetId } = state;
     const { moveTo, initiateAttack } = cardOps;
     const { canPerformAction, getActionByArea, canDeployCard} = rules;
-    // 👇 1. 新增：用来区分是“点击”还是“拖拽”
-    let hasMoved = false;
+    // 触摸意图判定：横向滑动优先视为滚动，而不是拖拽。
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let isScrollGesture = false;
+    let touchDragTimer = null;
+    let touchDragActive = false;
+    let touchSourceArea = null;
     const onDragStart = (card) => {
+        if (!state.isDevMode.value && !state.isMyTurn.value) return;
         draggedCard.value = card;
+        hoveredAttackTargetId.value = null;
         if (window.navigator.vibrate) window.navigator.vibrate(10);
     };
 
-    const onDragOver = (e, areaName) => {
+    const onDragOver = (e, areaName, enemyCardId = null) => {
         e.preventDefault();
         isDraggingOver.value = areaName;
+        if (areaName === 'attack-target' && enemyCardId !== null && enemyCardId !== undefined) {
+            hoveredAttackTargetId.value = String(enemyCardId);
+        } else {
+            hoveredAttackTargetId.value = null;
+        }
     };
 
     const onAttackDrop = (enemyCard) => {
         isDraggingOver.value = null;
+        hoveredAttackTargetId.value = null;
         if (!draggedCard.value) return;
 
         // 【规则拦截】非攻击阶段
@@ -43,6 +56,7 @@ export function createDragDropHandler(state, cardOps, rules) {
 
     const onDropMouse = (toAreaName) => {
         isDraggingOver.value = null;
+        hoveredAttackTargetId.value = null;
         if (!draggedCard.value) return;
 
         const actionType = getActionByArea(toAreaName);
@@ -68,18 +82,70 @@ export function createDragDropHandler(state, cardOps, rules) {
 
     let touchMoved = false; // 区分是“点击”还是“拖拽”
 
-    const onTouchStart = (e, card) => {
-        draggedCard.value = card;
+    const onTouchStart = (e, card, sourceArea = 'hand') => {
+        if (!state.isDevMode.value && !state.isMyTurn.value) return;
         touchMoved = false; // 每次触摸重置
-        if (window.navigator.vibrate) window.navigator.vibrate(10);
+        isScrollGesture = false;
+        touchDragActive = false;
+        touchSourceArea = sourceArea;
+        touchStartX = e.touches?.[0]?.clientX || 0;
+        touchStartY = e.touches?.[0]?.clientY || 0;
+
+        if (sourceArea !== 'hand') {
+            // 战场卡：立即进入拖拽，确保触碰敌卡时能实时高亮。
+            draggedCard.value = card;
+            touchDragActive = true;
+            if (window.navigator.vibrate) window.navigator.vibrate(10);
+            return;
+        }
+
+        // 长按激活拖拽：短触与横滑默认让给原生滚动/点击。
+        if (touchDragTimer) clearTimeout(touchDragTimer);
+        touchDragTimer = setTimeout(() => {
+            if (isScrollGesture) return;
+            draggedCard.value = card;
+            touchDragActive = true;
+            if (window.navigator.vibrate) window.navigator.vibrate(10);
+        }, 180);
     };
 
     const onTouchMove = (e) => {
-        if (!draggedCard.value) return;
+        const touch = e.touches?.[0];
+        if (!touch) return;
+
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        // 手牌区域：横向位移显著时，交给原生滚动处理。
+        if (touchSourceArea === 'hand' && !isScrollGesture && absX > 12 && absX > absY + 4) {
+            isScrollGesture = true;
+            if (touchDragTimer) {
+                clearTimeout(touchDragTimer);
+                touchDragTimer = null;
+            }
+            draggedCard.value = null;
+            touchDragActive = false;
+            isDraggingOver.value = null;
+            hoveredAttackTargetId.value = null;
+            return;
+        }
+
+        // 战场区域：仅在“明显的大幅横扫”时才交给滚动，默认优先拖曳攻击。
+        if (touchSourceArea !== 'hand' && !isScrollGesture && absX > 46 && absX > absY + 18) {
+            isScrollGesture = true;
+            draggedCard.value = null;
+            touchDragActive = false;
+            isDraggingOver.value = null;
+            hoveredAttackTargetId.value = null;
+            return;
+        }
+
+        if (isScrollGesture || !touchDragActive || !draggedCard.value) return;
+
         touchMoved = true; // 只要手指滑动了，就是真正的拖拽
         e.preventDefault();
-
-        const touch = e.touches[0];
         const element = document.elementFromPoint(touch.clientX, touch.clientY);
         const enemyCardEl = element?.closest('[data-enemy-id]');
         const area = element?.closest('[data-area]');
@@ -87,28 +153,47 @@ export function createDragDropHandler(state, cardOps, rules) {
         if (enemyCardEl && (state.currentPhase.value === 'ATTACK' || state.isDevMode.value)) {
              if (draggedCard.value.isTapped && !state.isDevMode.value) {
                  isDraggingOver.value = null; 
+                 hoveredAttackTargetId.value = null;
              } else {
                  isDraggingOver.value = 'attack-target';
+                 hoveredAttackTargetId.value = enemyCardEl.getAttribute('data-enemy-id');
              }
         } else if (area) {
             isDraggingOver.value = area.getAttribute('data-area');
+            hoveredAttackTargetId.value = null;
         } else {
             isDraggingOver.value = null;
+            hoveredAttackTargetId.value = null;
         }
     };
 
     const onTouchEnd = (e, card) => {
-        if (!draggedCard.value) return;
+        if (touchDragTimer) {
+            clearTimeout(touchDragTimer);
+            touchDragTimer = null;
+        }
 
-        // 🛡️ 核心机制：记录拖拽结束的时间戳到全局
-        window.lastDragEndTime = Date.now();
-
-        if (!touchMoved) {
-            // 如果没移动过，这是纯点击，直接清理拖拽状态，让 click 事件去接管
+        if (!touchDragActive || !draggedCard.value) {
             draggedCard.value = null;
             isDraggingOver.value = null;
+            hoveredAttackTargetId.value = null;
+            touchDragActive = false;
+            touchSourceArea = null;
             return;
         }
+
+        if (!touchMoved) {
+            // 纯点击，不设置 lastDragEndTime，让 click 事件正常触发
+            draggedCard.value = null;
+            isDraggingOver.value = null;
+            hoveredAttackTargetId.value = null;
+            touchDragActive = false;
+            touchSourceArea = null;
+            return;
+        }
+
+        // 🛡️ 只有真正拖拽结束才记录时间戳，避免误拦截点击
+        window.lastDragEndTime = Date.now();
 
         // --- 下面是原有的真实拖拽判定逻辑 ---
         const touch = e.changedTouches[0];
@@ -121,6 +206,8 @@ export function createDragDropHandler(state, cardOps, rules) {
                 console.warn("[规则拦截] 已横置的卡牌无法再次攻击！");
                 draggedCard.value = null;
                 isDraggingOver.value = null;
+                hoveredAttackTargetId.value = null;
+                touchSourceArea = null;
                 return;
             }
             const enemyId = enemyCardEl.getAttribute('data-enemy-id');
@@ -162,7 +249,10 @@ export function createDragDropHandler(state, cardOps, rules) {
         }
         
         draggedCard.value = null;
+        touchDragActive = false;
+        touchSourceArea = null;
         isDraggingOver.value = null;
+        hoveredAttackTargetId.value = null;
     };
 
     return {

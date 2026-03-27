@@ -23,6 +23,14 @@ export function createCardOperations(state) {
         if (area === boundless.value) return 'boundless'; if (area === deck.value) return 'deck'; return 'unknown';
     };
 
+    const scrollHandToLatest = () => {
+        requestAnimationFrame(() => {
+            const strip = document.querySelector('.hand-strip-scroll');
+            if (!strip) return;
+            strip.scrollTo({ left: strip.scrollWidth, behavior: 'smooth' });
+        });
+    };
+
     const moveTo = (card, toAreaName) => {
         const fromArea = getArea(card);
         if (!fromArea) return;
@@ -72,6 +80,7 @@ export function createCardOperations(state) {
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
 
     const drawCard = () => {
+        if (!state.isDevMode.value && !state.isMyTurn.value) return;
         if (hand.value.length >= 10 || deck.value.length === 0) return;
 
         undoStack.value.push({ type: 'draw', previousPhase: state.currentPhase.value });
@@ -100,21 +109,31 @@ export function createCardOperations(state) {
         flyingCard.style.opacity = '0';
         document.body.appendChild(flyingCard);
 
+        const drawAnimationDuration = 900;
         const animation = flyingCard.animate([
             { transform: 'scale(0.5) rotateY(180deg) rotateZ(-15deg)', left: `${startX}px`, top: `${startY}px`, opacity: 0 },
             { opacity: 1, offset: 0.1 },
             { transform: 'scale(1.8) rotateY(90deg) rotateZ(5deg)', left: `${midX}px`, top: `${midY}px`, opacity: 1, offset: 0.5 },
             { transform: 'scale(0.8) rotateY(0deg) rotateZ(0deg)', left: `${endX}px`, top: `${endY}px`, opacity: 0 }
-        ], { duration: 700, easing: 'cubic-bezier(0.2, 1, 0.3, 1)', fill: 'forwards' });
+        ], { duration: drawAnimationDuration, easing: 'cubic-bezier(0.2, 1, 0.3, 1)', fill: 'forwards' });
 
-        animation.onfinish = () => {
-            flyingCard.remove(); 
-            hand.value.push(deck.value.pop());
-            if (socket) socket.emit('player-draw');
+        let drawSettled = false;
+        const settleDraw = () => {
+            if (drawSettled) return;
+            drawSettled = true;
+            flyingCard.remove();
+            const drawnCard = deck.value.pop();
+            hand.value.push(drawnCard);
+            scrollHandToLatest();
+            if (socket) socket.emit('player-draw', { card: drawnCard });
             if (state.currentPhase.value === 'BEGINNING' && !state.isDevMode.value) {
                 state.currentPhase.value = 'BOND';
             }
         };
+
+        animation.onfinish = settleDraw;
+        // 在动画尾段提前结算，减少“动画结束后卡还没入手”的空档体感。
+        setTimeout(settleDraw, Math.floor(drawAnimationDuration * 0.3));
     };
 
     const toggleBondFace = (card) => {
@@ -225,7 +244,8 @@ export function createCardOperations(state) {
     const getMySyncData = () => {
         return {
             front: state.fieldFront.value, rear: state.fieldRear.value, bonds: state.bonds.value,
-            jewels: state.jewels.value, graveyard: state.graveyard.value, 
+            jewels: state.jewels.value, graveyard: state.graveyard.value,
+            hand: state.hand.value, deck: state.deck.value, boundless: state.boundless.value,
             handCount: state.hand.value.length, bondsCount: state.bonds.value.length
         };
     };

@@ -10,6 +10,7 @@ export const CardDetailModal = {
             required: true
         },
         isDevMode: Boolean,
+        isMyTurn: Boolean,
         showFullImage: Boolean,
         formattedAbility: {
             type: Function,
@@ -96,7 +97,7 @@ export const CardDetailModal = {
                     </div>
                 </div>
                 <div class="p-4 bg-gray-800/20 space-y-2">
-                    <div v-if="isMyCard(selectedCard)">
+                    <div v-if="isMyCard(selectedCard) && (isDevMode || isMyTurn)">
                         <div v-if="isCardInHand(selectedCard)" class="grid grid-cols-3 gap-2">
                             <button @click="playToField(selectedCard, 'front')" class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
                             <button @click="playToField(selectedCard, 'rear')" class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
@@ -104,7 +105,7 @@ export const CardDetailModal = {
                         </div>
                         <button v-else @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
                     </div>
-                    <div v-if="isMyCard(selectedCard)" class="grid grid-cols-2 gap-2 mt-2 border-t border-white/5 pt-2">
+                    <div v-if="isMyCard(selectedCard) && (isDevMode || isMyTurn)" class="grid grid-cols-2 gap-2 mt-2 border-t border-white/5 pt-2">
                         <button v-if="isDevMode && selectedCard.isTapped"
                                 @click="untapCard(selectedCard)"
                                 class="col-span-2 py-2 mb-1 bg-green-600 hover:bg-green-500 rounded text-[10px] font-bold shadow-[0_0_10px_rgba(22,163,74,0.5)] transition-all">

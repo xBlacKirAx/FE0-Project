@@ -41,8 +41,12 @@ export function createTurnManager(state) {
      * 处理开始阶段逻辑（对手回合结束时触发）
      */
     const handleBeginningPhase = () => {
+        // 重置本方回合状态
+        currentPhase.value = 'BEGINNING';
+        hasPlacedBond.value = false;
+        if (state.usedBondsThisTurn) state.usedBondsThisTurn.value = 0;
+        if (state.undoStack) state.undoStack.value = [];
         console.log('我的回合开始：解除横置，准备抽牌');
-        // TODO: 自动抽牌逻辑
     };
 
     /**

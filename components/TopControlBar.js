@@ -1,6 +1,7 @@
 export const TopControlBar = {
     props: {
         isDevMode: Boolean,
+        isMyTurn: Boolean,
         onToggleDevMode: {
             type: Function,
             required: true
@@ -56,6 +57,12 @@ export const TopControlBar = {
                     <span class="text-[8px] text-green-200">COST</span>
                     <span class="text-[10px] sm:text-[11px] font-black text-green-400 font-mono">{{ remainingCost }}</span>
                     <span class="text-[9px] text-green-600 font-mono">/ {{ totalBonds }}</span>
+                </div>
+
+                <div v-if="!isDevMode"
+                     :class="isMyTurn ? 'bg-green-900/60 border-green-500/60 text-green-300' : 'bg-red-900/60 border-red-500/60 text-red-300'"
+                     class="px-1.5 py-0.5 border rounded text-[8px] font-bold whitespace-nowrap">
+                    {{ isMyTurn ? '我方回合' : '对手回合' }}
                 </div>
 
                 <button v-if="hasUndo"

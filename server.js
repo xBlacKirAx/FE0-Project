@@ -31,6 +31,9 @@ io.on('connection', (socket) => {
     socket.on('request-sync', () => socket.broadcast.emit('request-sync'));
     socket.on('full-state-sync', (data) => socket.broadcast.emit('full-state-sync', data));
     socket.on('sync-reset', () => socket.broadcast.emit('sync-reset'));
+    // ====== 🔄 回合与模式同步 ======
+    socket.on('turn-end', () => socket.broadcast.emit('opponent-turn-end'));
+    socket.on('sync-dev-mode', (data) => socket.broadcast.emit('opponent-dev-mode-changed', data));
 });
 
 const PORT = 3000;

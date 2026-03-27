@@ -1,11 +1,14 @@
 // modules/socketHandler.js
 export function createSocketHandler(state, cardOps) {
-    const { socket, oppStats, oppGraveyard, oppJewels, oppBonds, opponentFront, opponentRear } = state;
+    const { socket, oppStats, oppHand, oppGraveyard, oppJewels, oppBonds, oppDeck, oppBoundless, opponentFront, opponentRear } = state;
     // 必须从 cardOps 中取出这三个函数
     const { resolveCombat, getMySyncData, resetGame } = cardOps;
 
     const setupSocketListeners = () => {
-        socket.on('opponent-draw-card', () => { oppStats.value.hand++; });
+        socket.on('opponent-draw-card', (data) => {
+            oppStats.value.hand++;
+            if (data?.card) oppHand.value = [...oppHand.value, data.card];
+        });
         
         socket.on('opponent-bond-flipped', ({ instanceId, isFaceDown }) => {
             const card = oppBonds.value.find(c => c.instanceId === instanceId);
@@ -82,11 +85,27 @@ export function createSocketHandler(state, cardOps) {
             oppBonds.value = data.bonds || [];
             oppJewels.value = data.jewels || [];
             oppGraveyard.value = data.graveyard || [];
+            oppHand.value = data.hand || [];
+            oppDeck.value = data.deck || [];
+            oppBoundless.value = data.boundless || [];
             oppStats.value = { hand: data.handCount || 0, bonds: data.bondsCount || 0, active: 0 };
         });
 
         socket.on('sync-reset', () => {
             if (resetGame) resetGame(true);
+        });
+
+        // ====== 🔄 模式同步 ======
+        socket.on('opponent-dev-mode-changed', ({ isDevMode, turnOwner }) => {
+            state.isDevMode.value = isDevMode;
+
+            // 对手切到 PLAY 时，对手应为回合方，本端强制为非回合方。
+            if (!isDevMode && turnOwner === 'sender') {
+                state.isMyTurn.value = false;
+                state.currentPhase.value = 'BEGINNING';
+                state.hasPlacedBond.value = false;
+                state.usedBondsThisTurn.value = 0;
+            }
         });
 
         const requestSync = () => socket.emit('request-sync');
@@ -103,7 +122,9 @@ export function createSocketHandler(state, cardOps) {
         else if (areaName === 'bonds') oppBonds.value = oppBonds.value.filter(c => c.instanceId !== cardId);
         else if (areaName === 'front') opponentFront.value = opponentFront.value.filter(c => c.instanceId !== cardId);
         else if (areaName === 'rear') opponentRear.value = opponentRear.value.filter(c => c.instanceId !== cardId);
-        else if (areaName === 'hand') oppStats.value.hand--;
+        else if (areaName === 'deck') oppDeck.value = oppDeck.value.filter(c => c.instanceId !== cardId);
+        else if (areaName === 'boundless') oppBoundless.value = oppBoundless.value.filter(c => c.instanceId !== cardId);
+        else if (areaName === 'hand') { oppStats.value.hand--; oppHand.value = oppHand.value.filter(c => c.instanceId !== cardId); }
     };
 
     const addCardToOpponentArea = (areaName, card) => {
@@ -112,7 +133,9 @@ export function createSocketHandler(state, cardOps) {
         else if (areaName === 'bonds') oppBonds.value.push(card);
         else if (areaName === 'front') opponentFront.value.push(card);
         else if (areaName === 'rear') opponentRear.value.push(card);
-        else if (areaName === 'hand') oppStats.value.hand++;
+        else if (areaName === 'deck') oppDeck.value.push(card);
+        else if (areaName === 'boundless') oppBoundless.value.push(card);
+        else if (areaName === 'hand') { oppStats.value.hand++; oppHand.value = [...oppHand.value, card]; }
     };
 
     return { setupSocketListeners };

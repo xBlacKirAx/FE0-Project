@@ -13,9 +13,14 @@ import { BondStrip } from './components/BondStrip.js';
 import { HandStrip } from './components/HandStrip.js';
 import { DeckWidget } from './components/DeckWidget.js';
 import { SidePanelButtons } from './components/SidePanelButtons.js';
+import { OppHandPanel } from './components/OppHandPanel.js';
+import { OppDeckPanel } from './components/OppDeckPanel.js';
 import { TopControlBar } from './components/TopControlBar.js';
 
 const { createApp, computed, onMounted, watch } = Vue;
+
+// 可选: 'theme1' (默认熔岩对峙), 'theme2' (金属桌垫)
+const BATTLE_THEME = 'theme1';
 
 createApp({
     components: {
@@ -27,7 +32,9 @@ createApp({
         TopControlBar,
         CombatOverlay,
         RegionPanel,
-        CardDetailModal
+        CardDetailModal,
+        OppHandPanel,
+        OppDeckPanel
     },
     setup() {
         const state = createGameState();
@@ -49,9 +56,11 @@ createApp({
             graveyard: '弃牌区',
             boundless: '无限区',
             deck: '牌组',
-            oppBonds: '羁绊区',
-            oppJewels: '宝玉区',
-            oppGraveyard: '弃牌区'
+            oppBonds: '对手羁绊区',
+            oppJewels: '对手宝玉区',
+            oppGraveyard: '对手弃牌区',
+            oppDeck: '对手牌组',
+            oppBoundless: '对手无限区'
         };
 
         const panelCardMap = {
@@ -62,7 +71,9 @@ createApp({
             deck: state.deck,
             oppBonds: state.oppBonds,
             oppJewels: state.oppJewels,
-            oppGraveyard: state.oppGraveyard
+            oppGraveyard: state.oppGraveyard,
+            oppBoundless: state.oppBoundless
+            // oppDeck 由 OppDeckPanel 单独处理（默认背面）
         };
 
         const activePanelTitle = computed(() => panelTitleMap[state.activePanel.value] || '区域');
@@ -71,62 +82,25 @@ createApp({
         const remainingCost = computed(() => Math.max(0, (state.bonds.value?.length || 0) - (state.usedBondsThisTurn.value || 0)));
         const totalBonds = computed(() => state.bonds.value?.length || 0);
         const currentPhaseName = computed(() => state.PHASES?.[state.currentPhase.value]?.name || state.currentPhase.value || '');
-        const showNextPhaseButton = computed(() => state.isDevMode.value || (state.currentPhase.value || 'BEGINNING') !== 'BEGINNING');
+        const showNextPhaseButton = computed(() =>
+            state.isDevMode.value || (state.isMyTurn.value && (state.currentPhase.value || 'BEGINNING') !== 'BEGINNING')
+        );
         const nextPhaseLabel = computed(() => (state.currentPhase.value || 'BEGINNING') === 'END' ? '结束' : 'NEXT');
 
         const playerPanelButtons = computed(() => ([
-            {
-                key: 'jewels',
-                label: '宝玉',
-                count: state.jewels.value?.length || 0,
-                className: 'w-10 h-10 bg-purple-900/80 border border-purple-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
-                countClass: ''
-            },
-            {
-                key: 'graveyard',
-                label: '弃牌',
-                count: state.graveyard.value?.length || 0,
-                className: 'w-10 h-10 bg-gray-800/80 border border-gray-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
-                countClass: ''
-            },
-            {
-                key: 'boundless',
-                label: '无限',
-                count: state.boundless.value?.length || 0,
-                className: 'w-10 h-10 bg-blue-900/80 border border-blue-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
-                countClass: ''
-            },
-            {
-                key: 'deck',
-                label: '牌组',
-                count: state.deck.value?.length || 0,
-                className: 'w-10 h-10 bg-red-900/80 border border-red-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
-                countClass: ''
-            }
+            { key: 'jewels',    label: '宝玉', count: state.jewels.value?.length || 0 },
+            { key: 'graveyard', label: '弃牌', count: state.graveyard.value?.length || 0 },
+            { key: 'deck',      label: '牌组', count: state.deck.value?.length || 0 },
+            { key: 'boundless', label: '无限', count: state.boundless.value?.length || 0 }
         ]));
 
         const enemyPanelButtons = computed(() => ([
-            {
-                key: 'oppJewels',
-                label: '宝玉',
-                count: state.oppJewels.value?.length || 0,
-                className: 'w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95',
-                countClass: 'text-red-500 font-mono'
-            },
-            {
-                key: 'oppGraveyard',
-                label: '弃牌',
-                count: state.oppGraveyard.value?.length || 0,
-                className: 'w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95',
-                countClass: 'text-red-500 font-mono'
-            },
-            {
-                key: 'oppBonds',
-                label: '羁绊',
-                count: state.oppBonds.value?.length || 0,
-                className: 'w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95',
-                countClass: 'text-red-500 font-mono'
-            }
+            { key: 'oppJewels',    label: '宝玉', count: state.oppJewels.value?.length || 0 },
+            { key: 'oppGraveyard', label: '弃牌', count: state.oppGraveyard.value?.length || 0 },
+            { key: 'oppDeck',      label: '牌组', count: state.oppDeck.value?.length || 0 },
+            { key: 'oppBoundless', label: '无限', count: state.oppBoundless.value?.length || 0 },
+            { key: 'oppHand',      label: '手牌', count: state.oppStats.value?.hand || 0 },
+            { key: 'oppBonds',     label: '羁绊', count: state.oppBonds.value?.length || 0 }
         ]));
 
         const closeActivePanel = () => {
@@ -150,7 +124,21 @@ createApp({
         };
 
         const toggleDevMode = () => {
-            state.isDevMode.value = !state.isDevMode.value;
+            const nextIsDevMode = !state.isDevMode.value;
+            state.isDevMode.value = nextIsDevMode;
+
+            // 切到 PLAY 时，由切换者拥有当前回合；对手会被同步为非回合方。
+            if (!nextIsDevMode) {
+                state.isMyTurn.value = true;
+                state.currentPhase.value = 'BEGINNING';
+                state.hasPlacedBond.value = false;
+                state.usedBondsThisTurn.value = 0;
+            }
+
+            state.socket.emit('sync-dev-mode', {
+                isDevMode: nextIsDevMode,
+                turnOwner: !nextIsDevMode ? 'sender' : null
+            });
         };
 
         const resetByControlBar = () => {
@@ -163,6 +151,7 @@ createApp({
 
         const clearDraggingOver = () => {
             state.isDraggingOver.value = null;
+            state.hoveredAttackTargetId.value = null;
         };
 
         const openBondsPanel = () => {
@@ -186,7 +175,7 @@ createApp({
                 return;
             }
 
-            if (state.activePanel.value === 'bonds') {
+            if (state.activePanel.value === 'bonds' && (state.isDevMode.value || state.isMyTurn.value)) {
                 cardOps.toggleBondFace(card);
             } else {
                 state.selectedCard.value = card;
@@ -211,6 +200,7 @@ createApp({
         const updateHeight = () => { document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`); };
 
         onMounted(async () => {
+            document.documentElement.setAttribute('data-battle-theme', BATTLE_THEME);
             window.addEventListener('resize', updateHeight);
             updateHeight();
 

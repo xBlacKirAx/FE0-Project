@@ -19,20 +19,18 @@ export const SidePanelButtons = {
         },
         containerClass() {
             return this.isEnemy
-                ? 'fixed left-2 top-20 z-panel flex flex-col gap-3'
-                : 'fixed right-2 top-24 z-[60] flex flex-col gap-2';
+                ? 'hud-strip hud-strip--enemy'
+                : 'hud-strip hud-strip--player';
         }
     },
     template: `
         <div :class="containerClass">
-            <div v-if="isEnemy" class="text-[8px] text-red-500 font-bold text-center uppercase opacity-50">Enemy</div>
-
             <button v-for="item in items"
                     :key="item.key"
                     @click="onOpenPanel(item.key)"
-                    :class="item.className">
-                <span>{{ item.label }}</span>
-                <span :class="item.countClass">{{ item.count || 0 }}</span>
+                    :class="['hud-tag', isEnemy ? 'hud-tag--enemy' : 'hud-tag--player']">
+                <span class="hud-tag__label">{{ item.label }}</span>
+                <span class="hud-tag__count">{{ item.count || 0 }}</span>
             </button>
         </div>
     `

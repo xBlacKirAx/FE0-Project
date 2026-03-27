@@ -17,9 +17,12 @@ export function createGameState() {
     // ===== 对手区域 =====
     const opponentFront = ref([]);
     const opponentRear = ref([]);
+    const oppHand = ref([]);
     const oppJewels = ref([]);
     const oppGraveyard = ref([]);
     const oppBonds = ref([]);
+    const oppDeck = ref([]);
+    const oppBoundless = ref([]);
     
     // ===== UI 相关状态 =====
     const selectedCard = ref(null);
@@ -29,6 +32,7 @@ export function createGameState() {
     
     // ===== 交互状态 =====
     const isDraggingOver = ref(null);
+    const hoveredAttackTargetId = ref(null);
     const draggedCard = ref(null);
     const undoStack = ref([]);
     
@@ -67,11 +71,11 @@ export function createGameState() {
         // 我方区域
         hand, fieldFront, fieldRear, bonds, jewels, graveyard, boundless, deck,
         // 对手区域
-        opponentFront, opponentRear, oppJewels, oppGraveyard, oppBonds,
+        opponentFront, opponentRear, oppHand, oppJewels, oppGraveyard, oppBonds, oppDeck, oppBoundless,
         // UI
         selectedCard, activePanel, showFullImage, allCards,
         // 交互
-        isDraggingOver, draggedCard, undoStack,
+        isDraggingOver, hoveredAttackTargetId, draggedCard, undoStack,
         // 游戏状态
         isDevMode, currentPhase, isMyTurn, hasPlacedBond,
         oppStats, socket, PHASES,

@@ -15,18 +15,9 @@
 
 <div id="app" class="h-full flex flex-col relative">
 
-    <div class="top-bar">
-        <div class="flex w-full justify-between items-center px-4 text-[10px]">
-            <div class="flex gap-3">
-                <span>对手手牌: <b class="text-white">{{oppStats.hand}}</b></span>
-                <span>羁绊: <b class="text-white">{{oppStats.bonds}}</b></span>
-            </div>
-            <div class="text-red-500 font-bold">OPPONENT FIELD</div>
-        </div>
-    </div>
-    
 	<top-control-bar
         :is-dev-mode="isDevMode"
+        :is-my-turn="isMyTurn"
         :on-toggle-dev-mode="toggleDevMode"
         :on-reset-game="resetByControlBar"
         :remaining-cost="remainingCost"
@@ -44,10 +35,12 @@
             :cards="opponentRear"
             row-class="row-opp-rear"
             :is-enemy="true"
+            :hovered-attack-target-id="hoveredAttackTargetId"
             :is-guide-active="false"
             :is-dragging-over="false"
             :set-dragging-over="setDraggingOver"
             :clear-dragging-over="clearDraggingOver"
+            :on-drag-over="onDragOver"
             :on-drop-area="onDrop"
             :on-attack-drop="onAttackDrop"
             :on-card-click="handleMinifiedClick"
@@ -61,10 +54,12 @@
             :cards="opponentFront"
             row-class="row-opp-front"
             :is-enemy="true"
+            :hovered-attack-target-id="hoveredAttackTargetId"
             :is-guide-active="false"
             :is-dragging-over="false"
             :set-dragging-over="setDraggingOver"
             :clear-dragging-over="clearDraggingOver"
+            :on-drag-over="onDragOver"
             :on-drop-area="onDrop"
             :on-attack-drop="onAttackDrop"
             :on-card-click="handleMinifiedClick"
@@ -80,10 +75,12 @@
             area="front"
             area-label="Front"
             :is-enemy="false"
+            :hovered-attack-target-id="hoveredAttackTargetId"
             :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
             :is-dragging-over="isDraggingOver === 'front'"
             :set-dragging-over="setDraggingOver"
             :clear-dragging-over="clearDraggingOver"
+            :on-drag-over="onDragOver"
             :on-drop-area="onDrop"
             :on-attack-drop="onAttackDrop"
             :on-card-click="handleMinifiedClick"
@@ -99,10 +96,12 @@
             area="rear"
             area-label="Rear"
             :is-enemy="false"
+            :hovered-attack-target-id="hoveredAttackTargetId"
             :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
             :is-dragging-over="isDraggingOver === 'rear'"
             :set-dragging-over="setDraggingOver"
             :clear-dragging-over="clearDraggingOver"
+            :on-drag-over="onDragOver"
             :on-drop-area="onDrop"
             :on-attack-drop="onAttackDrop"
             :on-card-click="handleMinifiedClick"
@@ -178,6 +177,7 @@
         :is-my-card="isMyCard"
         :is-card-in-hand="isCardInHand"
         :is-dev-mode="isDevMode"
+        :is-my-turn="isMyTurn"
         :show-full-image="showFullImage"
         :formatted-ability="formattedAbility"
         :formatted-support="formattedSupport"
@@ -192,6 +192,21 @@
         :on-close="closeSelectedCard"
         :on-open-full-image="openFullImage">
     </card-detail-modal>
+
+    <opp-hand-panel
+        :active-panel="activePanel"
+        :opp-hand-cards="oppHand"
+        :opp-hand-count="oppStats.hand"
+        :is-dev-mode="isDevMode"
+        :on-close="closeActivePanel">
+    </opp-hand-panel>
+
+    <opp-deck-panel
+        :active-panel="activePanel"
+        :opp-deck-cards="oppDeck"
+        :is-dev-mode="isDevMode"
+        :on-close="closeActivePanel">
+    </opp-deck-panel>
 
     <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
         <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">

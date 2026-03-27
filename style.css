@@ -24,61 +24,180 @@ html, body {
     width: 100vw;
 }
 
-/* 顶部信息栏：增加内边距适配手机状态栏 */
-.top-bar {
-    height: 40px; /* 稍微加高 */
-    flex-shrink: 0;
-    background: rgba(0,0,0,0.9);
-    display: flex;
-    align-items: center;
-    padding-top: env(safe-area-inset-top); /* 适配刘海屏 */
-    border-bottom: 1px solid rgba(255,0,0,0.2);
-    z-index: 60;
-}
 
 .battle-container {
-    flex: 1 1 auto; /* 关键：允许缩小 */
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
-    min-height: 0; 
+    min-height: 0;
     overflow: hidden;
+    padding-top: 36px; /* 为悬浮相位条留出空间 */
 }
 
 .battle-row {
-    flex: 1 1 0%;       /* 强制四个区域均分剩余空间，取代原来的 flex: 1 */
-    min-height: 0;      /* 🔑 核心修复：防止内部大图片撑开 Flex 容器 */
+    flex: 1 1 0%;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+    position: relative;
+    background-color: #050505;
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+    isolation: isolate;
+}
+
+.battle-row::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image:
+        radial-gradient(120% 140% at 50% -20%, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0) 62%),
+        repeating-linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.035) 0px,
+            rgba(255, 255, 255, 0.035) 1px,
+            rgba(255, 255, 255, 0) 1px,
+            rgba(255, 255, 255, 0) 8px
+        );
+    mix-blend-mode: soft-light;
+    opacity: 0.55;
+}
+
+.battle-row > * {
+    position: relative;
+    z-index: 1;
+}
+
+.battle-row-track {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    position: relative;
-    background-color: #050505;
-    overflow: hidden;   /* 确保超出部分被隐藏，绝不挤压其他行 */
+    width: max-content;
+    min-width: 100%;
+    padding: 0 8px 0 28px;
+    height: 100%;
+    overflow: visible;
 }
-/* 1. 战场行：保持极深基色 */
-.row-opp-rear { background-color: rgba(10, 5, 5, 0.9); }
-.row-opp-front { 
-    background-color: rgba(20, 10, 10, 0.7); 
-    border-bottom: 1px solid rgba(255, 255, 255, 0.03); 
+/* Theme 1: 近黑底 + 角落能量光（默认） */
+.row-opp-rear {
+    background:
+        linear-gradient(180deg, rgba(28, 12, 14, 0.88) 0%, rgba(17, 9, 10, 0.94) 56%, rgba(10, 8, 9, 0.98) 100%);
+    box-shadow: inset 0 10px 16px rgba(255, 255, 255, 0.03), inset 0 -14px 24px rgba(0, 0, 0, 0.52);
+    border-top: 1px solid rgba(255, 188, 188, 0.06);
 }
-.row-my-front { 
-    background-color: rgba(10, 15, 30, 0.7); 
+.row-opp-front {
+    background:
+        linear-gradient(180deg, rgba(38, 14, 18, 0.84) 0%, rgba(24, 10, 12, 0.9) 56%, rgba(14, 9, 10, 0.96) 100%);
+    border-bottom: 1px solid rgba(248, 113, 113, 0.18);
+    border-top: 1px solid rgba(255, 214, 214, 0.08);
+    box-shadow: inset 0 8px 14px rgba(255, 255, 255, 0.035), inset 0 -10px 16px rgba(0, 0, 0, 0.45);
+    overflow-y: hidden;
 }
-.row-my-rear { 
-    background-color: rgba(5, 5, 15, 0.9); 
+.row-my-front {
+    background:
+        linear-gradient(180deg, rgba(14, 24, 44, 0.84) 0%, rgba(10, 17, 30, 0.9) 56%, rgba(9, 12, 18, 0.96) 100%);
+    border-top: 1px solid rgba(206, 228, 255, 0.08);
+    border-bottom: 1px solid rgba(96, 165, 250, 0.18);
+    box-shadow: inset 0 8px 14px rgba(255, 255, 255, 0.03), inset 0 -10px 16px rgba(0, 0, 0, 0.45);
+    overflow-y: hidden;
+}
+.row-my-rear {
+    background:
+        linear-gradient(180deg, rgba(10, 18, 36, 0.9) 0%, rgba(8, 13, 26, 0.95) 56%, rgba(7, 9, 14, 0.98) 100%);
+    box-shadow: inset 0 10px 16px rgba(255, 255, 255, 0.03), inset 0 -14px 24px rgba(0, 0, 0, 0.5);
+}
+
+/* 角落静态光晕（无动画） */
+.row-opp-rear::after,
+.row-opp-front::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(circle at 14% 55%, rgba(248, 113, 113, 0.2) 0%, rgba(248, 113, 113, 0) 52%),
+        radial-gradient(circle at 84% 45%, rgba(239, 68, 68, 0.14) 0%, rgba(239, 68, 68, 0) 56%);
+}
+.row-my-front::after,
+.row-my-rear::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+        radial-gradient(circle at 18% 52%, rgba(96, 165, 250, 0.2) 0%, rgba(96, 165, 250, 0) 52%),
+        radial-gradient(circle at 82% 46%, rgba(56, 189, 248, 0.13) 0%, rgba(56, 189, 248, 0) 56%);
+}
+
+/* Theme 2: 金属桌垫（通过 app.js 变量切换） */
+[data-battle-theme='theme2'] .battle-row::before {
+    background-image:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 35%),
+        radial-gradient(140% 110% at 50% 0%, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0) 60%),
+        repeating-linear-gradient(
+            135deg,
+            rgba(255, 255, 255, 0.012) 0px,
+            rgba(255, 255, 255, 0.012) 1px,
+            rgba(255, 255, 255, 0) 1px,
+            rgba(255, 255, 255, 0) 7px
+        );
+    mix-blend-mode: screen;
+    opacity: 0.42;
+}
+
+[data-battle-theme='theme2'] .row-opp-rear {
+    background: linear-gradient(180deg, rgba(26, 27, 30, 0.9) 0%, rgba(15, 16, 18, 0.95) 56%, rgba(10, 10, 12, 0.98) 100%);
+    box-shadow: inset 0 10px 16px rgba(255, 255, 255, 0.03), inset 0 -14px 24px rgba(0, 0, 0, 0.5);
+    border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+[data-battle-theme='theme2'] .row-opp-front {
+    background: linear-gradient(180deg, rgba(33, 34, 38, 0.84) 0%, rgba(20, 21, 24, 0.9) 56%, rgba(13, 14, 16, 0.96) 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 8px 14px rgba(255, 255, 255, 0.035), inset 0 -10px 16px rgba(0, 0, 0, 0.45);
+}
+
+[data-battle-theme='theme2'] .row-my-front {
+    background: linear-gradient(180deg, rgba(36, 38, 43, 0.84) 0%, rgba(24, 25, 29, 0.9) 56%, rgba(16, 17, 20, 0.96) 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 8px 14px rgba(255, 255, 255, 0.035), inset 0 -10px 16px rgba(0, 0, 0, 0.45);
+}
+
+[data-battle-theme='theme2'] .row-my-rear {
+    background: linear-gradient(180deg, rgba(24, 25, 28, 0.9) 0%, rgba(14, 15, 17, 0.95) 56%, rgba(9, 9, 11, 0.98) 100%);
+    box-shadow: inset 0 10px 16px rgba(255, 255, 255, 0.03), inset 0 -14px 24px rgba(0, 0, 0, 0.5);
+}
+
+[data-battle-theme='theme2'] .dragging-over {
+    background-color: rgba(88, 100, 126, 0.22) !important;
+    outline: 2px inset rgba(198, 208, 228, 0.24);
 }
 
 /* 2. 羁绊位：深咖啡/暗金色调 */
 .bonds-area {
     background-color: rgba(20, 15, 5, 0.9) !important;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
 }
 
 /* 3. 拖拽高亮：改用深蓝色 (Deep Blue) */
 /* 降低亮度，增加对比度，去掉模糊的发光 */
 .dragging-over {
-    background-color: rgba(30, 58, 138, 0.4) !important; /* 深蓝色 */
+    background-color: rgba(61, 80, 138, 0.28) !important;
     /* 使用内缩的边框线，更有“选中感” */
-    outline: 2px inset rgba(59, 130, 246, 0.3); 
+    outline: 2px inset rgba(125, 173, 255, 0.28);
     outline-offset: -2px;
     transition: background-color 0.2s ease;
 }
@@ -100,8 +219,8 @@ html, body {
 
 /* 手牌区：固定在底部，不参与战场伸缩 */
 .hand-container-fixed {
-    height: 160px; /* 增加到160px确保显示完整 */
-    flex: 0 0 160px; /* 关键：禁止伸缩，固定160px */
+    height: 118px;
+    flex: 0 0 118px;
     background: #111;
     display: flex;
     flex-direction: column;
@@ -117,6 +236,7 @@ html, body {
 .card-base img, .card-adaptive img {
     -webkit-touch-callout: none;
     -webkit-user-select: none;
+    user-select: none;
     touch-action: none;
     pointer-events: none;
 }
@@ -124,12 +244,14 @@ html, body {
 
 /* 3. 锁定卡片最大高度，防止被父级容器撑开 */
 .card-adaptive {
-    height: 80% !important; /* 稍微调小一点，确保有呼吸空间 */
-    max-height: 80% !important;
+    height: 100% !important;
+    min-height: 96px;
+    max-height: none !important;
     aspect-ratio: 55 / 76;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
 }
 
 .card-adaptive img {
@@ -143,11 +265,115 @@ html, body {
 .z-region { z-index: 998; }  /* 区域大窗口 (牌组/弃牌等) */
 .z-detail { z-index: 999; }  /* 卡片详情窗口 (最顶层) */
 
+/* ========================================= */
+/* 🎮 HUD 侧边标签 (Side HUD Tags)           */
+/* ========================================= */
+.hud-strip {
+    position: fixed;
+    top: 48px;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    pointer-events: auto;
+}
+.hud-strip--enemy { left: 0; }
+.hud-strip--player { right: 0; }
+
+.hud-tag {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    padding: 5px 2px;
+    background: rgba(6, 4, 6, 0.62);
+    backdrop-filter: blur(6px);
+    cursor: pointer;
+    transition: background 0.18s ease, box-shadow 0.18s ease;
+    user-select: none;
+    border: none;
+    outline: none;
+}
+
+.hud-tag--enemy {
+    border-left: 2px solid rgba(248, 113, 113, 0.55);
+    border-radius: 0 4px 4px 0;
+    box-shadow: inset 2px 0 8px rgba(248, 113, 113, 0.08);
+}
+.hud-tag--enemy:hover, .hud-tag--enemy:active {
+    background: rgba(60, 10, 14, 0.72);
+    box-shadow: inset 2px 0 12px rgba(248, 113, 113, 0.22),
+                0 0 10px rgba(248, 113, 113, 0.12);
+}
+
+.hud-tag--player {
+    border-right: 2px solid rgba(96, 165, 250, 0.55);
+    border-radius: 4px 0 0 4px;
+    box-shadow: inset -2px 0 8px rgba(96, 165, 250, 0.08);
+}
+.hud-tag--player:hover, .hud-tag--player:active {
+    background: rgba(10, 20, 50, 0.72);
+    box-shadow: inset -2px 0 12px rgba(96, 165, 250, 0.22),
+                0 0 10px rgba(96, 165, 250, 0.12);
+}
+
+.hud-tag__label {
+    font-size: 8px;
+    letter-spacing: 0.04em;
+    color: rgba(200, 200, 210, 0.45);
+    font-weight: 500;
+    line-height: 1;
+    text-transform: uppercase;
+}
+.hud-tag__count {
+    font-size: 13px;
+    font-weight: 700;
+    font-family: ui-monospace, monospace;
+    line-height: 1.2;
+    margin-top: 1px;
+}
+.hud-tag--enemy .hud-tag__count  { color: rgba(252, 165, 165, 0.85); }
+.hud-tag--player .hud-tag__count { color: rgba(147, 197, 253, 0.85); }
+
 .card-base { width: 50px; height: 69px; flex-shrink: 0; position: relative; }
 .card-base img { width: 100%; height: 100%; border-radius: 3px; object-fit: cover; }
 
+.card-base,
+.card-adaptive {
+    touch-action: pan-x;
+}
+
 .bond-card { transform: rotate(90deg) scale(0.85); margin: 0 -8px; }
 .scroll-container::-webkit-scrollbar { display: none; }
+
+.row-scroll,
+.hand-strip-scroll,
+.bond-strip-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.6) transparent;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+}
+
+.row-scroll::-webkit-scrollbar,
+.hand-strip-scroll::-webkit-scrollbar,
+.bond-strip-scroll::-webkit-scrollbar {
+    height: 5px;
+}
+
+.row-scroll::-webkit-scrollbar-thumb,
+.hand-strip-scroll::-webkit-scrollbar-thumb,
+.bond-strip-scroll::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.55);
+    border-radius: 999px;
+}
+
+.row-scroll::-webkit-scrollbar-track,
+.hand-strip-scroll::-webkit-scrollbar-track,
+.bond-strip-scroll::-webkit-scrollbar-track {
+    background: rgba(15, 23, 42, 0.25);
+}
 
 .custom-scrollbar::-webkit-scrollbar { width: 3px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #3b82f6; border-radius: 10px; }
@@ -158,7 +384,7 @@ html, body {
 
 /* 当元素被拖过上方时，区域高亮 */
 .battle-row:active, .battle-row:hover {
-    background-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* 正在被拖拽的卡片样式 */
@@ -175,6 +401,80 @@ html, body {
 
 .card-base:active {
     cursor: grabbing;
+}
+
+@keyframes target-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes target-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 2px rgba(255, 230, 230, 0.4), 0 0 0 0 rgba(248, 113, 113, 0.0); opacity: 0.9; }
+    50% { box-shadow: inset 0 0 0 3px rgba(255, 245, 245, 0.85), 0 0 0 10px rgba(248, 113, 113, 0.32); opacity: 1; }
+}
+
+@keyframes target-outer-bloom {
+    0%, 100% {
+        opacity: 0.75;
+        transform: scale(1);
+        filter: blur(4px);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1.03);
+        filter: blur(6px);
+    }
+}
+
+.deployable-card {
+    position: relative;
+    overflow: hidden;
+}
+
+.attack-target-highlight {
+    position: relative;
+    overflow: visible !important;
+    outline: 2px solid rgba(248, 113, 113, 0.95);
+    outline-offset: -2px;
+    box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.8), 0 0 26px rgba(248, 113, 113, 0.9);
+    transform: translateY(-2px) scale(1.025);
+    transition: box-shadow 0.12s ease, transform 0.12s ease;
+    z-index: 8;
+}
+
+.attack-target-highlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255, 120, 120, 0.28) 0%, rgba(185, 28, 28, 0.35) 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 220, 220, 0.35);
+    pointer-events: none;
+    animation: target-fade-in 0.08s ease-out, target-pulse 0.45s ease-in-out infinite;
+}
+
+.attack-target-highlight::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 8px;
+    background: radial-gradient(circle, rgba(248, 113, 113, 0.62) 0%, rgba(248, 113, 113, 0.18) 40%, rgba(248, 113, 113, 0) 72%);
+    z-index: -1;
+    pointer-events: none;
+    animation: target-fade-in 0.1s ease-out, target-outer-bloom 0.45s ease-in-out infinite;
+}
+
+.attack-target-mc-highlight {
+    outline: 2px solid rgba(250, 204, 21, 0.98);
+    box-shadow: 0 0 0 2px rgba(146, 64, 14, 0.85), 0 0 30px rgba(250, 204, 21, 0.95), 0 0 18px rgba(248, 113, 113, 0.65);
+}
+
+.attack-target-mc-highlight::before {
+    background: linear-gradient(180deg, rgba(255, 226, 120, 0.32) 0%, rgba(220, 38, 38, 0.38) 100%);
+    box-shadow: inset 0 0 0 2px rgba(255, 245, 200, 0.72);
+}
+
+.attack-target-mc-highlight::after {
+    background: radial-gradient(circle, rgba(250, 204, 21, 0.72) 0%, rgba(248, 113, 113, 0.3) 42%, rgba(248, 113, 113, 0) 74%);
 }
 
 /* 拖拽时的半透明效果 */
@@ -228,33 +528,38 @@ html, body {
 /* 3. 状态控制条样式 */
 .phase-control-bar {
     position: fixed;
-    top: 50px; /* 位于 top-bar 下方 */
-    left: 50%;
-    transform: translateX(-50%);
+    top: env(safe-area-inset-top, 0px);
+    left: 0;
+    right: 0;
+    width: 100%;
+    transform: none;
     z-index: 100;
     display: flex;
     align-items: center;
     gap: 12px;
-    background: rgba(0, 0, 0, 0.85);
-    padding: 6px 16px;
-    border-radius: 99px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(8px);
+    background: linear-gradient(180deg, rgba(36, 8, 8, 0.78) 0%, rgba(18, 6, 6, 0.72) 100%);
+    padding: 4px 12px;
+    border-radius: 0;
+    border: 0;
+    border-bottom: 1px solid rgba(248, 113, 113, 0.22);
+    backdrop-filter: blur(4px);
+    box-shadow: inset 0 -8px 14px rgba(0, 0, 0, 0.25);
     pointer-events: auto;
 }
 
 .phase-btn {
-    background: #2563eb;
+    background: rgba(127, 29, 29, 0.88);
     color: white;
     font-size: 10px;
     font-weight: bold;
     padding: 4px 12px;
-    border-radius: 99px;
+    border-radius: 8px;
+    border: 1px solid rgba(248, 113, 113, 0.35);
     text-transform: uppercase;
     transition: all 0.2s;
 }
 
-.phase-btn:hover { background: #3b82f6; }
+.phase-btn:hover { background: rgba(153, 27, 27, 0.95); }
 .phase-btn:active { transform: scale(0.95); }
 
 /* 禁用状态的视觉反馈 */
@@ -346,9 +651,9 @@ html, body {
 /* 1. 全局定义标记的样式 */
 .mc-crown-marker {
     position: absolute; /* 相对于卡片定位 */
-    top: -6px;          /* 稍微悬浮在卡片上方 */
-    right: -6px;         /* 稍微悬浮在卡片右侧 */
-    z-index: 50;        /* 确保在所有内容之上 */
+    top: 1px;
+    right: 1px;
+    z-index: 120;
     
     /* 核心视觉设计：金色、圆形、黑字 */
     width: 20px;
@@ -408,8 +713,8 @@ html, body {
         width: 16px;
         height: 16px;
         font-size: 9px;
-        top: -4px;
-        right: -4px;
+        top: 1px;
+        right: 1px;
         border-width: 1.5px;
     }
 }

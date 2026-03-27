@@ -31,7 +31,7 @@ export const HandStrip = {
         }
     },
     template: `
-        <div class="flex-1 flex items-center gap-2 px-2 overflow-x-auto">
+        <div class="flex-1 flex items-center gap-2 px-2 overflow-x-auto overflow-y-hidden hand-strip-scroll">
             <div v-for="card in hand"
                  :key="card.instanceId"
                  class="card-base flex-shrink-0 relative overflow-hidden h-[var(--hand-card-height)]"
@@ -43,7 +43,7 @@ export const HandStrip = {
                  draggable="true"
                  @dragstart="onDragStart(card)"
                  @click="onCardClick(card)"
-                 @touchstart="onTouchStart($event, card)"
+                 @touchstart="onTouchStart($event, card, 'hand')"
                  @touchmove="onTouchMove($event)"
                  @touchend="onTouchEnd($event, card)">
                 <div class="absolute top-0 left-0 z-10 flex flex-col items-center justify-center font-bold text-white bg-black/70 rounded-br px-1 py-0.5 leading-none shadow-[2px_2px_5px_rgba(0,0,0,0.5)]"

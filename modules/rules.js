@@ -6,6 +6,8 @@ export function createRulesEngine(state) {
     // 基础阶段动作判定
     const canPerformAction = (actionType) => {
         if (state.isDevMode.value) return true;
+        // PLAY 模式下，非回合方完全禁止操作
+        if (!state.isMyTurn.value) return false;
 
         const validPhases = {
             'draw': ['BEGINNING'],

@@ -30,7 +30,7 @@ export const BondStrip = {
         }
     },
     template: `
-        <div class="h-10 px-2 flex items-center bonds-area"
+        <div class="h-10 px-2 flex items-center gap-1 bonds-area bond-strip-scroll"
              data-area="bonds"
              :class="{
                  'guide-bond-active': currentPhase === 'BOND' && !hasPlacedBond && !isDevMode,
