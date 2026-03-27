@@ -12,8 +12,9 @@ createApp({
     setup() {
         const state = createGameState();
         const rules = createRulesEngine(state);
-        const cardOps = createCardOperations(state);
-        const dragDrop = createDragDropHandler(state, cardOps, rules);
+        // 👇 加上 rules 参数，让 cardOps 也能使用规则引擎！
+        const cardOps = createCardOperations(state, rules); 
+        const dragDrop = createDragDropHandler(state, cardOps, rules)
         const turnMgr = createTurnManager(state);
         const socketHandler = createSocketHandler(state, cardOps);
 
@@ -21,7 +22,9 @@ createApp({
         const isCardInHand = (card) => state.hand.value.some(c => c.instanceId === card.instanceId);
         const formattedAbility = (t) => t ? t.replace(/能力：/g, '<span class="text-blue-400">【能力】</span>') : "无";
         const formattedSupport = (t) => t ? t.replace(/支援技能：/g, '<span class="text-yellow-500">【支援】</span>') : "无支援";
-		watch(state.currentPhase, (newPhase) => {
+		
+        
+        watch(state.currentPhase, (newPhase) => {
             if (newPhase === 'BEGINNING') {
                 state.usedBondsThisTurn.value = 0;
             }
@@ -44,12 +47,14 @@ createApp({
                 alert("只能在出击阶段 (DEPLOY) 部署单位！");
                 return;
             }
-            if (!rules.canDeployCard(card)) {
-                const left = state.bonds.value.length - (state.usedBondsThisTurn?.value || 0);
-                alert(`费用不足！此卡需要 ${card.cost} 费，本回合仅剩 ${left} 费。`);
+            
+            // 💡 修复 Bug 4: 正确解析 deployCheck 对象的 .valid 属性
+            const deployCheck = rules.canDeployCard(card);
+            if (!deployCheck.valid) {
+                alert(deployCheck.message); // 打印出是缺费用还是缺颜色
                 return;
             }
-            // 调用原始的 playToField
+            
             cardOps.playToField(card, area);
             state.selectedCard.value = null; 
         };
@@ -73,7 +78,7 @@ createApp({
             ...dragDrop, // 自动暴露拖拽与攻击指令
 			playToField: safePlayToField,
             nextPhase: turnMgr.nextPhase,
-            canPerformAction: rules.canPerformAction,
+            canPerformAction: rules.canPerformAction,getFactionInfo: rules.getFactionInfo,
             isMyCard, isCardInHand, formattedAbility, formattedSupport, handleMinifiedClick, updateHeight
         };
     }

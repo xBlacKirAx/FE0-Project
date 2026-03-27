@@ -53,11 +53,13 @@ export function createDragDropHandler(state, cardOps, rules) {
         }
 
         // 💰 新增：如果是出击动作，校验费用！
-        if (actionType === 'deploy' && !canDeployCard(draggedCard.value)) {
-            // 你也可以在这里加一个弹窗提示玩家
-            alert(`费用不足！需要 ${draggedCard.value.cost} 羁绊。`);
-            draggedCard.value = null;
-            return;
+        if (actionType === 'deploy') {
+            const deployCheck = canDeployCard(draggedCard.value);
+            if (!deployCheck.valid) {
+                alert(deployCheck.message); // 👈 动态显示是缺费用还是缺颜色
+                draggedCard.value = null;
+                return;
+            }
         }
 
         moveTo(draggedCard.value, toAreaName);
@@ -147,9 +149,9 @@ export function createDragDropHandler(state, cardOps, rules) {
 
             // 💰 修复：校验出击费用
             if (actionType === 'deploy') {
-                if (!canDeployCard(draggedCard.value)) {
-                    const left = state.bonds.value.length - (state.usedBondsThisTurn?.value || 0);
-                    alert(`费用不足！此卡需要 ${draggedCard.value.cost} 费，本回合仅剩 ${left} 费。`);
+                const deployCheck = canDeployCard(draggedCard.value);
+                if (!deployCheck.valid) {
+                    alert(deployCheck.message); // 👈 动态显示
                     draggedCard.value = null;
                     isDraggingOver.value = null;
                     return;

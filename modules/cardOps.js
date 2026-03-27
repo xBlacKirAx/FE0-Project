@@ -33,22 +33,22 @@ export function createCardOperations(state) {
 
         const idx = fromArea.findIndex(c => c.instanceId === card.instanceId);
         if (idx > -1) {
-            // 💰 判断是否是“出击动作” (从手牌到前后卫)
             const isDeploy = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
-            const cost = isDeploy ? (parseInt(card.cost) || 0) : 0;
+            
+            // 💡 修复 Bug 2: 如果处于 DEV 模式，强制算作 0 费，不再扣除可用费用！
+            const cost = (isDeploy && !state.isDevMode.value) ? (parseInt(card.cost) || 0) : 0;
 
-            // 📝 快照记录加入 costUsed
             undoStack.value.push({ 
                 card, 
                 from: fromAreaName, 
                 to: toAreaName,
                 previousPhase: state.currentPhase.value,
                 previousHasPlacedBond: hasPlacedBond.value,
-                costUsed: cost // 👈 记录这步操作扣除的费用，用于撤销
+                costUsed: cost // 记录扣掉的费用，用于撤销
             });
             if (undoStack.value.length > 10) undoStack.value.shift();
             
-            // 💰 核心：如果是出击，正式扣除费用！
+            // 扣除费用
             if (isDeploy && state.usedBondsThisTurn !== undefined) {
                 state.usedBondsThisTurn.value += cost;
             }
@@ -67,7 +67,25 @@ export function createCardOperations(state) {
         }
     };
 
-    const playToField = (card, pos) => moveTo(card, pos);
+    // 在 cardOps.js 内部，找到下面这行：
+    // const playToField = (card, pos) => moveTo(card, pos); 
+    
+    // 👇 将其替换为这段包含双重校验的逻辑 👇
+    const playToField = (card, pos) => {
+        if (!rules.canPerformAction('deploy')) {
+            alert("只能在出击阶段 (DEPLOY) 部署单位！");
+            return;
+        }
+        
+        const deployCheck = rules.canDeployCard(card);
+        if (!deployCheck.valid) {
+            alert(deployCheck.message); // 会自动提示缺数量还是缺颜色
+            return;
+        }
+        
+        moveTo(card, pos);
+        state.selectedCard.value = null; // 出阵后自动关闭面板
+    };
     const playToBond = (card) => moveTo(card, 'bonds');
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
     const safePlayToField = (card, area) => {
