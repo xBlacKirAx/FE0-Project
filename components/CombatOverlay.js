@@ -5,7 +5,23 @@ export const CombatOverlay = {
         oppSupportCard: Object,
         attacker: Object,
         defender: Object,
+        costCards: {
+            type: Array,
+            default: () => []
+        },
+        selectedCostCard: {
+            type: Object,
+            default: null
+        },
+        selectedCostCardName: {
+            type: String,
+            default: ''
+        },
         isMyAttacker: Boolean,
+        onOpenCostPicker: {
+            type: Function,
+            required: true
+        },
         onCombatDecision: {
             type: Function,
             required: true
@@ -17,10 +33,6 @@ export const CombatOverlay = {
         combatStats: {
             type: Object,
             default: () => ({})
-        },
-        onClose: {
-            type: Function,
-            required: true
         }
     },
     computed: {
@@ -28,12 +40,41 @@ export const CombatOverlay = {
             const role = this.isMyAttacker ? 'attacker' : 'defender';
             return this.combatDecision?.promptOwner === role;
         },
+        defenderCharaName() {
+            const direct = (this.defender?.charaName || '').trim();
+            if (direct) return direct;
+
+            const fromCardName = (this.defender?.cardName || '').trim();
+            if (fromCardName) {
+                const idx = fromCardName.search(/\s/);
+                if (idx > -1) {
+                    const derived = fromCardName.slice(idx).trim();
+                    if (derived) return derived;
+                }
+                return fromCardName;
+            }
+
+            const legacyName = (this.defender?.name || '').trim();
+            if (legacyName) {
+                const idx = legacyName.search(/\s/);
+                if (idx > -1) {
+                    const derived = legacyName.slice(idx).trim();
+                    if (derived) return derived;
+                }
+                return legacyName;
+            }
+
+            return '该单位';
+        },
         decisionTitle() {
             if (this.combatDecision?.stage === 'awaiting-attacker-critical') {
                 return '本次原本未击破，是否发动必杀？';
             }
-            if (this.combatDecision?.stage === 'awaiting-defender-evasion' || this.combatDecision?.stage === 'awaiting-defender-evasion-after-critical') {
-                return '本次战斗将击破，是否发动回避？';
+            if (this.combatDecision?.stage === 'awaiting-defender-evasion') {
+                return `${this.defenderCharaName}将被击破，是否发动回避？`;
+            }
+            if (this.combatDecision?.stage === 'awaiting-defender-evasion-after-critical') {
+                return `对方发动必杀，${this.defenderCharaName}将被击破，是否发动回避？`;
             }
             return '';
         },
@@ -45,6 +86,42 @@ export const CombatOverlay = {
                 return '等待防御方选择是否发动回避...';
             }
             return '正在结算战斗...';
+        },
+        requiredCharaName() {
+            if (this.combatDecision?.stage === 'awaiting-attacker-critical') {
+                return this.attackerCharaName;
+            }
+            if (this.combatDecision?.stage === 'awaiting-defender-evasion' || this.combatDecision?.stage === 'awaiting-defender-evasion-after-critical') {
+                return this.defenderCharaName;
+            }
+            return '';
+        },
+        attackerCharaName() {
+            const direct = (this.attacker?.charaName || '').trim();
+            if (direct) return direct;
+            const fullName = (this.attacker?.cardName || this.attacker?.name || '').trim();
+            if (!fullName) return '';
+            const idx = fullName.search(/\s/);
+            if (idx > -1) {
+                const derived = fullName.slice(idx).trim();
+                if (derived) return derived;
+            }
+            return fullName;
+        },
+        hasSkillCostCard() {
+            return (this.costCards || []).length > 0;
+        },
+        canActivateSkill() {
+            return this.hasSkillCostCard && !!this.selectedCostCard?.instanceId;
+        }
+    },
+    methods: {
+        activateDecision(decisionType) {
+            if (!this.canActivateSkill) return;
+            this.onCombatDecision(decisionType, true, this.selectedCostCard.instanceId);
+        },
+        declineDecision(decisionType) {
+            this.onCombatDecision(decisionType, false, null);
         }
     },
     template: `
@@ -58,34 +135,52 @@ export const CombatOverlay = {
 
             <!-- 必杀/回避决策面板 - 绝对居中弹层，始终在屏幕内可见 -->
             <div v-if="combatDecision?.stage && combatDecision.stage !== 'idle' && combatDecision.stage !== 'resolved'"
-                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-white/20 bg-black/90 backdrop-blur-sm px-6 py-6 text-center shadow-2xl">
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-white/20 bg-black/55 backdrop-blur-sm px-6 py-6 text-center shadow-2xl">
                 <div v-if="canAct" class="space-y-4">
                     <div class="text-lg md:text-2xl font-black text-white">{{ decisionTitle }}</div>
                     <div v-if="combatDecision.stage === 'awaiting-attacker-critical'" class="text-sm md:text-base text-yellow-300">
                         发动后攻击战力将提升至 {{ combatDecision.criticalPower }}
                     </div>
+                    <div class="rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-left">
+                        <div class="text-xs md:text-sm text-white/80">发动代价：从手牌弃置1张同角色名卡（{{ requiredCharaName || '未知角色' }}）</div>
+                        <div v-if="hasSkillCostCard" class="mt-2 space-y-2">
+                            <button
+                                @click="onOpenCostPicker()"
+                                class="w-full rounded-lg border border-white/20 bg-black/30 px-3 py-2 text-xs md:text-sm text-white/90 hover:bg-black/45 transition-colors">
+                                从手牌筛选并选择代价卡
+                            </button>
+                            <div class="text-xs md:text-sm text-emerald-300">
+                                已选择：{{ selectedCostCardName || selectedCostCard?.cardName || '未选择' }}
+                            </div>
+                        </div>
+                        <div v-else class="mt-2 text-sm text-rose-300">手牌中没有同角色名卡，无法发动。</div>
+                    </div>
                     <div class="flex items-center justify-center gap-3 md:gap-4 mt-4">
                         <button
                             v-if="combatDecision.stage === 'awaiting-attacker-critical'"
-                            @click="onCombatDecision('critical', true)"
-                            class="px-6 py-3 rounded-full bg-yellow-500 hover:bg-yellow-400 text-black font-black transition-colors text-base md:text-lg">
+                            @click="activateDecision('critical')"
+                            :disabled="!canActivateSkill"
+                            :class="canActivateSkill ? 'bg-yellow-500 hover:bg-yellow-400 text-black' : 'bg-yellow-900/50 text-yellow-200/60 cursor-not-allowed'"
+                            class="px-6 py-3 rounded-full font-black transition-colors text-base md:text-lg">
                             发动必杀
                         </button>
                         <button
                             v-if="combatDecision.stage === 'awaiting-attacker-critical'"
-                            @click="onCombatDecision('critical', false)"
+                            @click="declineDecision('critical')"
                             class="px-6 py-3 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold transition-colors text-base md:text-lg">
                             不发动
                         </button>
                         <button
                             v-if="combatDecision.stage === 'awaiting-defender-evasion' || combatDecision.stage === 'awaiting-defender-evasion-after-critical'"
-                            @click="onCombatDecision('evasion', true)"
-                            class="px-6 py-3 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-black transition-colors text-base md:text-lg">
+                            @click="activateDecision('evasion')"
+                            :disabled="!canActivateSkill"
+                            :class="canActivateSkill ? 'bg-cyan-500 hover:bg-cyan-400 text-black' : 'bg-cyan-900/50 text-cyan-200/60 cursor-not-allowed'"
+                            class="px-6 py-3 rounded-full font-black transition-colors text-base md:text-lg">
                             发动回避
                         </button>
                         <button
                             v-if="combatDecision.stage === 'awaiting-defender-evasion' || combatDecision.stage === 'awaiting-defender-evasion-after-critical'"
-                            @click="onCombatDecision('evasion', false)"
+                            @click="declineDecision('evasion')"
                             class="px-6 py-3 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold transition-colors text-base md:text-lg">
                             不回避
                         </button>
@@ -158,11 +253,6 @@ export const CombatOverlay = {
                     </div>
                 </div>
 
-                        <div class="mt-10 md:mt-16 z-40">
-                    <button @click="onClose()" class="px-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold rounded-full shadow-lg border border-neutral-600 transition-colors">
-                        关闭面板 (调试用)
-                    </button>
-                </div>
             </div>
         </div>
     `

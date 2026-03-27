@@ -104,7 +104,7 @@ export const SpectatorInfoPanel = {
             return '旁观者';
         },
         cardName(card) {
-            return card?.name || card?.cardName || card?.id || '未知卡牌';
+            return card?.cardName || card?.id || '未知卡牌';
         },
         actionDescription(action) {
             const type = action?.type;

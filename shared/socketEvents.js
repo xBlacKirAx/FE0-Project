@@ -22,6 +22,8 @@
         OPPONENT_ATTACK: 'opponent-attack',
         SYNC_DEFENSE_SUPPORT: 'sync-defense-support',
         OPPONENT_DEFENSE_SUPPORT: 'opponent-defense-support',
+        SYNC_COMBAT_DECISION: 'sync-combat-decision',
+        OPPONENT_COMBAT_DECISION: 'opponent-combat-decision',
         SYNC_CARD_UNTAP: 'sync-card-untap',
         OPPONENT_CARD_UNTAP: 'opponent-card-untap',
         SYNC_UNTAP_ALL: 'sync-untap-all',

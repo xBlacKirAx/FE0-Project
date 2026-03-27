@@ -1,5 +1,7 @@
 // modules/state/gameState.js
 
+import { createInitialCombatDecision } from '../engine/combatDecisionEngine.js';
+
 const { ref } = Vue;
 
 export function createGameFlowState() {
@@ -7,6 +9,7 @@ export function createGameFlowState() {
     const currentPhase = ref('BEGINNING');
     const isMyTurn = ref(true);
     const hasPlacedBond = ref(false);
+    const hasBattledThisTurn = ref(false);
 
     const oppStats = ref({ hand: 6, bonds: 0, active: 0 });
     const usedBondsThisTurn = ref(0);
@@ -26,12 +29,14 @@ export function createGameFlowState() {
     const mySupportCard = ref(null);
     const oppSupportCard = ref(null);
     const combatStats = ref({ myTotalPower: 0, oppTotalPower: 0 });
+    const combatDecision = ref(createInitialCombatDecision());
 
     return {
         isDevMode,
         currentPhase,
         isMyTurn,
         hasPlacedBond,
+        hasBattledThisTurn,
         oppStats,
         usedBondsThisTurn,
         PHASES,
@@ -41,6 +46,7 @@ export function createGameFlowState() {
         defender,
         mySupportCard,
         oppSupportCard,
-        combatStats
+        combatStats,
+        combatDecision
     };
 }

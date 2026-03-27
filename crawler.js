@@ -68,6 +68,26 @@ function parseSkillCost(html) {
 }
 
 /**
+ * 拆分卡名：以空格分割为称号(cardName)和角色名(charaName)
+ */
+function splitCardAndCharaName(rawName) {
+    const normalized = (rawName || '').trim();
+    if (!normalized) {
+        return { cardName: '', charaName: '' };
+    }
+
+    const firstSpaceIndex = normalized.search(/\s/);
+    if (firstSpaceIndex === -1) {
+        return { cardName: normalized, charaName: '' };
+    }
+
+    return {
+        cardName: normalized,
+        charaName: normalized.slice(firstSpaceIndex).trim()
+    };
+}
+
+/**
  * 主抓取逻辑
  */
 async function startScraping() {
@@ -125,9 +145,13 @@ async function startScraping() {
                 timing: text.match(/〖.*?〗/g) || []    // 〖1回合1次〗〖攻击型〗
             });
 
+            const rawName = h2Element.find('a').text().trim();
+            const { cardName, charaName } = splitCardAndCharaName(rawName);
+
             const cardInfo = {
                 id: cardId,
-				name: h2Element.find('a').text().trim(),
+                cardName: cardName,
+                charaName: charaName,
 				force: force,   // 存储势力
 				gender: gender, // 存储性别
 				weapon: weapon, // 存储武器

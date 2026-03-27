@@ -2,15 +2,60 @@
 
 import { isAttackerFromMyField, getCombatWinner } from '../engine/combatEngine.js';
 import { createInitialCombatDecision, getInitialCombatDecisionContext } from '../engine/combatDecisionEngine.js';
-import { emitSyncAttack, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
+import { emitSyncAttack, emitSyncCardMove, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
 import { emitSyncCombatDecision } from '../effects/combatSocketEffects.js';
 
 export function createCombatCommands({ state, socket }) {
+    const getCardCharaName = (card) => {
+        const direct = (card?.charaName || '').trim();
+        if (direct) return direct;
+
+        const fullName = (card?.cardName || card?.name || '').trim();
+        if (!fullName) return '';
+        const idx = fullName.search(/\s/);
+        if (idx > -1) {
+            const derived = fullName.slice(idx).trim();
+            if (derived) return derived;
+        }
+        return fullName;
+    };
+
     const getIsMyAttacker = (currentState) => isAttackerFromMyField(
         currentState.attacker.value?.instanceId,
         currentState.fieldFront.value,
         currentState.fieldRear.value
     );
+
+    const canCurrentPlayerAct = (currentState) => {
+        const owner = currentState.combatDecision.value?.promptOwner;
+        if (!owner) return false;
+        const isMyAttacker = getIsMyAttacker(currentState);
+        return (owner === 'attacker' && isMyAttacker) || (owner === 'defender' && !isMyAttacker);
+    };
+
+    const getRequiredCharaNameByDecision = (currentState) => {
+        const stage = currentState.combatDecision.value?.stage;
+        if (stage === 'awaiting-attacker-critical') return getCardCharaName(currentState.attacker.value);
+        if (stage === 'awaiting-defender-evasion' || stage === 'awaiting-defender-evasion-after-critical') return getCardCharaName(currentState.defender.value);
+        return '';
+    };
+
+    const consumeDecisionCostCard = (currentState, costCardId) => {
+        const requiredCharaName = getRequiredCharaNameByDecision(currentState);
+        if (!requiredCharaName) return null;
+
+        const idx = currentState.hand.value.findIndex((card) => {
+            if (!costCardId || card.instanceId !== costCardId) return false;
+            return getCardCharaName(card) === requiredCharaName;
+        });
+
+        if (idx === -1) return null;
+
+        const paidCard = currentState.hand.value.splice(idx, 1)[0];
+        currentState.graveyard.value.push(paidCard);
+        emitSyncCardMove(socket, { card: paidCard, from: 'hand', to: 'graveyard' });
+        return paidCard;
+    };
 
     const resetCombatState = (currentState) => {
         currentState.isCombatActive.value = false;
@@ -131,15 +176,33 @@ export function createCombatCommands({ state, socket }) {
         }
     };
 
-    const respondCombatDecision = (currentState, decisionType, useSkill) => {
-        emitSyncCombatDecision(socket, { decisionType, useSkill });
-        applyCombatDecision(currentState, { decisionType, useSkill });
+    const respondCombatDecision = (currentState, decisionType, useSkill, costCardId = null) => {
+        if (!canCurrentPlayerAct(currentState)) return false;
+
+        const payload = { decisionType, useSkill: !!useSkill };
+        if (payload.useSkill) {
+            const paidCard = consumeDecisionCostCard(currentState, costCardId);
+            if (!paidCard) {
+                alert('发动失败：请从手牌中选择1张同角色名卡牌作为代价。');
+                return false;
+            }
+            payload.costCard = paidCard;
+            payload.costCardId = paidCard.instanceId;
+            payload.costCharaName = getCardCharaName(paidCard);
+        }
+
+        emitSyncCombatDecision(socket, payload);
+        applyCombatDecision(currentState, payload);
+        return true;
     };
 
     const initiateAttack = (currentState, attackerCard, defenderCard) => {
         if (attackerCard.isTapped && !currentState.isDevMode.value) {
             console.warn('[规则拦截] 底层已拒绝：已横置的卡牌无法再次攻击！');
             return;
+        }
+        if (currentState.hasBattledThisTurn) {
+            currentState.hasBattledThisTurn.value = true;
         }
         attackerCard.isTapped = true;
         currentState.attacker.value = attackerCard;

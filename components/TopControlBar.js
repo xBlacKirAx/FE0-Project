@@ -19,6 +19,10 @@ export const TopControlBar = {
             default: 0
         },
         hasUndo: Boolean,
+        undoDisabled: {
+            type: Boolean,
+            default: false
+        },
         onUndo: {
             type: Function,
             required: true
@@ -35,6 +39,15 @@ export const TopControlBar = {
         onNextPhase: {
             type: Function,
             required: true
+        }
+    },
+    methods: {
+        handleUndoClick() {
+            if (this.undoDisabled) {
+                alert('本回合已发生战斗，无法撤销。');
+                return;
+            }
+            this.onUndo();
         }
     },
     template: `
@@ -66,8 +79,10 @@ export const TopControlBar = {
                 </div>
 
                 <button v-if="hasUndo"
-                        @click="onUndo()"
-                        class="bg-orange-600/90 hover:bg-orange-500 text-white text-[9px] px-2 py-1 rounded border border-orange-400/50 shadow-md flex items-center gap-1 transition-transform active:scale-95">
+                    :title="undoDisabled ? '本回合已发生战斗，无法撤销' : '撤销上一步'"
+                        @click="handleUndoClick()"
+                        :class="undoDisabled ? 'bg-orange-900/50 text-orange-200/60 border-orange-800/60 cursor-not-allowed' : 'bg-orange-600/90 hover:bg-orange-500 text-white border-orange-400/50 active:scale-95'"
+                        class="text-[9px] px-2 py-1 rounded shadow-md flex items-center gap-1 transition-transform">
                     <span>↩</span><span class="hidden sm:inline">撤销</span>
                 </button>
             </div>

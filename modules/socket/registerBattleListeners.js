@@ -2,6 +2,9 @@
 
 export function registerBattleListeners({ state, socket, EVT, beginCombatResolution, applyCombatDecision }) {
     socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard }) => {
+        if (state.hasBattledThisTurn) {
+            state.hasBattledThisTurn.value = true;
+        }
         const oppAttacker = [...state.opponentFront.value, ...state.opponentRear.value]
             .find(c => c.instanceId === attacker.instanceId);
         if (oppAttacker) oppAttacker.isTapped = true;
@@ -44,7 +47,7 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
             socket.emit(EVT.SYNC_DEFENSE_SUPPORT, { supportCard: defenseSupport });
             setTimeout(() => {
                 if (beginCombatResolution) beginCombatResolution(state);
-            }, 2000);
+            }, 1000);
         }, 800);
     });
 
@@ -79,7 +82,7 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
         state.combatStats.value.oppTotalPower += (supportCard?.support || 0);
         setTimeout(() => {
             if (beginCombatResolution) beginCombatResolution(state);
-        }, 2000);
+        }, 1000);
     });
 
     socket.on(EVT.OPPONENT_COMBAT_DECISION, (payload) => {

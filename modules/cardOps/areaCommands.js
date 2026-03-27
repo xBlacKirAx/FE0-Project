@@ -7,6 +7,7 @@ import {
     emitSyncReset,
     emitFullStateSync
 } from '../effects/cardSocketEffects.js';
+import { emitSyncPhase } from '../effects/socketEffects.js';
 
 export function createAreaCommands({ state, socket, refs }) {
     const {
@@ -181,15 +182,26 @@ export function createAreaCommands({ state, socket, refs }) {
     };
 
     const undoLastMove = () => {
+        if (state.hasBattledThisTurn?.value) {
+            alert('本回合已经发生战斗，无法撤销。');
+            return;
+        }
+
         const last = undoStack.value.pop();
         if (!last) return;
 
         if (last.previousPhase) state.currentPhase.value = last.previousPhase;
         if (last.previousHasPlacedBond !== undefined) hasPlacedBond.value = last.previousHasPlacedBond;
 
+        if (last.type === 'phase-transition') {
+            const phaseName = state.PHASES?.[state.currentPhase.value]?.name || state.currentPhase.value;
+            emitSyncPhase(socket, { phase: state.currentPhase.value, phaseName });
+            return;
+        }
+
         if (last.type === 'draw') {
             const card = hand.value.pop();
-            console.log(`[撤销] 撤回抽牌 → ${card?.name || '未知卡牌'}`);
+            console.log(`[撤销] 撤回抽牌 → ${card?.cardName || '未知卡牌'}`);
             if (card) deck.value.push(card);
             return;
         }
@@ -202,7 +214,7 @@ export function createAreaCommands({ state, socket, refs }) {
         if (idx > -1) {
             const card = currentArea.splice(idx, 1)[0];
             const fromLabel = { hand: '手牌', front: '前排', rear: '后排', bonds: '羁绊区', jewels: '宝玉区', graveyard: '弃牌区', boundless: '无限区', deck: '牌组' };
-            console.log(`[撤销] 撤回：${card?.name || '卡牌'} [${fromLabel[last.to] || last.to} → ${fromLabel[last.from] || last.from}]`);
+            console.log(`[撤销] 撤回：${card?.cardName || '卡牌'} [${fromLabel[last.to] || last.to} → ${fromLabel[last.from] || last.from}]`);
             getAreaArray(last.from).push(card);
             emitSyncCardMove(socket, { card, to: last.from, from: last.to });
         }
@@ -233,6 +245,9 @@ export function createAreaCommands({ state, socket, refs }) {
         state.currentPhase.value = 'BEGINNING';
         state.hasPlacedBond.value = false;
         state.usedBondsThisTurn.value = 0;
+        if (state.hasBattledThisTurn) {
+            state.hasBattledThisTurn.value = false;
+        }
 
         try {
             const res = await fetch('/api/cards');

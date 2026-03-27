@@ -1,3 +1,5 @@
+const { ref, watch, computed } = Vue;
+
 export const RegionPanel = {
     props: {
         activePanel: String,
@@ -9,6 +11,7 @@ export const RegionPanel = {
             type: Array,
             default: () => []
         },
+        isDevMode: Boolean,
         isOpponentPanel: Boolean,
         onClose: {
             type: Function,
@@ -19,6 +22,41 @@ export const RegionPanel = {
             required: true
         }
     },
+    setup(props) {
+        const flippedIds = ref(new Set());
+
+        watch(() => props.activePanel, () => {
+            flippedIds.value = new Set();
+        });
+
+        const isJewelPanel = computed(() => props.activePanel === 'jewels' || props.activePanel === 'oppJewels');
+
+        const displayCards = computed(() => {
+            if (!isJewelPanel.value) return props.panelCards;
+            return (props.panelCards || []).map(card => ({
+                ...card,
+                localFlipped: flippedIds.value.has(card.instanceId)
+            }));
+        });
+
+        const handleCardClick = (card) => {
+            if (isJewelPanel.value) {
+                if (!props.isDevMode) return;
+                const next = new Set(flippedIds.value);
+                if (next.has(card.instanceId)) next.delete(card.instanceId);
+                else next.add(card.instanceId);
+                flippedIds.value = next;
+                return;
+            }
+            props.onCardClick(card);
+        };
+
+        return {
+            isJewelPanel,
+            displayCards,
+            handleCardClick
+        };
+    },
     template: `
         <div v-if="activePanel" class="fixed inset-0 z-region flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="onClose()"></div>
@@ -28,24 +66,32 @@ export const RegionPanel = {
                     <span class="text-sm font-bold uppercase" :class="isOpponentPanel ? 'text-red-500' : 'text-blue-400'">
                         {{ isOpponentPanel ? '对手的' : '我的' }} {{ panelTitle }}
                     </span>
-                    <button @click="onClose()" class="text-white p-1">✕</button>
+                    <div class="flex items-center gap-2">
+                        <span v-if="isJewelPanel && isDevMode" class="text-[9px] text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded">DEV · 点击翻面</span>
+                        <button @click="onClose()" class="text-white p-1">✕</button>
+                    </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-2">
-                    <div v-for="card in panelCards"
+                    <div v-for="card in displayCards"
                          :key="card.instanceId"
-                         @click="onCardClick(card)"
-                         class="aspect-[55/76] relative group">
-                        <img :src="card.isFaceDown ? 'images/card_back.jpg' : card.image"
+                         @click="handleCardClick(card)"
+                         :class="[isJewelPanel ? (isDevMode ? 'cursor-pointer active:scale-95' : 'cursor-default') : 'cursor-pointer', 'aspect-[55/76] relative group transition-transform']">
+                        <img :src="isJewelPanel ? (card.localFlipped ? card.image : 'images/card_back.jpg') : (card.isFaceDown ? 'images/card_back.jpg' : card.image)"
                              class="w-full h-full object-cover rounded shadow-md transition-all"
-                             :class="{ 'opacity-50 grayscale': card.isFaceDown }">
+                                :class="{ 'opacity-50 grayscale': !isJewelPanel && card.isFaceDown }">
 
-                        <div v-if="card.isFaceDown" class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <div v-if="!isJewelPanel && card.isFaceDown" class="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div class="bg-black/60 px-2 py-1 rounded text-[10px] text-amber-500 border border-amber-500/30">已消耗</div>
+                        </div>
+
+                        <div v-if="isJewelPanel && isDevMode && !card.localFlipped"
+                             class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <div class="bg-black/70 px-1.5 py-0.5 rounded text-[9px] text-amber-400">翻面</div>
                         </div>
                     </div>
 
-                    <div v-if="panelCards.length === 0" class="col-span-4 py-20 text-center text-gray-600 text-xs italic">
+                    <div v-if="displayCards.length === 0" class="col-span-4 py-20 text-center text-gray-600 text-xs italic">
                         该区域目前没有卡牌
                     </div>
                 </div>

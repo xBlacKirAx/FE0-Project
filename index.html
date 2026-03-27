@@ -23,6 +23,7 @@
         :remaining-cost="remainingCost"
         :total-bonds="totalBonds"
         :has-undo="undoStack.length > 0"
+        :undo-disabled="hasBattledThisTurn"
         :on-undo="undoLastMove"
         :phase-name="currentPhaseName"
         :show-next-phase-button="showNextPhaseButton"
@@ -171,16 +172,23 @@
         :attacker="attacker"
         :defender="defender"
         :combat-stats="combatStats"
-        :on-close="closeCombatOverlay">
+        :combat-decision="combatDecision"
+        :cost-cards="combatCostCandidates"
+        :selected-cost-card="selectedCombatCostCard"
+        :selected-cost-card-name="selectedCombatCostCardName"
+        :is-my-attacker="isMyCombatAttacker"
+        :on-open-cost-picker="openCombatCostPicker"
+        :on-combat-decision="handleCombatDecision">
     </combat-overlay>
 
     <region-panel
         :active-panel="activePanel"
-        :panel-title="activePanelTitle"
-        :panel-cards="activePanelCards"
+        :panel-title="resolvedPanelTitle"
+        :panel-cards="resolvedPanelCards"
+        :is-dev-mode="isDevMode"
         :is-opponent-panel="isOpponentPanel"
         :on-close="closeActivePanel"
-        :on-card-click="handleMinifiedClick">
+        :on-card-click="handleRegionPanelCardClick">
     </region-panel>
 
     <card-detail-modal

@@ -55,10 +55,12 @@ function main() {
         'modules/cardOps/areaCommands.js',
         'modules/cardOps/combatCommands.js',
         'modules/engine/combatEngine.js',
+        'modules/engine/combatDecisionEngine.js',
         'modules/engine/phaseEngine.js',
         'modules/commands/turnCommands.js',
         'modules/effects/socketEffects.js',
         'modules/effects/cardSocketEffects.js',
+        'modules/effects/combatSocketEffects.js',
         'server/socket/registerGameplayHandlers.js',
         'server/socket/registerBattleHandlers.js',
         'server/socket/registerSyncHandlers.js',
@@ -86,6 +88,7 @@ function main() {
     assertRegex('modules/cardOps/areaCommands.js', /export function createAreaCommands\s*\(/, 'createAreaCommands 导出');
     assertRegex('modules/cardOps/combatCommands.js', /export function createCombatCommands\s*\(/, 'createCombatCommands 导出');
     assertRegex('modules/engine/combatEngine.js', /export function isAttackerFromMyField\s*\(/, 'isAttackerFromMyField 导出');
+    assertRegex('modules/engine/combatDecisionEngine.js', /export function createInitialCombatDecision\s*\(/, 'createInitialCombatDecision 导出');
     assertRegex('modules/engine/phaseEngine.js', /export function getNextPhase\s*\(/, 'getNextPhase 导出');
 
     assertContains('index.html', 'shared/socketEvents.js', '共享事件脚本加载');

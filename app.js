@@ -20,7 +20,7 @@ import { OppHandPanel } from './components/OppHandPanel.js';
 import { OppDeckPanel } from './components/OppDeckPanel.js';
 import { TopControlBar } from './components/TopControlBar.js';
 
-const { createApp, computed, onMounted, watch } = Vue;
+const { createApp, computed, onMounted, watch, ref } = Vue;
 
 // 可选: 'theme1' (默认熔岩对峙), 'theme2' (金属桌垫)
 const BATTLE_THEME = 'theme1';
@@ -67,9 +67,69 @@ createApp({
             state.isDevMode.value || (state.isMyTurn.value && (state.currentPhase.value || 'BEGINNING') !== 'BEGINNING')
         );
         const nextPhaseLabel = computed(() => (state.currentPhase.value || 'BEGINNING') === 'END' ? '结束' : 'NEXT');
+        const isMyCombatAttacker = computed(() => ['fieldFront', 'fieldRear'].some(area =>
+            state[area].value.some(card => card.instanceId === state.attacker.value?.instanceId)
+        ));
+        const selectedCombatCostCardId = ref(null);
+        const selectedCombatCostCardName = ref('');
+
+        const getCardCharaName = (card) => {
+            const direct = (card?.charaName || '').trim();
+            if (direct) return direct;
+            const fullName = (card?.cardName || card?.name || '').trim();
+            if (!fullName) return '';
+            const idx = fullName.search(/\s/);
+            if (idx > -1) {
+                const derived = fullName.slice(idx).trim();
+                if (derived) return derived;
+            }
+            return fullName;
+        };
+
+        const isLocalDecisionActor = computed(() => {
+            const owner = state.combatDecision.value?.promptOwner;
+            if (!owner) return false;
+            return (owner === 'attacker' && isMyCombatAttacker.value) || (owner === 'defender' && !isMyCombatAttacker.value);
+        });
+
+        const requiredCombatCharaName = computed(() => {
+            const stage = state.combatDecision.value?.stage;
+            if (stage === 'awaiting-attacker-critical') return getCardCharaName(state.attacker.value);
+            if (stage === 'awaiting-defender-evasion' || stage === 'awaiting-defender-evasion-after-critical') return getCardCharaName(state.defender.value);
+            return '';
+        });
+
+        const combatCostCandidates = computed(() => {
+            if (!isLocalDecisionActor.value) return [];
+            const required = requiredCombatCharaName.value;
+            if (!required) return [];
+            return state.hand.value.filter(card => getCardCharaName(card) === required);
+        });
+
+        const selectedCombatCostCard = computed(() =>
+            combatCostCandidates.value.find(card => card.instanceId === selectedCombatCostCardId.value) || null
+        );
+
+        const resolvedPanelTitle = computed(() => {
+            if (state.activePanel.value === 'combatCostHand') {
+                return `战斗代价选择（角色名：${requiredCombatCharaName.value || '未知'}）`;
+            }
+            return activePanelTitle.value;
+        });
+
+        const resolvedPanelCards = computed(() => {
+            if (state.activePanel.value === 'combatCostHand') {
+                return combatCostCandidates.value;
+            }
+            return activePanelCards.value;
+        });
 
         const closeActivePanel = () => {
             state.activePanel.value = null;
+        };
+
+        const openCombatCostPicker = () => {
+            state.activePanel.value = 'combatCostHand';
         };
 
         const closeSelectedCard = () => {
@@ -78,10 +138,6 @@ createApp({
 
         const openFullImage = () => {
             state.showFullImage.value = true;
-        };
-
-        const closeCombatOverlay = () => {
-            state.isCombatActive.value = false;
         };
 
         const openPanel = (panelKey) => {
@@ -127,14 +183,48 @@ createApp({
         const selectCard = (card) => {
             state.selectedCard.value = card;
         };
-		
-        
+
+        const handleCombatDecision = (decisionType, useSkill, costCardId = null) => {
+            const idToUse = useSkill ? (costCardId || selectedCombatCostCardId.value) : null;
+            const success = cardOps.respondCombatDecision(state, decisionType, useSkill, idToUse);
+            if (success) {
+                selectedCombatCostCardId.value = null;
+                selectedCombatCostCardName.value = '';
+                if (state.activePanel.value === 'combatCostHand') {
+                    closeActivePanel();
+                }
+            }
+        };
+
+        const handleRegionPanelCardClick = (card) => {
+            if (state.activePanel.value === 'combatCostHand') {
+                selectedCombatCostCardId.value = card.instanceId;
+                selectedCombatCostCardName.value = card.cardName || card.name || '';
+                closeActivePanel();
+                return;
+            }
+            handleMinifiedClick(card);
+        };
+
         watch(state.currentPhase, (newPhase) => {
             if (newPhase === 'BEGINNING') {
                 state.usedBondsThisTurn.value = 0;
             }
         });
         const { handleMinifiedClick, safePlayToField } = createUiActions({ state, cardOps, rules });
+
+        watch(() => state.combatDecision.value?.stage, () => {
+            selectedCombatCostCardId.value = null;
+            selectedCombatCostCardName.value = '';
+            if (state.activePanel.value === 'combatCostHand') {
+                closeActivePanel();
+            }
+        });
+
+        watch(requiredCombatCharaName, () => {
+            selectedCombatCostCardId.value = null;
+            selectedCombatCostCardName.value = '';
+        });
         const updateHeight = () => { document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`); };
 
         onMounted(async () => {
@@ -159,18 +249,20 @@ createApp({
             canPerformAction: rules.canPerformAction,getCardFactionInfo: rules.getCardFactionInfo,
             activePanelTitle,
             activePanelCards,
+            resolvedPanelTitle,
+            resolvedPanelCards,
             isOpponentPanel,
             remainingCost,
             totalBonds,
             currentPhaseName,
             showNextPhaseButton,
             nextPhaseLabel,
+            isMyCombatAttacker,
             playerPanelButtons,
             enemyPanelButtons,
             closeActivePanel,
             closeSelectedCard,
             openFullImage,
-            closeCombatOverlay,
             openPanel,
             toggleDevMode,
             resetByControlBar,
@@ -178,6 +270,13 @@ createApp({
             clearDraggingOver,
             openBondsPanel,
             selectCard,
+            handleCombatDecision,
+            handleRegionPanelCardClick,
+            openCombatCostPicker,
+            selectedCombatCostCardId,
+            selectedCombatCostCard,
+            selectedCombatCostCardName,
+            combatCostCandidates,
             isMyCard, isCardInHand, formattedAbility, formattedSupport, handleMinifiedClick, updateHeight
         };
     }

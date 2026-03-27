@@ -70,7 +70,7 @@ export const CardDetailModal = {
                         <img :src="selectedCard.image" class="w-full h-full object-cover rounded shadow-md">
                     </div>
                     <div class="flex-1">
-                        <h3 class="font-bold text-white text-sm leading-tight">{{ selectedCard.name }}</h3>
+                        <h3 class="font-bold text-white text-sm leading-tight">{{ selectedCard.cardName }}</h3>
                         <div class="grid grid-cols-2 gap-x-2 mt-2 text-[10px] text-gray-400">
                             <div>费用: <span class="text-white">{{ selectedCard.cost }}</span></div>
                             <div>射程: <span class="text-white">{{ selectedCard.range }}</span></div>

@@ -5,6 +5,7 @@ const getEvents = () => globalThis.SOCKET_EVENTS || {
     PLAYER_DRAW: 'player-draw',
     SYNC_BOND_FLIP: 'sync-bond-flip',
     SYNC_ATTACK: 'sync-attack',
+    SYNC_COMBAT_DECISION: 'sync-combat-decision',
     SYNC_CARD_UNTAP: 'sync-card-untap',
     SYNC_RESET: 'sync-reset',
     FULL_STATE_SYNC: 'full-state-sync'

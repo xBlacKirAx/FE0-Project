@@ -12,7 +12,7 @@ function areaLabel(a) {
 }
 
 function cardName(c) {
-    return c?.name || c?.id || '未知卡牌';
+    return c?.cardName || c?.id || '未知卡牌';
 }
 
 function registerGameplayHandlers({ socket, EVT, log }) {

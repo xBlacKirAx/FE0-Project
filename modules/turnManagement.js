@@ -12,9 +12,20 @@ export function createTurnManager(state) {
      * 进入下一阶段
      */
     const nextPhase = () => {
+        const prev = currentPhase.value;
         const next = getNextPhase(currentPhase.value);
 
         if (next) {
+            if (prev === 'DEPLOY' && next === 'ATTACK' && state.undoStack) {
+                state.undoStack.value.push({
+                    type: 'phase-transition',
+                    from: prev,
+                    to: next,
+                    previousPhase: prev,
+                    previousHasPlacedBond: hasPlacedBond.value
+                });
+                if (state.undoStack.value.length > 10) state.undoStack.value.shift();
+            }
             currentPhase.value = next;
             
             // 进入 BOND 阶段时，重置"已放置羁绊"标志
@@ -54,6 +65,9 @@ export function createTurnManager(state) {
         // 重置本方回合状态
         setBeginningPhaseState(state);
         clearTurnUsageState(state);
+        if (state.hasBattledThisTurn) {
+            state.hasBattledThisTurn.value = false;
+        }
 
         // 解除我方所有横置
         untapArea(state.fieldFront);
