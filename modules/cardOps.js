@@ -24,6 +24,7 @@ export function createCardOperations(state) {
     };
 
     // 🚀 改造后的 moveTo：支持阶段状态快照和自动进入出击阶段
+    // modules/cardOps.js
     const moveTo = (card, toAreaName) => {
         const fromArea = getArea(card);
         if (!fromArea) return;
@@ -32,23 +33,32 @@ export function createCardOperations(state) {
 
         const idx = fromArea.findIndex(c => c.instanceId === card.instanceId);
         if (idx > -1) {
-            // 📝 记录状态快照，用于撤销和阶段回退
+            // 💰 判断是否是“出击动作” (从手牌到前后卫)
+            const isDeploy = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
+            const cost = isDeploy ? (parseInt(card.cost) || 0) : 0;
+
+            // 📝 快照记录加入 costUsed
             undoStack.value.push({ 
                 card, 
                 from: fromAreaName, 
                 to: toAreaName,
                 previousPhase: state.currentPhase.value,
-                previousHasPlacedBond: hasPlacedBond.value
+                previousHasPlacedBond: hasPlacedBond.value,
+                costUsed: cost // 👈 记录这步操作扣除的费用，用于撤销
             });
             if (undoStack.value.length > 10) undoStack.value.shift();
             
+            // 💰 核心：如果是出击，正式扣除费用！
+            if (isDeploy && state.usedBondsThisTurn !== undefined) {
+                state.usedBondsThisTurn.value += cost;
+            }
+
             const targetCard = fromArea.splice(idx, 1)[0];
             getAreaArray(toAreaName).push(targetCard);
             if (socket) socket.emit('sync-card-move', { card: targetCard, to: toAreaName, from: fromAreaName });
             selectedCard.value = null;
         }
 
-        // 🚀 自动阶段过渡：如果在羁绊阶段放了羁绊，自动进入出击阶段
         if (toAreaName === 'bonds') {
             hasPlacedBond.value = true;
             if (state.currentPhase.value === 'BOND' && !state.isDevMode.value) {
@@ -60,7 +70,18 @@ export function createCardOperations(state) {
     const playToField = (card, pos) => moveTo(card, pos);
     const playToBond = (card) => moveTo(card, 'bonds');
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
-
+    const safePlayToField = (card, area) => {
+            if (!rules.canPerformAction('deploy')) {
+                alert("只能在出击阶段 (DEPLOY) 部署单位！");
+                return;
+            }
+            if (!rules.canDeployCard(card)) {
+                alert(`费用不足！需要 ${card.cost} 羁绊。`);
+                return;
+            }
+            cardOps.playToField(card, area);
+            state.selectedCard.value = null; // 出阵后关闭面板
+        };
     // 🏆 终极原生 JS 抽牌动画 + 自动阶段过渡
     const drawCard = () => {
         if (hand.value.length >= 10 || deck.value.length === 0) return;
@@ -142,7 +163,10 @@ export function createCardOperations(state) {
             if (card) deck.value.push(card); 
             return;
         }
-
+        // 💰 撤销时：返还刚才出击扣除的费用！
+        if (last.costUsed && state.usedBondsThisTurn !== undefined) {
+            state.usedBondsThisTurn.value -= last.costUsed;
+        }
         const currentArea = getAreaArray(last.to);
         const idx = currentArea.findIndex(c => c.instanceId === last.card.instanceId);
         if (idx > -1) {
@@ -241,7 +265,7 @@ export function createCardOperations(state) {
     const resetGame = async (isRemote = false) => {
         hand.value = []; fieldFront.value = []; fieldRear.value = []; bonds.value = []; jewels.value = []; graveyard.value = []; boundless.value = []; deck.value = [];
         state.currentPhase.value = 'BEGINNING'; state.hasPlacedBond.value = false;
-
+        state.usedBondsThisTurn.value = 0;
         try {
             const res = await fetch('/api/cards');
             const data = await res.json();
@@ -267,7 +291,7 @@ export function createCardOperations(state) {
     };
 
     return {
-        getArea, getAreaArray, getAreaName, moveTo, playToField, playToBond, returnToHandFromBoard,
+        getArea, getAreaArray, getAreaName, moveTo, playToField:safePlayToField, playToBond, returnToHandFromBoard,
         drawCard, toggleBondFace, undoLastMove, initiateAttack, resolveCombat,
         getMySyncData, resetGame, untapCard
     };

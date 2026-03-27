@@ -24,32 +24,49 @@
             <div class="text-red-500 font-bold">OPPONENT FIELD</div>
         </div>
     </div>
-	<div class="phase-control-bar pointer-events-auto">
-		<div @click="isDevMode = !isDevMode" class="flex items-center gap-2 cursor-pointer">
-			<div :class="isDevMode ? 'bg-red-500' : 'bg-green-500'" class="w-1.5 h-1.5 rounded-full"></div>
-			<span class="text-[9px] font-mono">{{ isDevMode ? 'DEV' : 'PLAY' }}</span>
-		</div>
+    
+	<div class="phase-control-bar pointer-events-auto w-full px-2 sm:px-4 py-1.5 flex justify-between sm:justify-center sm:gap-12 items-center bg-black/80 backdrop-blur-md border-b border-white/10 z-[80]">
+        
+        <div class="flex items-center gap-2 sm:gap-4 shrink-0">
+            <div @click="isDevMode = !isDevMode" class="flex items-center gap-1.5 cursor-pointer">
+                <div :class="isDevMode ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]' : 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]'" class="w-2 h-2 rounded-full"></div>
+                <span class="text-[9px] sm:text-[10px] font-mono font-bold">{{ isDevMode ? 'DEV' : 'PLAY' }}</span>
+            </div>
 
-		<div class="w-[1px] h-3 bg-white/20"></div>
-        <button @click="resetGame(false)" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-2 py-1 rounded shadow-md font-bold uppercase tracking-wider transition-colors border border-red-500/50">
-            重置对局 (Reset)
-        </button>
-        <div class="w-[1px] h-3 bg-white/20"></div>
+            <div class="w-[1px] h-3 bg-white/20"></div>
+            
+            <button @click="resetGame(false)" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-1.5 py-1 rounded border border-red-500/50 uppercase">
+                重置
+            </button>
+        </div>
 
-		<div class="flex items-center gap-2">
-			<span class="text-[10px] font-bold text-amber-500 w-16 text-center">
-				{{ PHASES[currentPhase].name }}
-			</span>
-			<button v-if="isMyTurn || isDevMode" @click="nextPhase" class="phase-btn">
-				{{ currentPhase === 'END' ? '结束回合' : 'NEXT' }}
-			</button>
-		</div>
-	</div>
+        <div class="flex items-center gap-2">
+            <div class="flex items-center gap-1 px-1.5 py-0.5 bg-green-900/40 border border-green-500/40 rounded shadow-inner min-w-[50px] justify-center">
+                <span class="text-[8px] text-green-200">COST</span>
+                <span class="text-[10px] sm:text-[11px] font-black text-green-400 font-mono">
+                    {{ Math.max(0, (bonds?.length || 0) - (usedBondsThisTurn || 0)) }}
+                </span>
+                <span class="text-[9px] text-green-600 font-mono">/ {{ bonds?.length || 0 }}</span>
+            </div>
 
-    <button v-if="undoStack.length > 0" @click="undoLastMove" 
-            class="fixed top-12 left-4 z-[70] bg-orange-600 text-[10px] px-3 py-1 rounded-full shadow-lg">
-        ↩ 撤销移动
-    </button>
+            <button v-if="undoStack.length > 0" @click="undoLastMove" 
+                    class="bg-orange-600/90 hover:bg-orange-500 text-white text-[9px] px-2 py-1 rounded border border-orange-400/50 shadow-md flex items-center gap-1 transition-transform active:scale-95">
+                <span>↩</span><span class="hidden sm:inline">撤销</span>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-1.5 shrink-0">
+            <span class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">
+                {{ PHASES[currentPhase].name }}
+            </span>
+            
+            <button v-if="isDevMode || currentPhase !== 'BEGINNING'" 
+                    @click="nextPhase" 
+                    class="phase-btn px-2 py-1 text-[9px] sm:text-[10px] min-w-[45px]">
+                {{ currentPhase === 'END' ? '结束' : 'NEXT' }}
+            </button>
+        </div>
+    </div>
 	
     <div class="battle-container">
         <div class="battle-row row-opp-rear overflow-visible"> <div v-for="card in opponentRear" :key="card.instanceId" 

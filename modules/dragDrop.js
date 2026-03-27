@@ -4,7 +4,7 @@
 export function createDragDropHandler(state, cardOps, rules) {
     const { draggedCard, isDraggingOver } = state;
     const { moveTo, initiateAttack } = cardOps;
-    const { canPerformAction, getActionByArea } = rules;
+    const { canPerformAction, getActionByArea, canDeployCard} = rules;
     // 👇 1. 新增：用来区分是“点击”还是“拖拽”
     let hasMoved = false;
     const onDragStart = (card) => {
@@ -47,7 +47,15 @@ export function createDragDropHandler(state, cardOps, rules) {
 
         const actionType = getActionByArea(toAreaName);
         if (actionType && !canPerformAction(actionType)) {
-            console.warn(`[规则拦截] 无法执行 ${actionType}`);
+            console.warn(`[规则拦截] 无法执行 ${actionType}，阶段不符！`);
+            draggedCard.value = null;
+            return;
+        }
+
+        // 💰 新增：如果是出击动作，校验费用！
+        if (actionType === 'deploy' && !canDeployCard(draggedCard.value)) {
+            // 你也可以在这里加一个弹窗提示玩家
+            alert(`费用不足！需要 ${draggedCard.value.cost} 羁绊。`);
             draggedCard.value = null;
             return;
         }
@@ -129,12 +137,25 @@ export function createDragDropHandler(state, cardOps, rules) {
         if (areaElement) {
             const areaName = areaElement.getAttribute('data-area');
             const actionType = getActionByArea(areaName);
+            
             if (actionType && !canPerformAction(actionType)) {
                 console.warn(`[规则拦截] 无法执行 ${actionType}`);
                 draggedCard.value = null;
                 isDraggingOver.value = null;
                 return;
             }
+
+            // 💰 修复：校验出击费用
+            if (actionType === 'deploy') {
+                if (!canDeployCard(draggedCard.value)) {
+                    const left = state.bonds.value.length - (state.usedBondsThisTurn?.value || 0);
+                    alert(`费用不足！此卡需要 ${draggedCard.value.cost} 费，本回合仅剩 ${left} 费。`);
+                    draggedCard.value = null;
+                    isDraggingOver.value = null;
+                    return;
+                }
+            }
+
             moveTo(draggedCard.value, areaName);
         }
         

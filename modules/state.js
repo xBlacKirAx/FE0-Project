@@ -47,6 +47,7 @@ export function createGameState() {
     const isDrawingAnimationActive = ref(false); // 是否正在播放抽牌动画
     const currentDrawCardImage = ref('/images/card_back.jpg'); // 抽出的牌的图片（默认背面对手）
     // 👆 新增代码结束 👆
+    const usedBondsThisTurn = ref(0); // 👈 新增：追踪本回合已经消耗的费用额度
     // ===== 游戏阶段定义 =====
     const PHASES = {
         BEGINNING: { name: '开始阶段' },
@@ -76,6 +77,8 @@ export function createGameState() {
         oppStats, socket, PHASES,
         isCombatActive, combatPhase, attacker, defender, mySupportCard, oppSupportCard, combatStats,
         // 👇 新增：抽牌动画控制 👇
-        isDrawingAnimationActive, currentDrawCardImage
+        isDrawingAnimationActive, currentDrawCardImage,
+        // 👆 新增代码结束 👆
+        usedBondsThisTurn
     };
 }
