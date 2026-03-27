@@ -5,10 +5,30 @@ import { createCardOperations } from './modules/cardOps.js';
 import { createDragDropHandler } from './modules/dragDrop.js';
 import { createTurnManager } from './modules/turnManagement.js';
 import { createSocketHandler } from './modules/socketHandler.js';
+import { CombatOverlay } from './components/CombatOverlay.js';
+import { RegionPanel } from './components/RegionPanel.js';
+import { CardDetailModal } from './components/CardDetailModal.js';
+import { BattleRow } from './components/BattleRow.js';
+import { BondStrip } from './components/BondStrip.js';
+import { HandStrip } from './components/HandStrip.js';
+import { DeckWidget } from './components/DeckWidget.js';
+import { SidePanelButtons } from './components/SidePanelButtons.js';
+import { TopControlBar } from './components/TopControlBar.js';
 
-const { createApp, onMounted, watch } = Vue;
+const { createApp, computed, onMounted, watch } = Vue;
 
 createApp({
+    components: {
+        BattleRow,
+        BondStrip,
+        HandStrip,
+        DeckWidget,
+        SidePanelButtons,
+        TopControlBar,
+        CombatOverlay,
+        RegionPanel,
+        CardDetailModal
+    },
     setup() {
         const state = createGameState();
         const rules = createRulesEngine(state);
@@ -22,6 +42,136 @@ createApp({
         const isCardInHand = (card) => state.hand.value.some(c => c.instanceId === card.instanceId);
         const formattedAbility = (t) => t ? t.replace(/能力：/g, '<span class="text-blue-400">【能力】</span>') : "无";
         const formattedSupport = (t) => t ? t.replace(/支援技能：/g, '<span class="text-yellow-500">【支援】</span>') : "无支援";
+
+        const panelTitleMap = {
+            bonds: '羁绊区 (点击卡牌快速翻面)',
+            jewels: '宝玉区',
+            graveyard: '弃牌区',
+            boundless: '无限区',
+            deck: '牌组',
+            oppBonds: '羁绊区',
+            oppJewels: '宝玉区',
+            oppGraveyard: '弃牌区'
+        };
+
+        const panelCardMap = {
+            bonds: state.bonds,
+            jewels: state.jewels,
+            graveyard: state.graveyard,
+            boundless: state.boundless,
+            deck: state.deck,
+            oppBonds: state.oppBonds,
+            oppJewels: state.oppJewels,
+            oppGraveyard: state.oppGraveyard
+        };
+
+        const activePanelTitle = computed(() => panelTitleMap[state.activePanel.value] || '区域');
+        const activePanelCards = computed(() => panelCardMap[state.activePanel.value]?.value || []);
+        const isOpponentPanel = computed(() => state.activePanel.value?.startsWith('opp') || false);
+        const remainingCost = computed(() => Math.max(0, (state.bonds.value?.length || 0) - (state.usedBondsThisTurn.value || 0)));
+        const totalBonds = computed(() => state.bonds.value?.length || 0);
+        const currentPhaseName = computed(() => state.PHASES.value?.[state.currentPhase.value]?.name || '');
+        const showNextPhaseButton = computed(() => state.isDevMode.value || state.currentPhase.value !== 'BEGINNING');
+        const nextPhaseLabel = computed(() => state.currentPhase.value === 'END' ? '结束' : 'NEXT');
+
+        const playerPanelButtons = computed(() => ([
+            {
+                key: 'jewels',
+                label: '宝玉',
+                count: state.jewels.value?.length || 0,
+                className: 'w-10 h-10 bg-purple-900/80 border border-purple-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
+                countClass: ''
+            },
+            {
+                key: 'graveyard',
+                label: '弃牌',
+                count: state.graveyard.value?.length || 0,
+                className: 'w-10 h-10 bg-gray-800/80 border border-gray-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
+                countClass: ''
+            },
+            {
+                key: 'boundless',
+                label: '无限',
+                count: state.boundless.value?.length || 0,
+                className: 'w-10 h-10 bg-blue-900/80 border border-blue-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
+                countClass: ''
+            },
+            {
+                key: 'deck',
+                label: '牌组',
+                count: state.deck.value?.length || 0,
+                className: 'w-10 h-10 bg-red-900/80 border border-red-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col',
+                countClass: ''
+            }
+        ]));
+
+        const enemyPanelButtons = computed(() => ([
+            {
+                key: 'oppJewels',
+                label: '宝玉',
+                count: state.oppJewels.value?.length || 0,
+                className: 'w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95',
+                countClass: 'text-red-500 font-mono'
+            },
+            {
+                key: 'oppGraveyard',
+                label: '弃牌',
+                count: state.oppGraveyard.value?.length || 0,
+                className: 'w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95',
+                countClass: 'text-red-500 font-mono'
+            },
+            {
+                key: 'oppBonds',
+                label: '羁绊',
+                count: state.oppBonds.value?.length || 0,
+                className: 'w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95',
+                countClass: 'text-red-500 font-mono'
+            }
+        ]));
+
+        const closeActivePanel = () => {
+            state.activePanel.value = null;
+        };
+
+        const closeSelectedCard = () => {
+            state.selectedCard.value = null;
+        };
+
+        const openFullImage = () => {
+            state.showFullImage.value = true;
+        };
+
+        const closeCombatOverlay = () => {
+            state.isCombatActive.value = false;
+        };
+
+        const openPanel = (panelKey) => {
+            state.activePanel.value = panelKey;
+        };
+
+        const toggleDevMode = () => {
+            state.isDevMode.value = !state.isDevMode.value;
+        };
+
+        const resetByControlBar = () => {
+            cardOps.resetGame(false);
+        };
+
+        const setDraggingOver = (value) => {
+            state.isDraggingOver.value = value;
+        };
+
+        const clearDraggingOver = () => {
+            state.isDraggingOver.value = null;
+        };
+
+        const openBondsPanel = () => {
+            state.activePanel.value = 'bonds';
+        };
+
+        const selectCard = (card) => {
+            state.selectedCard.value = card;
+        };
 		
         
         watch(state.currentPhase, (newPhase) => {
@@ -79,6 +229,27 @@ createApp({
 			playToField: safePlayToField,
             nextPhase: turnMgr.nextPhase,
             canPerformAction: rules.canPerformAction,getCardFactionInfo: rules.getCardFactionInfo,
+            activePanelTitle,
+            activePanelCards,
+            isOpponentPanel,
+            remainingCost,
+            totalBonds,
+            currentPhaseName,
+            showNextPhaseButton,
+            nextPhaseLabel,
+            playerPanelButtons,
+            enemyPanelButtons,
+            closeActivePanel,
+            closeSelectedCard,
+            openFullImage,
+            closeCombatOverlay,
+            openPanel,
+            toggleDevMode,
+            resetByControlBar,
+            setDraggingOver,
+            clearDraggingOver,
+            openBondsPanel,
+            selectCard,
             isMyCard, isCardInHand, formattedAbility, formattedSupport, handleMinifiedClick, updateHeight
         };
     }

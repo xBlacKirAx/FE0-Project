@@ -25,420 +25,177 @@
         </div>
     </div>
     
-	<div class="phase-control-bar pointer-events-auto w-full px-2 sm:px-4 py-1.5 flex justify-between sm:justify-center sm:gap-12 items-center bg-black/80 backdrop-blur-md border-b border-white/10 z-[80]">
-        
-        <div class="flex items-center gap-2 sm:gap-4 shrink-0">
-            <div @click="isDevMode = !isDevMode" class="flex items-center gap-1.5 cursor-pointer">
-                <div :class="isDevMode ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]' : 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]'" class="w-2 h-2 rounded-full"></div>
-                <span class="text-[9px] sm:text-[10px] font-mono font-bold">{{ isDevMode ? 'DEV' : 'PLAY' }}</span>
-            </div>
-
-            <div class="w-[1px] h-3 bg-white/20"></div>
-            
-            <button @click="resetGame(false)" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-1.5 py-1 rounded border border-red-500/50 uppercase">
-                重置
-            </button>
-        </div>
-
-        <div class="flex items-center gap-2">
-            <div class="flex items-center gap-1 px-1.5 py-0.5 bg-green-900/40 border border-green-500/40 rounded shadow-inner min-w-[50px] justify-center">
-                <span class="text-[8px] text-green-200">COST</span>
-                <span class="text-[10px] sm:text-[11px] font-black text-green-400 font-mono">
-                    {{ Math.max(0, (bonds?.length || 0) - (usedBondsThisTurn || 0)) }}
-                </span>
-                <span class="text-[9px] text-green-600 font-mono">/ {{ bonds?.length || 0 }}</span>
-            </div>
-
-            <button v-if="undoStack.length > 0" @click="undoLastMove" 
-                    class="bg-orange-600/90 hover:bg-orange-500 text-white text-[9px] px-2 py-1 rounded border border-orange-400/50 shadow-md flex items-center gap-1 transition-transform active:scale-95">
-                <span>↩</span><span class="hidden sm:inline">撤销</span>
-            </button>
-        </div>
-
-        <div class="flex items-center gap-1.5 shrink-0">
-            <span class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">
-                {{ PHASES[currentPhase].name }}
-            </span>
-            
-            <button v-if="isDevMode || currentPhase !== 'BEGINNING'" 
-                    @click="nextPhase" 
-                    class="phase-btn px-2 py-1 text-[9px] sm:text-[10px] min-w-[45px]">
-                {{ currentPhase === 'END' ? '结束' : 'NEXT' }}
-            </button>
-        </div>
-    </div>
+	<top-control-bar
+        :is-dev-mode="isDevMode"
+        :on-toggle-dev-mode="toggleDevMode"
+        :on-reset-game="resetByControlBar"
+        :remaining-cost="remainingCost"
+        :total-bonds="totalBonds"
+        :has-undo="undoStack.length > 0"
+        :on-undo="undoLastMove"
+        :phase-name="currentPhaseName"
+        :show-next-phase-button="showNextPhaseButton"
+        :next-phase-label="nextPhaseLabel"
+        :on-next-phase="nextPhase">
+    </top-control-bar>
 	
     <div class="battle-container">
-        <div class="battle-row row-opp-rear overflow-visible"> <div v-for="card in opponentRear" :key="card.instanceId" 
-                class="card-adaptive deployable-card" 
-                :class="{
-                    'is-mc-card': card.isMainCharacter, 
-                    'card-tapped': card.isTapped   }" 
-                draggable="true"
-                 :data-enemy-id="card.instanceId"
-                 @dragover.prevent="isDraggingOver = 'attack-target'"
-                 @dragleave="isDraggingOver = null"
-                 @drop.stop="onAttackDrop(card)"
-                 @click="handleMinifiedClick(card)">
-                
-                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
-                               
-                <img :src="card.image">
-            </div>
-        </div>
+        <battle-row
+            :cards="opponentRear"
+            row-class="row-opp-rear"
+            :is-enemy="true"
+            :is-guide-active="false"
+            :is-dragging-over="false"
+            :set-dragging-over="setDraggingOver"
+            :clear-dragging-over="clearDraggingOver"
+            :on-drop-area="onDrop"
+            :on-attack-drop="onAttackDrop"
+            :on-card-click="handleMinifiedClick"
+            :on-drag-start="onDragStart"
+            :on-touch-start="onTouchStart"
+            :on-touch-move="onTouchMove"
+            :on-touch-end="onTouchEnd">
+        </battle-row>
 
-        <div class="battle-row row-opp-front overflow-visible">
-            <div v-for="card in opponentFront" :key="card.instanceId" 
-                class="card-adaptive deployable-card" 
-                :class="{
-                    'is-mc-card': card.isMainCharacter, 
-                    'card-tapped': card.isTapped   }" 
-                draggable="true"
-                 :data-enemy-id="card.instanceId"
-                 @dragover.prevent="isDraggingOver = 'attack-target'"
-                 @dragleave="isDraggingOver = null"
-                 @drop.stop="onAttackDrop(card)"
-                 @click="handleMinifiedClick(card)">
-                
-                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
-                             
-                <img :src="card.image">
-            </div>
-        </div>
+        <battle-row
+            :cards="opponentFront"
+            row-class="row-opp-front"
+            :is-enemy="true"
+            :is-guide-active="false"
+            :is-dragging-over="false"
+            :set-dragging-over="setDraggingOver"
+            :clear-dragging-over="clearDraggingOver"
+            :on-drop-area="onDrop"
+            :on-attack-drop="onAttackDrop"
+            :on-card-click="handleMinifiedClick"
+            :on-drag-start="onDragStart"
+            :on-touch-start="onTouchStart"
+            :on-touch-move="onTouchMove"
+            :on-touch-end="onTouchEnd">
+        </battle-row>
 
-        <div class="battle-row row-my-front overflow-visible" data-area="front" 
-             :class="{'guide-deploy-active': currentPhase === 'DEPLOY' && !isDevMode,
-             'dragging-over': isDraggingOver === 'front'}"
-             @dragover.prevent="isDraggingOver = 'front'"
-             @dragleave="isDraggingOver = null"
-             @drop="onDrop('front')">
-            <span class="area-label">Front</span>
-            <div v-for="card in fieldFront" :key="card.instanceId" 
-                class="card-adaptive deployable-card" 
-                :class="{
-                    'is-mc-card': card.isMainCharacter, 
-                    'card-tapped': card.isTapped   }" 
-                draggable="true"
-                 @dragstart="onDragStart(card)"
-                 @touchstart="onTouchStart($event, card)" 
-                 @touchmove="onTouchMove"
-                 @touchend="onTouchEnd($event, card)"
-                 @click="handleMinifiedClick(card)">
-                
-                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
-                                
-                <img :src="card.image">
-            </div>
-        </div>
-         <div class="battle-row row-my-rear overflow-visible" data-area="rear"
-             :class="{'guide-deploy-active': currentPhase === 'DEPLOY' && !isDevMode,
-             'dragging-over': isDraggingOver === 'rear'}"
-             @dragover.prevent="isDraggingOver = 'rear'"
-             @dragleave="isDraggingOver = null"
-             @drop="onDrop('rear')">
-            <span class="area-label">Rear</span>
-            <div v-for="card in fieldRear" :key="card.instanceId" 
-                 class="card-adaptive deployable-card" 
-                :class="{
-                    'is-mc-card': card.isMainCharacter, 
-                    'card-tapped': card.isTapped   }" 
-                draggable="true"
-                 @dragstart="onDragStart(card)"
-                 @touchstart="onTouchStart($event, card)" 
-                 @touchmove="onTouchMove"
-                 @touchend="onTouchEnd($event, card)"
-                 @click="handleMinifiedClick(card)">
-                
-                <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
-                
-                <img :src="card.image">
-            </div>
-        </div>
+        <battle-row
+            :cards="fieldFront"
+            row-class="row-my-front"
+            area="front"
+            area-label="Front"
+            :is-enemy="false"
+            :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
+            :is-dragging-over="isDraggingOver === 'front'"
+            :set-dragging-over="setDraggingOver"
+            :clear-dragging-over="clearDraggingOver"
+            :on-drop-area="onDrop"
+            :on-attack-drop="onAttackDrop"
+            :on-card-click="handleMinifiedClick"
+            :on-drag-start="onDragStart"
+            :on-touch-start="onTouchStart"
+            :on-touch-move="onTouchMove"
+            :on-touch-end="onTouchEnd">
+        </battle-row>
+
+        <battle-row
+            :cards="fieldRear"
+            row-class="row-my-rear"
+            area="rear"
+            area-label="Rear"
+            :is-enemy="false"
+            :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
+            :is-dragging-over="isDraggingOver === 'rear'"
+            :set-dragging-over="setDraggingOver"
+            :clear-dragging-over="clearDraggingOver"
+            :on-drop-area="onDrop"
+            :on-attack-drop="onAttackDrop"
+            :on-card-click="handleMinifiedClick"
+            :on-drag-start="onDragStart"
+            :on-touch-start="onTouchStart"
+            :on-touch-move="onTouchMove"
+            :on-touch-end="onTouchEnd">
+        </battle-row>
     </div>
-    <div class="fixed right-2 sm:right-6 bottom-[130px] sm:bottom-[150px] z-[90] flex flex-col items-center cursor-pointer group" @click="drawCard">
-        
-        <span class="text-[10px] sm:text-xs text-white font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] bg-black/60 px-2 py-0.5 rounded-full mb-1">
-            Deck: {{ deck?.length || 0 }}
-        </span>
-        
-        <div class="relative transition-transform duration-200 group-hover:-translate-y-2 group-active:scale-95">
-            <img v-if="!deck || deck.length === 0" src="images/card_back.jpg" class="opacity-30 grayscale w-12 sm:w-16 aspect-[55/76] object-cover rounded shadow border border-white/10">
-            <img v-else src="images/card_back.jpg" class="w-12 sm:w-16 aspect-[55/76] object-cover rounded shadow-[0_5px_15px_rgba(0,0,0,0.6)] border border-white/30">
-            
-            <div v-if="deck && deck.length > 1" class="absolute inset-0 rounded border-t border-r border-white/30 translate-x-[2px] -translate-y-[2px] -z-10 bg-[#1a1a1a]"></div>
-            <div v-if="deck && deck.length > 10" class="absolute inset-0 rounded border-t border-r border-white/20 translate-x-[4px] -translate-y-[4px] -z-20 bg-[#1a1a1a]"></div>
-        </div>
-
-    </div>
+    <deck-widget
+        :deck-count="deck?.length || 0"
+        :on-draw-card="drawCard">
+    </deck-widget>
     <div class="hand-container-fixed">
-		<div class="h-10 px-2 flex items-center bonds-area" data-area="bonds"
-             :class="{'guide-bond-active': currentPhase === 'BOND' && !hasPlacedBond && !isDevMode,
-			'dragging-over': isDraggingOver === 'bonds'}"
-             @dragover.prevent="isDraggingOver = 'bonds'"
-             @drop="onDrop('bonds')"
-			 @click.self="activePanel = 'bonds'">
-            <div v-for="card in bonds" :key="card.instanceId" 
-                class="card-base bond-card relative overflow-hidden" 
-                :class="{
-                    // 👇 🔑 正面朝上时应用粗边框，背面则隐藏边框 👇
-                    'border-2': !card.isFaceDown,
-                    [card.isFaceDown ? 'border-gray-800' : getCardFactionInfo(card).borderColor]: true
-                }"
-                @click="selectedCard = card">
-                <div v-if="!card.isFaceDown" class="absolute top-0 left-0 z-10 flex flex-col items-center justify-center font-bold text-white bg-black/60 rounded-br p-0.5 leading-none"
-                    style="min-width: 22px;">
-                    <div class="text-[11px] sm:text-[13px] text-amber-300">{{ card.cost }}</div>
-                    <div v-if="card.promote_cost" class="text-[9px] sm:text-[10px] border-t border-amber-300/50 mt-0.5 pt-0.5 text-blue-300">
-                        {{ card.promote_cost }}
-                    </div>
-                </div>
-                <img :src="card.isFaceDown ? 'images/card_back.jpg' : card.image" class="h-full w-auto object-contain">
-            </div>
-        </div>
-        <div class="flex-1 flex items-center gap-2 px-2 overflow-x-auto">
-            <div v-for="card in hand" :key="card.instanceId" 
-                class="card-base flex-shrink-0 relative overflow-hidden h-[var(--hand-card-height)]" 
-                :class="{
-                    'bond-active': isDraggingOver === 'hand',
-                    // 👇 🔑 势力粗边框 👇
-                    'border-2': true,
-                    [getCardFactionInfo(card).borderColor]: true
-                }"
-                @click="handleMinifiedClick(card)"
-                @touchstart="onTouchStart($event, card)" 
-                @touchmove="onTouchMove" 
-                @touchend="onTouchEnd($event, card)">
-                
-                <div class="absolute top-0 left-0 z-10 flex flex-col items-center justify-center font-bold text-white bg-black/70 rounded-br px-1 py-0.5 leading-none shadow-[2px_2px_5px_rgba(0,0,0,0.5)]"
-                    style="min-width: 22px;">
-                    
-                    <div class="text-[12px] sm:text-[14px] text-yellow-400 drop-shadow-md">{{ card.cost }}</div>
-                    
-                    <div v-if="card.promoteCost && String(card.promoteCost).toUpperCase() !== 'N/A'" 
-                        class="text-[9px] sm:text-[10px] border-t border-yellow-400/50 mt-0.5 pt-0.5 text-cyan-300 drop-shadow-md w-full text-center">
-                        {{ card.promoteCost }}
-                    </div>
-                    
-                </div>
-                <img :src="card.image" class="h-full w-auto object-contain">
-            </div>
-        </div>
+		<bond-strip
+            :bonds="bonds"
+            :current-phase="currentPhase"
+            :has-placed-bond="hasPlacedBond"
+            :is-dev-mode="isDevMode"
+            :is-dragging-over="isDraggingOver"
+            :get-card-faction-info="getCardFactionInfo"
+            :set-dragging-over="setDraggingOver"
+            :on-drop="onDrop"
+            :on-open-panel="openBondsPanel"
+            :on-select-card="selectCard">
+        </bond-strip>
+
+        <hand-strip
+            :hand="hand"
+            :is-dragging-over="isDraggingOver"
+            :get-card-faction-info="getCardFactionInfo"
+            :on-card-click="handleMinifiedClick"
+            :on-touch-start="onTouchStart"
+            :on-touch-move="onTouchMove"
+            :on-touch-end="onTouchEnd">
+        </hand-strip>
     </div>
     
-	<div class="fixed right-2 top-24 z-[60] flex flex-col gap-2">
-		<button @click="activePanel = 'jewels'" class="w-10 h-10 bg-purple-900/80 border border-purple-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
-			<span>宝玉</span>
-			<span>{{jewels?.length || 0}}</span>
-		</button>
-		<button @click="activePanel = 'graveyard'" class="w-10 h-10 bg-gray-800/80 border border-gray-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
-			<span>弃牌</span>
-			<span>{{graveyard?.length || 0}}</span>
-		</button>
-		<button @click="activePanel = 'boundless'" class="w-10 h-10 bg-blue-900/80 border border-blue-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
-			<span>无限</span>
-			<span>{{boundless?.length || 0}}</span>
-		</button>
-		<button @click="activePanel = 'deck'" class="w-10 h-10 bg-red-900/80 border border-red-400 rounded-full text-[8px] text-white shadow-lg flex items-center justify-center flex-col">
-			<span>牌组</span>
-			<span>{{deck?.length || 0}}</span>
-		</button>
-	</div>
-	<div class="fixed left-2 top-20 z-panel flex flex-col gap-3">
-    <div class="text-[8px] text-red-500 font-bold text-center uppercase opacity-50">Enemy</div>
-    <button v-for="type in ['oppJewels','oppGraveyard','oppBonds']" 
-            @click="activePanel = type"
-            class="w-10 h-10 rounded-full border border-red-900/30 bg-black/80 text-[9px] text-gray-400 flex flex-col items-center justify-center shadow-xl active:scale-95">
-        <span>{{ {oppJewels:'宝玉',oppGraveyard:'弃牌',oppBonds:'羁绊'}[type] }}</span>
-        <span class="text-red-500 font-mono">{{ this[type]?.length || 0 }}</span>
-    </button>
-    <div v-if="isCombatActive" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
-        <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
-        
-        <div class="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
-            <div class="absolute top-1/2 left-0 w-full h-2 bg-blue-600 shadow-[0_0_50px_20px_rgba(37,99,235,0.6)] transform -translate-y-1/2 rotate-12"></div>
-            <div class="absolute top-1/2 left-0 w-full h-2 bg-red-600 shadow-[0_0_50px_20px_rgba(220,38,38,0.6)] transform -translate-y-1/2 -rotate-12"></div>
-        </div>
+    <side-panel-buttons
+        mode="player"
+        :items="playerPanelButtons"
+        :on-open-panel="openPanel">
+    </side-panel-buttons>
 
-        <div class="relative z-10 w-full max-w-4xl flex flex-col items-center">
-            <h2 class="text-4xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-white to-red-500 mb-6 md:mb-12 italic tracking-widest drop-shadow-[0_0_15px_rgba(255,255,255,0.5)]">
-                BATTLE START
-            </h2>
+    <side-panel-buttons
+        mode="enemy"
+        :items="enemyPanelButtons"
+        :on-open-panel="openPanel">
+    </side-panel-buttons>
 
-            <div class="flex justify-between items-end w-full px-2 md:px-10 gap-2 md:gap-8">
-                
-                <div class="flex-1 flex flex-col items-center gap-2 md:gap-4 relative animate-slide-in-left">
-                    <div class="text-blue-400 font-bold text-sm md:text-xl uppercase tracking-wider mb-2">Attacker</div>
-                    
-                    <div class="relative w-20 h-28 md:w-32 md:h-44 border-2 border-dashed border-blue-500/50 rounded-lg flex items-center justify-center bg-blue-900/20 perspective-1000">
-                        <transition name="flip">
-                            <img v-if="mySupportCard" :src="mySupportCard.image" class="w-full h-full object-cover rounded-lg shadow-[0_0_20px_rgba(59,130,246,0.5)]">
-                            <span v-else class="text-blue-500/50 text-[10px] md:text-xs font-bold text-center">SUPPORT<br>AREA</span>
-                        </transition>
-                    </div>
-                    
-                    <div class="text-center font-mono mt-2">
-                        <div class="text-gray-300 text-xs md:text-sm">
-                            Base: {{ attacker?.attack || 0 }} 
-                            <span v-if="mySupportCard" class="text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]">
-                                + {{ mySupportCard.support || 0 }}
-                            </span>
-                        </div>
-                        <div class="text-5xl md:text-7xl font-black text-white text-shadow-glow-blue mt-1 transition-all duration-500">{{ combatStats.myTotalPower || attacker?.attack || 0 }}</div>
-                    </div>
+    <combat-overlay
+        :is-combat-active="isCombatActive"
+        :my-support-card="mySupportCard"
+        :opp-support-card="oppSupportCard"
+        :attacker="attacker"
+        :defender="defender"
+        :combat-stats="combatStats"
+        :on-close="closeCombatOverlay">
+    </combat-overlay>
 
-                    <div class="w-28 h-40 md:w-48 md:h-64 relative mt-2 z-20 transition-transform hover:scale-105">
-                        <img v-if="attacker" :src="attacker.image" class="w-full h-full object-cover rounded-xl shadow-2xl border-2 border-blue-400">
-                    </div>
-                </div>
+    <region-panel
+        :active-panel="activePanel"
+        :panel-title="activePanelTitle"
+        :panel-cards="activePanelCards"
+        :is-opponent-panel="isOpponentPanel"
+        :on-close="closeActivePanel"
+        :on-card-click="handleMinifiedClick">
+    </region-panel>
 
-                <div class="flex items-center justify-center pb-[10vh] md:pb-[15vh] z-30 shrink-0 mx-2 md:mx-4">
-                    <div class="text-6xl md:text-8xl font-black text-white italic transform -skew-x-12 text-shadow-vs animate-pulse-fast">VS</div>
-                </div>
+    <card-detail-modal
+        :selected-card="selectedCard"
+        :is-my-card="isMyCard"
+        :is-card-in-hand="isCardInHand"
+        :is-dev-mode="isDevMode"
+        :show-full-image="showFullImage"
+        :formatted-ability="formattedAbility"
+        :formatted-support="formattedSupport"
+        :get-area-name="getAreaName"
+        :get-area="getArea"
+        :play-to-field="playToField"
+        :play-to-bond="playToBond"
+        :return-to-hand-from-board="returnToHandFromBoard"
+        :untap-card="untapCard"
+        :toggle-bond-face="toggleBondFace"
+        :move-to="moveTo"
+        :on-close="closeSelectedCard"
+        :on-open-full-image="openFullImage">
+    </card-detail-modal>
 
-                <div class="flex-1 flex flex-col items-center gap-2 md:gap-4 relative animate-slide-in-right">
-                    <div class="text-red-500 font-bold text-sm md:text-xl uppercase tracking-wider mb-2">Defender</div>
-                    
-                    <div class="relative w-20 h-28 md:w-32 md:h-44 border-2 border-dashed border-red-500/50 rounded-lg flex items-center justify-center bg-red-900/20 perspective-1000">
-                        <transition name="flip">
-                            <img v-if="oppSupportCard" :src="oppSupportCard.image" class="w-full h-full object-cover rounded-lg shadow-[0_0_20px_rgba(239,68,68,0.5)]">
-                            <span v-else class="text-red-500/50 text-[10px] md:text-xs font-bold text-center">SUPPORT<br>AREA</span>
-                        </transition>
-                    </div>
-                    
-                    <div class="text-center font-mono mt-2">
-                        <div class="text-gray-300 text-xs md:text-sm">
-                            Base: {{ defender?.attack || 0 }} 
-                            <span v-if="oppSupportCard" class="text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]">
-                                + {{ oppSupportCard.support || 0 }}
-                            </span>
-                        </div>
-                        <div class="text-5xl md:text-7xl font-black text-white text-shadow-glow-red mt-1 transition-all duration-500">{{ combatStats.oppTotalPower || defender?.attack || 0 }}</div>
-                    </div>
-
-                    <div class="w-28 h-40 md:w-48 md:h-64 relative mt-2 z-20 transition-transform hover:scale-105">
-                        <img v-if="defender" :src="defender.image" class="w-full h-full object-cover rounded-xl shadow-2xl border-2 border-red-500">
-                    </div>
-                </div>
-            </div>
-
-            <div class="mt-10 md:mt-16 z-40">
-                <button @click="isCombatActive = false" class="px-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold rounded-full shadow-lg border border-neutral-600 transition-colors">
-                    关闭面板 (调试用)
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-<div v-if="activePanel" class="fixed inset-0 z-region flex items-center justify-center p-4">
-    <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="activePanel = null"></div>
-    
-    <div class="relative bg-neutral-900 border border-white/10 w-full max-w-lg h-[70vh] rounded-xl flex flex-col animate-zoom">
-        <div class="p-3 border-b border-white/10 flex justify-between bg-white/5">
-            <span class="text-sm font-bold uppercase" :class="activePanel.startsWith('opp') ? 'text-red-500' : 'text-blue-400'">
-                {{ activePanel.startsWith('opp') ? '对手的' : '我的' }}
-                {{ {
-                    bonds: '羁绊区 (点击卡牌快速翻面)', 
-                    jewels: '宝玉区', 
-                    graveyard: '弃牌区', 
-                    boundless: '无限区', 
-                    deck: '牌组', 
-                    oppBonds: '羁绊区', 
-                    oppJewels: '宝玉区', 
-                    oppGraveyard: '弃牌区'
-                }[activePanel] }}
-            </span>
-            <button @click="activePanel = null" class="text-white p-1">✕</button>
-        </div>
-        
-        <div class="flex-1 overflow-y-auto p-4 grid grid-cols-4 gap-2">
-            <div v-for="card in this[activePanel]" 
-                 :key="card.instanceId" 
-                 @click="handleMinifiedClick(card)" 
-                 class="aspect-[55/76] relative group">
-                <img :src="card.isFaceDown ? 'images/card_back.jpg' : card.image" 
-                     class="w-full h-full object-cover rounded shadow-md transition-all"
-                     :class="{ 'opacity-50 grayscale': card.isFaceDown }">
-                
-                <div v-if="card.isFaceDown" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div class="bg-black/60 px-2 py-1 rounded text-[10px] text-amber-500 border border-amber-500/30">已消耗</div>
-                </div>
-            </div>
-            
-            <div v-if="this[activePanel]?.length === 0" class="col-span-4 py-20 text-center text-gray-600 text-xs italic">
-                该区域目前没有卡牌
-            </div>
-        </div>
-    </div>
-</div>
-<div v-if="selectedCard" class="fixed inset-0 z-detail flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="selectedCard = null"></div>
-        <div class="relative bg-gray-900 border border-blue-600 rounded-2xl w-full max-w-sm overflow-hidden flex flex-col animate-zoom">
-            <div class="flex p-4 gap-4 bg-gray-800/60">
-                <div class="w-20 h-28 flex-shrink-0 shadow-lg" @click="showFullImage = true">
-                    <img :src="selectedCard.image" class="w-full h-full object-cover rounded shadow-md">
-                </div>
-                <div class="flex-1">
-                    <h3 class="font-bold text-white text-sm leading-tight">{{selectedCard.name}}</h3>
-                    <div class="grid grid-cols-2 gap-x-2 mt-2 text-[10px] text-gray-400">
-                        <div>费用: <span class="text-white">{{selectedCard.cost}}</span></div>
-                        <div>射程: <span class="text-white">{{selectedCard.range}}</span></div>
-                        <div>战力: <span class="text-red-500 font-bold">{{selectedCard.attack}}</span></div>
-                        <div>支援: <span class="text-yellow-500">{{selectedCard.support}}</span></div>
-                    </div>
-                </div>
-            </div>
-            <div class="px-4 py-2 bg-black/40 border-y border-white/5 space-y-2">
-			<div class="border-b border-white/5 pb-2">
-				<div class="text-[9px] text-blue-400 font-bold mb-1 uppercase">Unit Ability / 单元能力</div>
-				<div class="max-h-24 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-300 pr-1" 
-					 style="white-space: pre-wrap;" 
-					 v-html="formattedAbility(selectedCard.ability?.text)">
-				</div>
-			</div>
-			
-			<div>
-				<div class="text-[9px] text-yellow-500 font-bold mb-1 uppercase">Support Ability / 支援能力</div>
-				<div class="max-h-20 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-400 pr-1 italic" 
-					 style="white-space: pre-wrap;" 
-					 v-html="formattedSupport(selectedCard.supportAbility?.text)">
-				</div>
-			</div>
-			
-		</div>
-            <div class="p-4 bg-gray-800/20 space-y-2">
-			<div v-if="isMyCard(selectedCard)">
-				<div v-if="isCardInHand(selectedCard)" class="grid grid-cols-3 gap-2">
-					<button @click="playToField(selectedCard, 'front')" class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
-					<button @click="playToField(selectedCard, 'rear')" class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
-					<button @click="playToBond(selectedCard)" class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
-				</div>
-				<button v-else @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
-			</div>
-			<div v-if="isMyCard(selectedCard)" class="grid grid-cols-2 gap-2 mt-2 border-t border-white/5 pt-2">
-				<button v-if="isDevMode && selectedCard.isTapped" 
-                        @click="untapCard(selectedCard)" 
-                        class="col-span-2 py-2 mb-1 bg-green-600 hover:bg-green-500 rounded text-[10px] font-bold shadow-[0_0_10px_rgba(22,163,74,0.5)] transition-all">
-                    【DEV】恢复直立
-                </button>
-                <button v-if="getAreaName(getArea(selectedCard)) === 'bonds'" 
-						@click="toggleBondFace(selectedCard)" 
-						class="py-2 bg-amber-600 rounded text-[10px] col-span-2 font-bold uppercase">
-					{{ selectedCard.isFaceDown ? '翻开 (起立)' : '翻面 (横置/消耗)' }}
-				</button>
-				<button @click="moveTo(selectedCard, 'graveyard')" class="py-1.5 bg-gray-800 text-[9px] rounded border border-white/10">送入弃牌区</button>
-				<button @click="moveTo(selectedCard, 'jewels')" class="py-1.5 bg-purple-900/40 text-[9px] rounded border border-purple-500/50">转为宝玉</button>
-				<button @click="moveTo(selectedCard, 'boundless')" class="py-1.5 bg-blue-900/40 text-[9px] rounded border border-blue-500/50">送入无限区</button>
-				<button @click="moveTo(selectedCard, 'hand')" class="py-1.5 bg-green-900/40 text-[9px] rounded border border-green-500/50">回手牌</button>
-			</div>
-			<button @click="showFullImage = true" class="w-full py-1 text-indigo-400 text-[10px] uppercase font-bold">查看高清大图</button>
-		</div>
-        </div>
-</div>	
-<div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
+    <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
         <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">
+    </div>
 </div>
-</div>   
-
 
 <script src="/socket.io/socket.io.js"></script>
 <script type="module" src="app.js"></script>
