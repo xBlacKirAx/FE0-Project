@@ -17,6 +17,10 @@ export const HandStrip = {
             type: Function,
             required: true
         },
+        onDragStart: {
+            type: Function,
+            required: true
+        },
         onTouchMove: {
             type: Function,
             required: true
@@ -36,9 +40,11 @@ export const HandStrip = {
                      'border-2': true,
                      [getCardFactionInfo(card).borderColor]: true
                  }"
+                 draggable="true"
+                 @dragstart="onDragStart(card)"
                  @click="onCardClick(card)"
                  @touchstart="onTouchStart($event, card)"
-                 @touchmove="onTouchMove()"
+                 @touchmove="onTouchMove($event)"
                  @touchend="onTouchEnd($event, card)">
                 <div class="absolute top-0 left-0 z-10 flex flex-col items-center justify-center font-bold text-white bg-black/70 rounded-br px-1 py-0.5 leading-none shadow-[2px_2px_5px_rgba(0,0,0,0.5)]"
                      style="min-width: 22px;">

@@ -66,7 +66,7 @@ export const TopControlBar = {
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
-                <span class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">{{ phaseName }}</span>
+                <span class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">{{ phaseName || 'BEGINNING' }}</span>
 
                 <button v-if="showNextPhaseButton"
                         @click="onNextPhase()"

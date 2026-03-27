@@ -70,9 +70,9 @@ createApp({
         const isOpponentPanel = computed(() => state.activePanel.value?.startsWith('opp') || false);
         const remainingCost = computed(() => Math.max(0, (state.bonds.value?.length || 0) - (state.usedBondsThisTurn.value || 0)));
         const totalBonds = computed(() => state.bonds.value?.length || 0);
-        const currentPhaseName = computed(() => state.PHASES.value?.[state.currentPhase.value]?.name || '');
-        const showNextPhaseButton = computed(() => state.isDevMode.value || state.currentPhase.value !== 'BEGINNING');
-        const nextPhaseLabel = computed(() => state.currentPhase.value === 'END' ? '结束' : 'NEXT');
+        const currentPhaseName = computed(() => state.PHASES?.[state.currentPhase.value]?.name || state.currentPhase.value || '');
+        const showNextPhaseButton = computed(() => state.isDevMode.value || (state.currentPhase.value || 'BEGINNING') !== 'BEGINNING');
+        const nextPhaseLabel = computed(() => (state.currentPhase.value || 'BEGINNING') === 'END' ? '结束' : 'NEXT');
 
         const playerPanelButtons = computed(() => ([
             {
