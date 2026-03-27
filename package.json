@@ -4,7 +4,13 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "npm run check",
+    "check": "npm run check:structure && npm run check:engine && npm run check:rules",
+    "start": "node server.js",
+    "start:3001": "node server.js --port=3001",
+    "check:structure": "node scripts/structure-smoke.cjs",
+    "check:engine": "node scripts/engine-smoke.cjs",
+    "check:rules": "node scripts/rules-smoke.cjs"
   },
   "keywords": [],
   "author": "",

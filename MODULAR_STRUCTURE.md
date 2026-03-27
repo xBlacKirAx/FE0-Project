@@ -1,33 +1,93 @@
-# FE0 Frontend Modular Structure
+# FE0 Modular Structure
 
-## Entry
+## Entry Layer
 
-- index.html: only keeps page skeleton and component tags.
-- app.js: root composition, state wiring, computed view models, component registry.
+- index.html: page skeleton, component mounting points, shared script loading order.
+- app.js: root composition and module wiring only.
+- server.js: backend bootstrap and handler registration only.
 
-## Core Logic Modules
+## Frontend Composition
 
-- modules/state.js: reactive game state and defaults.
-- modules/rules.js: rule checks and faction helpers.
-- modules/cardOps.js: card movements and area operations.
-- modules/dragDrop.js: drag/touch interactions and attack drop handling.
-- modules/turnManagement.js: phase transitions and turn-level behavior.
-- modules/socketHandler.js: multiplayer sync events.
+- modules/viewModels.js: panel title/card mapping and side button view models.
+- modules/uiActions.js: UI-level guarded actions such as safe deploy and minified card click handling.
+- modules/formatters.js: ability/support text formatting helpers.
+
+## State Layer
+
+- modules/state.js: state aggregation entry; merges all state slices into the public state object.
+- modules/state/myAreas.js: local board areas.
+- modules/state/opponentAreas.js: remote board areas.
+- modules/state/uiState.js: panel/full-image/draw-animation UI state.
+- modules/state/interactionState.js: drag, hover, undo interaction state.
+- modules/state/gameState.js: phase, combat, turn, cost-usage state.
+- modules/state/networkState.js: socket initialization.
+
+## Rules And Engine Layer
+
+- modules/rules.js: phase legality, deploy cost/color checks, faction info lookup.
+- modules/engine/combatEngine.js: combat winner and attacker ownership pure functions.
+- modules/engine/phaseEngine.js: phase order, phase labels, phase advancement pure functions.
+
+## Command / Effect Layer
+
+- modules/commands/turnCommands.js: turn-state mutations such as beginning-phase reset and untap.
+- modules/effects/socketEffects.js: turn-related socket emits.
+- modules/effects/cardSocketEffects.js: card-operation socket emits.
+
+## Card Operations
+
+- modules/cardOps.js: card operation facade that composes area commands and combat commands.
+- modules/cardOps/areaCommands.js: move, draw, undo, reset, and sync-data logic.
+- modules/cardOps/combatCommands.js: initiate attack, untap card, resolve combat.
+
+## Input / Turn / Socket Layer
+
+- modules/dragDrop.js: pointer and touch interaction flow.
+- modules/turnManagement.js: turn orchestration built on phase engine, commands, and effects.
+- modules/socketHandler.js: frontend socket composition entry.
+- modules/socket/opponentAreaStore.js: remote area add/remove helpers.
+- modules/socket/registerStateListeners.js: frontend state-sync listeners.
+- modules/socket/registerBattleListeners.js: frontend battle listeners.
+
+## Shared Protocol Layer
+
+- shared/socketEvents.js: single source of truth for frontend/backend socket event names.
+
+## Backend Socket Layer
+
+- server/socket/connectionRegistry.js: player labels and structured log helpers.
+- server/socket/registerGameplayHandlers.js: draw, move, bond flip, and general gameplay sync.
+- server/socket/registerBattleHandlers.js: battle sync and merged combat log handling.
+- server/socket/registerSyncHandlers.js: full-state sync and reset handling.
+- server/socket/registerTurnModeHandlers.js: phase log, turn end, and dev mode sync.
 
 ## UI Components
 
-- components/BattleRow.js: unified battlefield row for enemy and player rows.
-- components/BondStrip.js: bond area strip and face-down/face-up rendering.
-- components/HandStrip.js: hand cards strip with touch handlers.
-- components/DeckWidget.js: floating deck draw widget.
-- components/SidePanelButtons.js: reusable left/right side circular panel buttons.
-- components/TopControlBar.js: phase control, cost, reset, undo, and mode toggle bar.
-- components/CombatOverlay.js: battle animation overlay panel.
-- components/RegionPanel.js: cards-in-region modal panel.
-- components/CardDetailModal.js: selected card detail and actions modal.
+- components/BattleRow.js: unified battlefield row.
+- components/BondStrip.js: bond strip display and interaction.
+- components/HandStrip.js: hand display and touch integration.
+- components/DeckWidget.js: deck draw widget.
+- components/SidePanelButtons.js: side-panel button groups.
+- components/TopControlBar.js: phase, cost, undo, reset, and mode controls.
+- components/CombatOverlay.js: combat overlay panel.
+- components/RegionPanel.js: generic card region modal.
+- components/CardDetailModal.js: selected card detail modal.
+- components/OppHandPanel.js: opponent hand panel.
+- components/OppDeckPanel.js: opponent deck panel.
 
-## Refactor Direction
+## Development Commands
 
-- Keep index.html as declarative layout only.
-- Move mapping logic and presentational branching to app.js computed outputs.
-- Add new UI blocks as components under components/ with function props for actions.
+- npm start: start server on port 3000.
+- npm run start:3001: start server on port 3001.
+- npm run check:structure: verify critical files, exports, and shared event wiring.
+- npm run check:engine: verify pure combat and phase engine behavior.
+- npm run check:rules: verify rule engine behavior for phase, cost, and color checks.
+- npm test: run all current checks.
+
+## Current Architecture Direction
+
+- Keep app.js and server.js as composition roots, not logic dumps.
+- Prefer pure functions in engine/ for rule-sensitive behavior.
+- Route state mutations through commands/ or focused modules when possible.
+- Route socket side effects through effects/ or socket registrars instead of scattering raw event strings.
+- Keep shared/socketEvents.js as the single event-name source for both browser and Node.
