@@ -66,9 +66,13 @@ export const BattleRow = {
     },
     computed: {
         rowClasses() {
+            const hasTarget = this.isEnemy
+                && this.hoveredAttackTargetId
+                && (this.cards || []).some(c => String(c.instanceId) === String(this.hoveredAttackTargetId));
             return {
                 'guide-deploy-active': !this.isEnemy && this.isGuideActive,
-                'dragging-over': !this.isEnemy && this.isDraggingOver
+                'dragging-over': !this.isEnemy && this.isDraggingOver,
+                'has-attack-target': hasTarget
             };
         }
     },
@@ -87,8 +91,7 @@ export const BattleRow = {
                      :class="{
                          'is-mc-card': card.isMainCharacter,
                          'card-tapped': card.isTapped,
-                         'attack-target-highlight': isEnemy && String(hoveredAttackTargetId) === String(card.instanceId),
-                         'attack-target-mc-highlight': isEnemy && card.isMainCharacter && String(hoveredAttackTargetId) === String(card.instanceId)
+                         'attack-target-lift': isEnemy && String(hoveredAttackTargetId) === String(card.instanceId)
                      }"
                      draggable="true"
                      :data-enemy-id="isEnemy ? card.instanceId : null"

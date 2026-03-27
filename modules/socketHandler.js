@@ -68,6 +68,16 @@ export function createSocketHandler(state, cardOps) {
                 }
             });
         });
+
+        // 3. 对手回合开始 — 解除所有横置（对手视角的我方单位）
+        socket.on('opponent-untap-all', () => {
+            ['opponentFront', 'opponentRear'].forEach(areaName => {
+                const area = state[areaName];
+                if (!area?.value?.length) return;
+                area.value.forEach(card => { card.isTapped = false; });
+                area.value = [...area.value];
+            });
+        });
         socket.on('opponent-defense-support', ({ supportCard }) => {
             state.oppSupportCard.value = supportCard; 
             state.combatStats.value.oppTotalPower += (supportCard?.support || 0);

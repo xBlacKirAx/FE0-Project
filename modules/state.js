@@ -33,6 +33,7 @@ export function createGameState() {
     // ===== 交互状态 =====
     const isDraggingOver = ref(null);
     const hoveredAttackTargetId = ref(null);
+    const hoveredAttackTargetRect = ref(null);
     const draggedCard = ref(null);
     const undoStack = ref([]);
     
@@ -75,7 +76,7 @@ export function createGameState() {
         // UI
         selectedCard, activePanel, showFullImage, allCards,
         // 交互
-        isDraggingOver, hoveredAttackTargetId, draggedCard, undoStack,
+        isDraggingOver, hoveredAttackTargetId, hoveredAttackTargetRect, draggedCard, undoStack,
         // 游戏状态
         isDevMode, currentPhase, isMyTurn, hasPlacedBond,
         oppStats, socket, PHASES,

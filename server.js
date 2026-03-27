@@ -27,6 +27,7 @@ io.on('connection', (socket) => {
     socket.on('sync-defense-support', (data) => socket.broadcast.emit('opponent-defense-support', data));
     // 👇 新增：监听卡牌恢复直立
     socket.on('sync-card-untap', (data) => socket.broadcast.emit('opponent-card-untap', data));
+    socket.on('sync-untap-all', () => socket.broadcast.emit('opponent-untap-all'));
     // ====== 🔄 断线重连与状态同步 ======
     socket.on('request-sync', () => socket.broadcast.emit('request-sync'));
     socket.on('full-state-sync', (data) => socket.broadcast.emit('full-state-sync', data));

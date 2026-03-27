@@ -34,6 +34,16 @@ export function createTurnManager(state) {
         currentPhase.value = 'BEGINNING';
         hasPlacedBond.value = false;
         isMyTurn.value = false;
+
+        // 己方回合结束 = 敌方回合开始，立即在本地将对手卡牌回正（乐观更新）
+        const untapOpponent = (areaRef) => {
+            if (!areaRef?.value?.length) return;
+            areaRef.value.forEach(card => { card.isTapped = false; });
+            areaRef.value = [...areaRef.value];
+        };
+        untapOpponent(state.opponentFront);
+        untapOpponent(state.opponentRear);
+
         socket.emit('turn-end');
     };
 
@@ -46,6 +56,19 @@ export function createTurnManager(state) {
         hasPlacedBond.value = false;
         if (state.usedBondsThisTurn) state.usedBondsThisTurn.value = 0;
         if (state.undoStack) state.undoStack.value = [];
+
+        // 解除我方所有横置
+        const untapArea = (areaRef) => {
+            if (!areaRef?.value?.length) return;
+            areaRef.value.forEach(card => { card.isTapped = false; });
+            areaRef.value = [...areaRef.value]; // 触发响应式更新
+        };
+        untapArea(state.fieldFront);
+        untapArea(state.fieldRear);
+
+        // 通知对方同步解横置
+        socket.emit('sync-untap-all');
+
         console.log('我的回合开始：解除横置，准备抽牌');
     };
 

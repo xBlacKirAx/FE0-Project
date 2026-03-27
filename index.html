@@ -153,6 +153,17 @@
         :on-open-panel="openPanel">
     </side-panel-buttons>
 
+    <div
+        v-if="hoveredAttackTargetRect"
+        :class="['attack-target-screen-overlay', { 'attack-target-screen-overlay--mc': [...opponentFront, ...opponentRear].some(card => String(card.instanceId) === String(hoveredAttackTargetId) && card.isMainCharacter) }]"
+        :style="{
+            top: hoveredAttackTargetRect.top + 'px',
+            left: hoveredAttackTargetRect.left + 'px',
+            width: hoveredAttackTargetRect.width + 'px',
+            height: hoveredAttackTargetRect.height + 'px'
+        }">
+    </div>
+
     <combat-overlay
         :is-combat-active="isCombatActive"
         :my-support-card="mySupportCard"

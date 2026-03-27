@@ -152,6 +152,7 @@ createApp({
         const clearDraggingOver = () => {
             state.isDraggingOver.value = null;
             state.hoveredAttackTargetId.value = null;
+            state.hoveredAttackTargetRect.value = null;
         };
 
         const openBondsPanel = () => {
