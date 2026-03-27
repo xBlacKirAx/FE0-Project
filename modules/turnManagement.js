@@ -5,6 +5,9 @@ export function createTurnManager(state) {
     const { currentPhase, hasPlacedBond, isMyTurn, socket, PHASES } = state;
 
     const phaseOrder = ['BEGINNING', 'BOND', 'DEPLOY', 'ATTACK', 'END'];
+    const phaseNameMap = {
+        BEGINNING: '开始阶段', BOND: '羁绊阶段', DEPLOY: '出击阶段', ATTACK: '攻击阶段', END: '结束阶段'
+    };
 
     /**
      * 进入下一阶段
@@ -19,6 +22,10 @@ export function createTurnManager(state) {
             if (currentPhase.value === 'BOND') {
                 hasPlacedBond.value = false;
             }
+
+            const phaseName = phaseNameMap[currentPhase.value] || currentPhase.value;
+            console.log(`[阶段] → ${phaseName}`);
+            socket.emit('sync-phase', { phase: currentPhase.value, phaseName });
         } else {
             // 回合结束，准备进入对手的回合
             currentPhase.value = 'BEGINNING';

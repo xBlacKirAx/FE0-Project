@@ -151,6 +151,7 @@ export function createCardOperations(state) {
 
         if (last.type === 'draw') {
             const card = hand.value.pop();
+            console.log(`[撤销] 撤回抽牌 → ${card?.name || '未知卡牌'}`);
             if (card) deck.value.push(card); 
             return;
         }
@@ -162,6 +163,8 @@ export function createCardOperations(state) {
         const idx = currentArea.findIndex(c => c.instanceId === last.card.instanceId);
         if (idx > -1) {
             const card = currentArea.splice(idx, 1)[0];
+            const fromLabel = { hand:'手牌', front:'前排', rear:'后排', bonds:'羁绊区', jewels:'宝玉区', graveyard:'弃牌区', boundless:'无限区', deck:'牌组' };
+            console.log(`[撤销] 撤回：${card?.name || '卡牌'} [${fromLabel[last.to] || last.to} → ${fromLabel[last.from] || last.from}]`);
             getAreaArray(last.from).push(card);
             if (socket) socket.emit('sync-card-move', { card, to: last.from, from: last.to });
         }
