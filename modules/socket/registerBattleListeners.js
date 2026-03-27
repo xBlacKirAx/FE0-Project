@@ -1,6 +1,6 @@
 // modules/socket/registerBattleListeners.js
 
-export function registerBattleListeners({ state, socket, EVT, resolveCombat }) {
+export function registerBattleListeners({ state, socket, EVT, beginCombatResolution, applyCombatDecision }) {
     socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard }) => {
         const oppAttacker = [...state.opponentFront.value, ...state.opponentRear.value]
             .find(c => c.instanceId === attacker.instanceId);
@@ -19,8 +19,18 @@ export function registerBattleListeners({ state, socket, EVT, resolveCombat }) {
         state.mySupportCard.value = supportCard;
         state.defender.value = defender;
         state.combatStats.value = {
+            myCardPower: attacker.attack || 0,
+            mySupportPower: supportCard?.support || 0,
             myTotalPower: (attacker.attack || 0) + (supportCard?.support || 0),
             oppTotalPower: defender.attack || 0
+        };
+        state.combatDecision.value = {
+            stage: 'idle',
+            promptOwner: null,
+            criticalPower: 0,
+            criticalUsed: false,
+            evaded: false,
+            finalAttackerWins: null
         };
         state.isCombatActive.value = true;
 
@@ -33,7 +43,7 @@ export function registerBattleListeners({ state, socket, EVT, resolveCombat }) {
             }
             socket.emit(EVT.SYNC_DEFENSE_SUPPORT, { supportCard: defenseSupport });
             setTimeout(() => {
-                if (resolveCombat) resolveCombat(state);
+                if (beginCombatResolution) beginCombatResolution(state);
             }, 2000);
         }, 800);
     });
@@ -68,7 +78,11 @@ export function registerBattleListeners({ state, socket, EVT, resolveCombat }) {
         state.oppSupportCard.value = supportCard;
         state.combatStats.value.oppTotalPower += (supportCard?.support || 0);
         setTimeout(() => {
-            if (resolveCombat) resolveCombat(state);
+            if (beginCombatResolution) beginCombatResolution(state);
         }, 2000);
+    });
+
+    socket.on(EVT.OPPONENT_COMBAT_DECISION, (payload) => {
+        if (applyCombatDecision) applyCombatDecision(state, payload);
     });
 }

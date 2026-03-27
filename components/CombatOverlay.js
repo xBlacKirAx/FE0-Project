@@ -5,6 +5,15 @@ export const CombatOverlay = {
         oppSupportCard: Object,
         attacker: Object,
         defender: Object,
+        isMyAttacker: Boolean,
+        onCombatDecision: {
+            type: Function,
+            required: true
+        },
+        combatDecision: {
+            type: Object,
+            default: () => ({})
+        },
         combatStats: {
             type: Object,
             default: () => ({})
@@ -14,6 +23,30 @@ export const CombatOverlay = {
             required: true
         }
     },
+    computed: {
+        canAct() {
+            const role = this.isMyAttacker ? 'attacker' : 'defender';
+            return this.combatDecision?.promptOwner === role;
+        },
+        decisionTitle() {
+            if (this.combatDecision?.stage === 'awaiting-attacker-critical') {
+                return '本次原本未击破，是否发动必杀？';
+            }
+            if (this.combatDecision?.stage === 'awaiting-defender-evasion' || this.combatDecision?.stage === 'awaiting-defender-evasion-after-critical') {
+                return '本次战斗将击破，是否发动回避？';
+            }
+            return '';
+        },
+        waitingTitle() {
+            if (this.combatDecision?.stage === 'awaiting-attacker-critical') {
+                return '等待攻击方选择是否发动必杀...';
+            }
+            if (this.combatDecision?.stage === 'awaiting-defender-evasion' || this.combatDecision?.stage === 'awaiting-defender-evasion-after-critical') {
+                return '等待防御方选择是否发动回避...';
+            }
+            return '正在结算战斗...';
+        }
+    },
     template: `
         <div v-if="isCombatActive" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
             <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
@@ -21,6 +54,47 @@ export const CombatOverlay = {
             <div class="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
                 <div class="absolute top-1/2 left-0 w-full h-2 bg-blue-600 shadow-[0_0_50px_20px_rgba(37,99,235,0.6)] transform -translate-y-1/2 rotate-12"></div>
                 <div class="absolute top-1/2 left-0 w-full h-2 bg-red-600 shadow-[0_0_50px_20px_rgba(220,38,38,0.6)] transform -translate-y-1/2 -rotate-12"></div>
+            </div>
+
+            <!-- 必杀/回避决策面板 - 绝对居中弹层，始终在屏幕内可见 -->
+            <div v-if="combatDecision?.stage && combatDecision.stage !== 'idle' && combatDecision.stage !== 'resolved'"
+                class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-white/20 bg-black/90 backdrop-blur-sm px-6 py-6 text-center shadow-2xl">
+                <div v-if="canAct" class="space-y-4">
+                    <div class="text-lg md:text-2xl font-black text-white">{{ decisionTitle }}</div>
+                    <div v-if="combatDecision.stage === 'awaiting-attacker-critical'" class="text-sm md:text-base text-yellow-300">
+                        发动后攻击战力将提升至 {{ combatDecision.criticalPower }}
+                    </div>
+                    <div class="flex items-center justify-center gap-3 md:gap-4 mt-4">
+                        <button
+                            v-if="combatDecision.stage === 'awaiting-attacker-critical'"
+                            @click="onCombatDecision('critical', true)"
+                            class="px-6 py-3 rounded-full bg-yellow-500 hover:bg-yellow-400 text-black font-black transition-colors text-base md:text-lg">
+                            发动必杀
+                        </button>
+                        <button
+                            v-if="combatDecision.stage === 'awaiting-attacker-critical'"
+                            @click="onCombatDecision('critical', false)"
+                            class="px-6 py-3 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold transition-colors text-base md:text-lg">
+                            不发动
+                        </button>
+                        <button
+                            v-if="combatDecision.stage === 'awaiting-defender-evasion' || combatDecision.stage === 'awaiting-defender-evasion-after-critical'"
+                            @click="onCombatDecision('evasion', true)"
+                            class="px-6 py-3 rounded-full bg-cyan-500 hover:bg-cyan-400 text-black font-black transition-colors text-base md:text-lg">
+                            发动回避
+                        </button>
+                        <button
+                            v-if="combatDecision.stage === 'awaiting-defender-evasion' || combatDecision.stage === 'awaiting-defender-evasion-after-critical'"
+                            @click="onCombatDecision('evasion', false)"
+                            class="px-6 py-3 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold transition-colors text-base md:text-lg">
+                            不回避
+                        </button>
+                    </div>
+                </div>
+                <div v-else class="space-y-2 text-white/90">
+                    <div class="text-lg md:text-2xl font-black">{{ waitingTitle }}</div>
+                    <div v-if="combatDecision.criticalUsed" class="text-sm md:text-base text-yellow-300">攻击方已宣言必杀</div>
+                </div>
             </div>
 
             <div class="relative z-10 w-full max-w-4xl flex flex-col items-center">
@@ -84,7 +158,7 @@ export const CombatOverlay = {
                     </div>
                 </div>
 
-                <div class="mt-10 md:mt-16 z-40">
+                        <div class="mt-10 md:mt-16 z-40">
                     <button @click="onClose()" class="px-8 py-3 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-bold rounded-full shadow-lg border border-neutral-600 transition-colors">
                         关闭面板 (调试用)
                     </button>

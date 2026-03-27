@@ -1,48 +1,29 @@
 // modules/cardOps/combatCommands.js
 
 import { isAttackerFromMyField, getCombatWinner } from '../engine/combatEngine.js';
+import { createInitialCombatDecision, getInitialCombatDecisionContext } from '../engine/combatDecisionEngine.js';
 import { emitSyncAttack, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
+import { emitSyncCombatDecision } from '../effects/combatSocketEffects.js';
 
 export function createCombatCommands({ state, socket }) {
-    const initiateAttack = (currentState, attackerCard, defenderCard) => {
-        if (attackerCard.isTapped && !currentState.isDevMode.value) {
-            console.warn('[规则拦截] 底层已拒绝：已横置的卡牌无法再次攻击！');
-            return;
-        }
-        attackerCard.isTapped = true;
-        currentState.attacker.value = attackerCard;
-        currentState.defender.value = defenderCard;
-        currentState.combatStats.value = {
-            myTotalPower: attackerCard.attack || 0,
-            oppTotalPower: defenderCard.attack || 0
-        };
-        currentState.isCombatActive.value = true;
+    const getIsMyAttacker = (currentState) => isAttackerFromMyField(
+        currentState.attacker.value?.instanceId,
+        currentState.fieldFront.value,
+        currentState.fieldRear.value
+    );
 
-        setTimeout(() => {
-            let mySupport = null;
-            if (currentState.deck.value.length > 0) {
-                mySupport = currentState.deck.value.pop();
-                currentState.mySupportCard.value = mySupport;
-                currentState.combatStats.value.myTotalPower += (mySupport.support || 0);
-            }
-            emitSyncAttack(socket, { attacker: attackerCard, defender: defenderCard, supportCard: mySupport });
-        }, 800);
+    const resetCombatState = (currentState) => {
+        currentState.isCombatActive.value = false;
+        currentState.attacker.value = null;
+        currentState.defender.value = null;
+        currentState.mySupportCard.value = null;
+        currentState.oppSupportCard.value = null;
+        currentState.combatDecision.value = createInitialCombatDecision();
     };
 
-    const untapCard = (card) => {
-        if (!card) return;
-        card.isTapped = false;
-        emitSyncCardUntap(socket, { instanceId: card.instanceId });
-        state.selectedCard.value = null;
-    };
-
-    const resolveCombat = (currentState) => {
-        const isMyAttacker = isAttackerFromMyField(
-            currentState.attacker.value?.instanceId,
-            currentState.fieldFront.value,
-            currentState.fieldRear.value
-        );
-        const attackerWins = getCombatWinner(
+    const resolveCombat = (currentState, forcedAttackerWins = null) => {
+        const isMyAttacker = getIsMyAttacker(currentState);
+        const attackerWins = forcedAttackerWins ?? getCombatWinner(
             currentState.combatStats.value.myTotalPower,
             currentState.combatStats.value.oppTotalPower
         );
@@ -86,18 +67,118 @@ export function createCombatCommands({ state, socket }) {
             if (currentState.oppSupportCard.value) currentState.graveyard.value.push(currentState.oppSupportCard.value);
         }
 
+        currentState.combatDecision.value = {
+            ...currentState.combatDecision.value,
+            stage: 'resolved',
+            finalAttackerWins: attackerWins
+        };
+
         setTimeout(() => {
-            currentState.isCombatActive.value = false;
-            currentState.attacker.value = null;
-            currentState.defender.value = null;
-            currentState.mySupportCard.value = null;
-            currentState.oppSupportCard.value = null;
-        }, 500);
+            resetCombatState(currentState);
+        }, 700);
+    };
+
+    const applyCombatDecision = (currentState, payload) => {
+        const decisionType = payload?.decisionType;
+        const useSkill = !!payload?.useSkill;
+        const currentDecision = currentState.combatDecision.value;
+
+        if (decisionType === 'critical') {
+            if (!useSkill) {
+                resolveCombat(currentState, false);
+                return;
+            }
+
+            currentState.combatStats.value.myTotalPower = currentDecision.criticalPower;
+            currentState.combatDecision.value = {
+                ...currentDecision,
+                stage: 'awaiting-defender-evasion-after-critical',
+                promptOwner: 'defender',
+                criticalUsed: true
+            };
+            return;
+        }
+
+        if (decisionType === 'evasion') {
+            if (useSkill) {
+                currentState.combatDecision.value = {
+                    ...currentDecision,
+                    evaded: true,
+                    finalAttackerWins: false
+                };
+                resolveCombat(currentState, false);
+                return;
+            }
+
+            currentState.combatDecision.value = {
+                ...currentDecision,
+                finalAttackerWins: true
+            };
+            resolveCombat(currentState, true);
+        }
+    };
+
+    const beginCombatResolution = (currentState) => {
+        const decisionContext = getInitialCombatDecisionContext(
+            currentState.combatStats.value.myCardPower,
+            currentState.combatStats.value.mySupportPower,
+            currentState.combatStats.value.oppTotalPower
+        );
+        currentState.combatDecision.value = decisionContext;
+
+        if (decisionContext.stage === 'auto-miss') {
+            resolveCombat(currentState, false);
+        }
+    };
+
+    const respondCombatDecision = (currentState, decisionType, useSkill) => {
+        emitSyncCombatDecision(socket, { decisionType, useSkill });
+        applyCombatDecision(currentState, { decisionType, useSkill });
+    };
+
+    const initiateAttack = (currentState, attackerCard, defenderCard) => {
+        if (attackerCard.isTapped && !currentState.isDevMode.value) {
+            console.warn('[规则拦截] 底层已拒绝：已横置的卡牌无法再次攻击！');
+            return;
+        }
+        attackerCard.isTapped = true;
+        currentState.attacker.value = attackerCard;
+        currentState.defender.value = defenderCard;
+        currentState.combatStats.value = {
+            myCardPower: attackerCard.attack || 0,
+            mySupportPower: 0,
+            myTotalPower: attackerCard.attack || 0,
+            oppTotalPower: defenderCard.attack || 0
+        };
+        currentState.combatDecision.value = createInitialCombatDecision();
+        currentState.isCombatActive.value = true;
+
+        setTimeout(() => {
+            let mySupport = null;
+            if (currentState.deck.value.length > 0) {
+                mySupport = currentState.deck.value.pop();
+                currentState.mySupportCard.value = mySupport;
+                const sp = mySupport.support || 0;
+                currentState.combatStats.value.mySupportPower = sp;
+                currentState.combatStats.value.myTotalPower += sp;
+            }
+            emitSyncAttack(socket, { attacker: attackerCard, defender: defenderCard, supportCard: mySupport });
+        }, 800);
+    };
+
+    const untapCard = (card) => {
+        if (!card) return;
+        card.isTapped = false;
+        emitSyncCardUntap(socket, { instanceId: card.instanceId });
+        state.selectedCard.value = null;
     };
 
     return {
         initiateAttack,
         untapCard,
-        resolveCombat
+        resolveCombat,
+        beginCombatResolution,
+        respondCombatDecision,
+        applyCombatDecision
     };
 }
