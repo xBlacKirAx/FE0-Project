@@ -78,7 +78,7 @@ createApp({
             ...dragDrop, // 自动暴露拖拽与攻击指令
 			playToField: safePlayToField,
             nextPhase: turnMgr.nextPhase,
-            canPerformAction: rules.canPerformAction,getFactionInfo: rules.getFactionInfo,
+            canPerformAction: rules.canPerformAction,getCardFactionInfo: rules.getCardFactionInfo,
             isMyCard, isCardInHand, formattedAbility, formattedSupport, handleMinifiedClick, updateHeight
         };
     }
