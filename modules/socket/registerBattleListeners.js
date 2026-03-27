@@ -1,7 +1,56 @@
 // modules/socket/registerBattleListeners.js
 
+import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
+import { emitPlayerDraw } from '../effects/cardSocketEffects.js';
+
+function applyCombatSupportEffectResult(state, result, role) {
+    if (!result) return;
+    if (result.powerDelta) {
+        if (role === 'attacker') {
+            state.combatStats.value.myTotalPower += result.powerDelta;
+        } else {
+            state.combatStats.value.oppTotalPower += result.powerDelta;
+        }
+    }
+    if (result.lockAttackerCritical) {
+        state.combatStats.value.attackerCriticalLocked = true;
+        state.combatStats.value.supportNotice = '祈祷之纹章生效：攻击方本次战斗不能发动必杀。';
+    }
+    if (result.jewelBreakCount) {
+        state.combatStats.value.jewelBreakCount = Math.max(
+            state.combatStats.value.jewelBreakCount || 1,
+            result.jewelBreakCount
+        );
+    }
+}
+
+function applyLocalSupportSideEffect(state, socket, result) {
+    if (!result || !result.sideEffect) return;
+    if (result.sideEffect === 'draw1Discard1') {
+        if (state.deck.value.length > 0) {
+            const drawnCard = state.deck.value.pop();
+            state.hand.value.push(drawnCard);
+            emitPlayerDraw(socket, { card: drawnCard });
+        }
+        state.supportInteraction.value = {
+            type: 'magic-discard',
+            source: 'support-effect'
+        };
+        state.combatStats.value.supportNotice = '魔术之纹章：请从手牌选择1张卡弃置。';
+    }
+
+    if (result.sideEffect === 'moveAllyExceptAttacker') {
+        state.supportInteraction.value = {
+            type: 'sky-move',
+            source: 'support-effect',
+            excludedId: state.attacker.value?.instanceId || null
+        };
+        state.combatStats.value.supportNotice = '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
+    }
+}
+
 export function registerBattleListeners({ state, socket, EVT, beginCombatResolution, applyCombatDecision }) {
-    socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard }) => {
+    socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard, supportFailed }) => {
         if (state.hasBattledThisTurn) {
             state.hasBattledThisTurn.value = true;
         }
@@ -23,9 +72,14 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
         state.defender.value = defender;
         state.combatStats.value = {
             myCardPower: attacker.attack || 0,
-            mySupportPower: supportCard?.support || 0,
-            myTotalPower: (attacker.attack || 0) + (supportCard?.support || 0),
-            oppTotalPower: defender.attack || 0
+            mySupportPower: supportFailed ? 0 : (supportCard?.support || 0),
+            myTotalPower: (attacker.attack || 0) + (supportFailed ? 0 : (supportCard?.support || 0)),
+            oppTotalPower: defender.attack || 0,
+            attackerCriticalLocked: false,
+            jewelBreakCount: 1,
+            attackerSupportApplied: supportFailed ? 0 : (supportCard?.support || 0),
+            defenderSupportApplied: 0,
+            supportNotice: supportFailed ? '支援失效：支援单位与被支援单位角色名相同。' : null
         };
         state.combatDecision.value = {
             stage: 'idle',
@@ -39,10 +93,28 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
 
         setTimeout(() => {
             let defenseSupport = null;
+            let defenseSupportFailed = false;
             if (state.deck.value.length > 0) {
                 defenseSupport = state.deck.value.pop();
                 state.oppSupportCard.value = defenseSupport;
-                state.combatStats.value.oppTotalPower += (defenseSupport.support || 0);
+                defenseSupportFailed = isSupportFailed(defenseSupport, state.defender.value);
+                const appliedSupport = defenseSupportFailed ? 0 : (defenseSupport.support || 0);
+                state.combatStats.value.defenderSupportApplied = appliedSupport;
+                state.combatStats.value.oppTotalPower += appliedSupport;
+
+                if (defenseSupportFailed) {
+                    state.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
+                }
+
+                if (!defenseSupportFailed) {
+                    const supportEffectResult = resolveSupportEffectResult({
+                        supportCard: defenseSupport,
+                        role: 'defender',
+                        state
+                    });
+                    applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
+                    applyLocalSupportSideEffect(state, socket, supportEffectResult);
+                }
             }
             socket.emit(EVT.SYNC_DEFENSE_SUPPORT, { supportCard: defenseSupport });
             setTimeout(() => {
@@ -78,8 +150,22 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
     });
 
     socket.on(EVT.OPPONENT_DEFENSE_SUPPORT, ({ supportCard }) => {
+        const supportFailed = isSupportFailed(supportCard, state.defender.value);
         state.oppSupportCard.value = supportCard;
-        state.combatStats.value.oppTotalPower += (supportCard?.support || 0);
+        const appliedSupport = supportFailed ? 0 : (supportCard?.support || 0);
+        state.combatStats.value.defenderSupportApplied = appliedSupport;
+        state.combatStats.value.oppTotalPower += appliedSupport;
+        if (supportFailed) {
+            state.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
+        }
+        if (!supportFailed) {
+            const supportEffectResult = resolveSupportEffectResult({
+                supportCard,
+                role: 'defender',
+                state
+            });
+            applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
+        }
         setTimeout(() => {
             if (beginCombatResolution) beginCombatResolution(state);
         }, 1000);

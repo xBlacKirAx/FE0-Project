@@ -67,6 +67,69 @@ function parseSkillCost(html) {
     return { raw: content, action: "其他", amount: 0 };
 }
 
+const SUPPORT_EFFECT_ID_MAP = Object.freeze({
+    '兄妹之纹章': 'EMBLEM_SIBLING',
+    '光明之纹章': 'EMBLEM_LIGHT',
+    '共斗之纹章': 'EMBLEM_COOP',
+    '勇气之纹章': 'EMBLEM_COURAGE',
+    '命运之纹章': 'EMBLEM_FATE',
+    '圣血之纹章': 'EMBLEM_HOLY_BLOOD',
+    '天空之纹章': 'EMBLEM_SKY',
+    '封咒之纹章': 'EMBLEM_SEAL_CURSE',
+    '希望之纹章': 'EMBLEM_HOPE',
+    '幻影之纹章': 'EMBLEM_PHANTOM',
+    '强者之纹章': 'EMBLEM_STRONG',
+    '必中之纹章': 'EMBLEM_CERTAINTY',
+    '忍术之纹章': 'EMBLEM_NINJUTSU',
+    '抵抗之纹章': 'EMBLEM_RESISTANCE',
+    '指挥之纹章': 'EMBLEM_COMMAND',
+    '援护之纹章': 'EMBLEM_SUPPORT',
+    '攻击之纹章': 'EMBLEM_ATTACK',
+    '歌舞之纹章': 'EMBLEM_DANCE',
+    '激励之纹章': 'EMBLEM_ENCOURAGE',
+    '盗贼之纹章': 'EMBLEM_THIEF',
+    '祈祷之纹章': 'EMBLEM_PRAYER',
+    '筹措之纹章': 'EMBLEM_PROCUREMENT',
+    '绝望之纹章': 'EMBLEM_DESPAIR',
+    '英雄之纹章': 'EMBLEM_HERO',
+    '计略之纹章': 'EMBLEM_STRATEGY',
+    '连携之纹章': 'EMBLEM_LINK',
+    '锻炼之纹章': 'EMBLEM_TRAINING',
+    '防御之纹章': 'EMBLEM_DEFENSE',
+    '预言之纹章': 'EMBLEM_PROPHECY',
+    '魔术之纹章': 'EMBLEM_MAGIC',
+    '黑暗之纹章': 'EMBLEM_DARK',
+    '龙人之纹章': 'EMBLEM_MANAKETE',
+    '龙血之纹章': 'EMBLEM_DRAGON_BLOOD',
+    '龙鳞之纹章': 'EMBLEM_DRAGON_SCALE'
+});
+
+function parseSupportEffect(text) {
+    const supportText = (text || '').trim();
+    if (!supportText) {
+        return {
+            effectName: null,
+            effectId: null,
+            effectTiming: null,
+            effectParams: {}
+        };
+    }
+
+    const titleMatch = supportText.match(/『(.*?)』/);
+    const timingMatch = supportText.match(/〖(.*?)〗/);
+    const effectName = titleMatch ? titleMatch[1].trim() : null;
+    const effectTiming = timingMatch ? `〖${timingMatch[1].trim()}〗` : null;
+    const effectId = effectName ? (SUPPORT_EFFECT_ID_MAP[effectName] || null) : null;
+
+    return {
+        effectName,
+        effectId,
+        effectTiming,
+        // 预留参数位，后续可按效果类型补充数值参数（如加值、目标范围）
+        effectParams: {}
+    };
+}
+
 /**
  * 拆分卡名：以空格分割为称号(cardName)和角色名(charaName)
  */
@@ -137,6 +200,7 @@ async function startScraping() {
 
             // 4. 解析支援能力
             const supportText = container.find('.symbolHead:contains("支援能力")').next('span').text().trim();
+            const supportEffect = parseSupportEffect(supportText);
 
             // 5. 关键词提取 (正则)
             const extractKeywords = (text) => ({
@@ -170,7 +234,11 @@ async function startScraping() {
                 },
                 supportAbility: {
                     text: supportText,
-                    keywords: extractKeywords(supportText)
+                    keywords: extractKeywords(supportText),
+                    effectName: supportEffect.effectName,
+                    effectId: supportEffect.effectId,
+                    effectTiming: supportEffect.effectTiming,
+                    effectParams: supportEffect.effectParams
                 },
                 image: `/images/cards/${cardId}.png`
             };

@@ -39,7 +39,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-001.png"
   },
@@ -77,7 +81,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-002.png"
   },
@@ -129,7 +137,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "英雄之纹章",
+      "effectId": "EMBLEM_HERO",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-003.png"
   },
@@ -178,7 +190,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-004.png"
   },
@@ -225,7 +241,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-005.png"
   },
@@ -280,7 +300,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-006.png"
   },
@@ -326,7 +350,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-007.png"
   },
@@ -376,7 +404,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-008.png"
   },
@@ -422,7 +454,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-009.png"
   },
@@ -472,7 +508,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-010.png"
   },
@@ -518,7 +558,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-011.png"
   },
@@ -568,7 +612,11 @@
         "timing": [
           "〖防御型〗"
         ]
-      }
+      },
+      "effectName": "防御之纹章",
+      "effectId": "EMBLEM_DEFENSE",
+      "effectTiming": "〖防御型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-012.png"
   },
@@ -608,7 +656,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-013.png"
   },
@@ -663,7 +715,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-014.png"
   },
@@ -715,7 +771,11 @@
         "timing": [
           "〖防御型〗"
         ]
-      }
+      },
+      "effectName": "祈祷之纹章",
+      "effectId": "EMBLEM_PRAYER",
+      "effectTiming": "〖防御型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-015.png"
   },
@@ -759,7 +819,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-016.png"
   },
@@ -797,7 +861,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-017.png"
   },
@@ -845,7 +913,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-018.png"
   },
@@ -893,7 +965,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-019.png"
   },
@@ -941,7 +1017,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-020.png"
   },
@@ -987,7 +1067,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-021.png"
   },
@@ -1031,7 +1115,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-022.png"
   },
@@ -1069,7 +1157,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-023.png"
   },
@@ -1117,7 +1209,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-024.png"
   },
@@ -1161,7 +1257,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-025.png"
   },
@@ -1215,7 +1315,11 @@
         "timing": [
           "〖防御型〗"
         ]
-      }
+      },
+      "effectName": "祈祷之纹章",
+      "effectId": "EMBLEM_PRAYER",
+      "effectTiming": "〖防御型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-026.png"
   },
@@ -1259,7 +1363,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-027.png"
   },
@@ -1309,7 +1417,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-028.png"
   },
@@ -1365,7 +1477,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "魔术之纹章",
+      "effectId": "EMBLEM_MAGIC",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-029.png"
   },
@@ -1410,7 +1526,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-030.png"
   },
@@ -1461,7 +1581,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-031.png"
   },
@@ -1503,7 +1627,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-032.png"
   },
@@ -1557,7 +1685,11 @@
         "timing": [
           "〖防御型〗"
         ]
-      }
+      },
+      "effectName": "祈祷之纹章",
+      "effectId": "EMBLEM_PRAYER",
+      "effectTiming": "〖防御型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-033.png"
   },
@@ -1601,7 +1733,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-034.png"
   },
@@ -1648,7 +1784,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-035.png"
   },
@@ -1701,7 +1841,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "魔术之纹章",
+      "effectId": "EMBLEM_MAGIC",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-036.png"
   },
@@ -1747,7 +1891,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-037.png"
   },
@@ -1796,7 +1944,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-038.png"
   },
@@ -1851,7 +2003,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-039.png"
   },
@@ -1900,7 +2056,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-040.png"
   },
@@ -1955,7 +2115,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-041.png"
   },
@@ -2004,7 +2168,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-042.png"
   },
@@ -2059,7 +2227,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-043.png"
   },
@@ -2103,7 +2275,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-044.png"
   },
@@ -2145,7 +2321,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-045.png"
   },
@@ -2189,7 +2369,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-046.png"
   },
@@ -2239,7 +2423,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "龙人之纹章",
+      "effectId": "EMBLEM_MANAKETE",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-047.png"
   },
@@ -2284,7 +2472,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-048.png"
   },
@@ -2328,7 +2520,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-049.png"
   },
@@ -2372,7 +2568,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-050.png"
   },
@@ -2419,7 +2619,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-051.png"
   },
@@ -2461,7 +2665,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-052.png"
   },
@@ -2509,7 +2717,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "英雄之纹章",
+      "effectId": "EMBLEM_HERO",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-053.png"
   },
@@ -2555,7 +2767,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-054.png"
   },
@@ -2599,7 +2815,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-055.png"
   },
@@ -2649,7 +2869,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "英雄之纹章",
+      "effectId": "EMBLEM_HERO",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-056.png"
   },
@@ -2696,7 +2920,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-057.png"
   },
@@ -2744,7 +2972,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "计略之纹章",
+      "effectId": "EMBLEM_STRATEGY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-058.png"
   },
@@ -2785,7 +3017,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-059.png"
   },
@@ -2837,7 +3073,11 @@
         "timing": [
           "〖防御型〗"
         ]
-      }
+      },
+      "effectName": "祈祷之纹章",
+      "effectId": "EMBLEM_PRAYER",
+      "effectTiming": "〖防御型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-060.png"
   },
@@ -2878,7 +3118,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-061.png"
   },
@@ -2921,7 +3165,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-062.png"
   },
@@ -2976,7 +3224,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-063.png"
   },
@@ -3021,7 +3273,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-064.png"
   },
@@ -3071,7 +3327,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-065.png"
   },
@@ -3116,7 +3376,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-066.png"
   },
@@ -3166,7 +3430,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-067.png"
   },
@@ -3213,7 +3481,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-068.png"
   },
@@ -3268,7 +3540,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-069.png"
   },
@@ -3315,7 +3591,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-070.png"
   },
@@ -3363,7 +3643,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-071.png"
   },
@@ -3419,7 +3703,11 @@
         "timing": [
           "〖防御型〗"
         ]
-      }
+      },
+      "effectName": "祈祷之纹章",
+      "effectId": "EMBLEM_PRAYER",
+      "effectTiming": "〖防御型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-072.png"
   },
@@ -3467,7 +3755,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-073.png"
   },
@@ -3519,7 +3811,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "盗贼之纹章",
+      "effectId": "EMBLEM_THIEF",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-074.png"
   },
@@ -3570,7 +3866,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-075.png"
   },
@@ -3625,7 +3925,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-076.png"
   },
@@ -3663,7 +3967,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-077.png"
   },
@@ -3705,7 +4013,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-078.png"
   },
@@ -3757,7 +4069,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "龙人之纹章",
+      "effectId": "EMBLEM_MANAKETE",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-079.png"
   },
@@ -3803,7 +4119,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-080.png"
   },
@@ -3845,7 +4165,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-081.png"
   },
@@ -3893,7 +4217,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "黑暗之纹章",
+      "effectId": "EMBLEM_DARK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-082.png"
   },
@@ -3935,7 +4263,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-083.png"
   },
@@ -3982,7 +4314,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-084.png"
   },
@@ -4037,7 +4373,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "天空之纹章",
+      "effectId": "EMBLEM_SKY",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-085.png"
   },
@@ -4084,7 +4424,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-086.png"
   },
@@ -4132,7 +4476,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "黑暗之纹章",
+      "effectId": "EMBLEM_DARK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-087.png"
   },
@@ -4174,7 +4522,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-088.png"
   },
@@ -4225,7 +4577,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-089.png"
   },
@@ -4266,7 +4622,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-090.png"
   },
@@ -4313,7 +4673,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-091.png"
   },
@@ -4359,7 +4723,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-092.png"
   },
@@ -4411,7 +4779,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-093.png"
   },
@@ -4454,7 +4826,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-094.png"
   },
@@ -4502,7 +4878,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-095.png"
   },
@@ -4542,7 +4922,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-096.png"
   },
@@ -4585,7 +4969,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-097.png"
   },
@@ -4633,7 +5021,11 @@
         "timing": [
           "〖攻击型〗"
         ]
-      }
+      },
+      "effectName": "攻击之纹章",
+      "effectId": "EMBLEM_ATTACK",
+      "effectTiming": "〖攻击型〗",
+      "effectParams": {}
     },
     "image": "/images/cards/B01-098.png"
   },
@@ -4681,7 +5073,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-099.png"
   },
@@ -4723,7 +5119,11 @@
         "type": [],
         "title": [],
         "timing": []
-      }
+      },
+      "effectName": null,
+      "effectId": null,
+      "effectTiming": null,
+      "effectParams": {}
     },
     "image": "/images/cards/B01-100.png"
   }

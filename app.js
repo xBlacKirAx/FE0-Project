@@ -114,12 +114,25 @@ createApp({
             if (state.activePanel.value === 'combatCostHand') {
                 return `战斗代价选择（角色名：${requiredCombatCharaName.value || '未知'}）`;
             }
+            if (state.activePanel.value === 'supportMagicDiscardHand') {
+                return '魔术之纹章：选择1张手牌弃置';
+            }
+            if (state.activePanel.value === 'supportSkyMoveCandidates') {
+                return '天空之纹章：选择1名我方单位移动';
+            }
             return activePanelTitle.value;
         });
 
         const resolvedPanelCards = computed(() => {
             if (state.activePanel.value === 'combatCostHand') {
                 return combatCostCandidates.value;
+            }
+            if (state.activePanel.value === 'supportMagicDiscardHand') {
+                return state.hand.value;
+            }
+            if (state.activePanel.value === 'supportSkyMoveCandidates') {
+                const excludedId = state.supportInteraction.value?.excludedId;
+                return [...state.fieldFront.value, ...state.fieldRear.value].filter(card => String(card.instanceId) !== String(excludedId));
             }
             return activePanelCards.value;
         });
@@ -203,6 +216,13 @@ createApp({
                 closeActivePanel();
                 return;
             }
+            if (state.activePanel.value === 'supportMagicDiscardHand' || state.activePanel.value === 'supportSkyMoveCandidates') {
+                const ok = cardOps.resolveSupportInteraction(state, card.instanceId);
+                if (ok) {
+                    closeActivePanel();
+                }
+                return;
+            }
             handleMinifiedClick(card);
         };
 
@@ -224,6 +244,21 @@ createApp({
         watch(requiredCombatCharaName, () => {
             selectedCombatCostCardId.value = null;
             selectedCombatCostCardName.value = '';
+        });
+
+        watch(() => state.supportInteraction.value?.type, (type) => {
+            if (type === 'magic-discard') {
+                state.activePanel.value = 'supportMagicDiscardHand';
+                return;
+            }
+            if (type === 'sky-move') {
+                state.activePanel.value = 'supportSkyMoveCandidates';
+                return;
+            }
+
+            if (state.activePanel.value === 'supportMagicDiscardHand' || state.activePanel.value === 'supportSkyMoveCandidates') {
+                closeActivePanel();
+            }
         });
         const updateHeight = () => { document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`); };
 

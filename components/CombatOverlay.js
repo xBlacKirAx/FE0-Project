@@ -138,6 +138,7 @@ export const CombatOverlay = {
                 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-white/20 bg-black/55 backdrop-blur-sm px-6 py-6 text-center shadow-2xl">
                 <div v-if="canAct" class="space-y-4">
                     <div class="text-lg md:text-2xl font-black text-white">{{ decisionTitle }}</div>
+                    <div v-if="combatStats.supportNotice" class="text-sm md:text-base text-amber-300">{{ combatStats.supportNotice }}</div>
                     <div v-if="combatDecision.stage === 'awaiting-attacker-critical'" class="text-sm md:text-base text-yellow-300">
                         发动后攻击战力将提升至 {{ combatDecision.criticalPower }}
                     </div>
@@ -188,6 +189,7 @@ export const CombatOverlay = {
                 </div>
                 <div v-else class="space-y-2 text-white/90">
                     <div class="text-lg md:text-2xl font-black">{{ waitingTitle }}</div>
+                    <div v-if="combatStats.supportNotice" class="text-sm md:text-base text-amber-300">{{ combatStats.supportNotice }}</div>
                     <div v-if="combatDecision.criticalUsed" class="text-sm md:text-base text-yellow-300">攻击方已宣言必杀</div>
                 </div>
             </div>
@@ -212,7 +214,7 @@ export const CombatOverlay = {
                             <div class="text-gray-300 text-xs md:text-sm">
                                 Base: {{ attacker?.attack || 0 }}
                                 <span v-if="mySupportCard" class="text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]">
-                                    + {{ mySupportCard.support || 0 }}
+                                    + {{ (combatStats.attackerSupportApplied ?? mySupportCard.support) || 0 }}
                                 </span>
                             </div>
                             <div class="text-5xl md:text-7xl font-black text-white text-shadow-glow-blue mt-1 transition-all duration-500">{{ combatStats.myTotalPower || attacker?.attack || 0 }}</div>
@@ -241,7 +243,7 @@ export const CombatOverlay = {
                             <div class="text-gray-300 text-xs md:text-sm">
                                 Base: {{ defender?.attack || 0 }}
                                 <span v-if="oppSupportCard" class="text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]">
-                                    + {{ oppSupportCard.support || 0 }}
+                                    + {{ (combatStats.defenderSupportApplied ?? oppSupportCard.support) || 0 }}
                                 </span>
                             </div>
                             <div class="text-5xl md:text-7xl font-black text-white text-shadow-glow-red mt-1 transition-all duration-500">{{ combatStats.oppTotalPower || defender?.attack || 0 }}</div>

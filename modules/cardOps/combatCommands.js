@@ -2,7 +2,8 @@
 
 import { isAttackerFromMyField, getCombatWinner } from '../engine/combatEngine.js';
 import { createInitialCombatDecision, getInitialCombatDecisionContext } from '../engine/combatDecisionEngine.js';
-import { emitSyncAttack, emitSyncCardMove, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
+import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
+import { emitSyncAttack, emitSyncCardMove, emitPlayerDraw, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
 import { emitSyncCombatDecision } from '../effects/combatSocketEffects.js';
 
 export function createCombatCommands({ state, socket }) {
@@ -57,12 +58,102 @@ export function createCombatCommands({ state, socket }) {
         return paidCard;
     };
 
+    const applyCombatSupportEffectResult = (currentState, result, role) => {
+        if (!result) return;
+        if (result.powerDelta) {
+            if (role === 'attacker') {
+                currentState.combatStats.value.myTotalPower += result.powerDelta;
+            } else {
+                currentState.combatStats.value.oppTotalPower += result.powerDelta;
+            }
+        }
+        if (result.lockAttackerCritical) {
+            currentState.combatStats.value.attackerCriticalLocked = true;
+            currentState.combatStats.value.supportNotice = '祈祷之纹章生效：攻击方本次战斗不能发动必杀。';
+        }
+        if (result.jewelBreakCount) {
+            currentState.combatStats.value.jewelBreakCount = Math.max(
+                currentState.combatStats.value.jewelBreakCount || 1,
+                result.jewelBreakCount
+            );
+        }
+    };
+
+    const applyLocalSupportSideEffect = (currentState, result) => {
+        if (!result || !result.sideEffect) return;
+        if (result.sideEffect === 'draw1Discard1') {
+            if (currentState.deck.value.length > 0) {
+                const drawnCard = currentState.deck.value.pop();
+                currentState.hand.value.push(drawnCard);
+                emitPlayerDraw(socket, { card: drawnCard });
+            }
+            currentState.supportInteraction.value = {
+                type: 'magic-discard',
+                source: 'support-effect'
+            };
+            currentState.combatStats.value.supportNotice = '魔术之纹章：请从手牌选择1张卡弃置。';
+        }
+
+        if (result.sideEffect === 'moveAllyExceptAttacker') {
+            currentState.supportInteraction.value = {
+                type: 'sky-move',
+                source: 'support-effect',
+                excludedId: currentState.attacker.value?.instanceId || null
+            };
+            currentState.combatStats.value.supportNotice = '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
+        }
+    };
+
+    const resolveSupportInteraction = (currentState, targetCardId) => {
+        const interaction = currentState.supportInteraction.value;
+        if (!interaction) return false;
+
+        if (interaction.type === 'magic-discard') {
+            const idx = currentState.hand.value.findIndex(c => c.instanceId === targetCardId);
+            if (idx === -1) return false;
+            const discardCard = currentState.hand.value.splice(idx, 1)[0];
+            currentState.graveyard.value.push(discardCard);
+            emitSyncCardMove(socket, { card: discardCard, from: 'hand', to: 'graveyard' });
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = null;
+            return true;
+        }
+
+        if (interaction.type === 'sky-move') {
+            const fromFront = currentState.fieldFront.value.findIndex(c => c.instanceId === targetCardId);
+            const fromRear = currentState.fieldRear.value.findIndex(c => c.instanceId === targetCardId);
+            const excludedId = interaction.excludedId;
+            if (excludedId && String(targetCardId) === String(excludedId)) return false;
+
+            if (fromFront > -1) {
+                const moved = currentState.fieldFront.value.splice(fromFront, 1)[0];
+                currentState.fieldRear.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'front', to: 'rear' });
+                currentState.supportInteraction.value = null;
+                currentState.combatStats.value.supportNotice = null;
+                return true;
+            }
+            if (fromRear > -1) {
+                const moved = currentState.fieldRear.value.splice(fromRear, 1)[0];
+                currentState.fieldFront.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'rear', to: 'front' });
+                currentState.supportInteraction.value = null;
+                currentState.combatStats.value.supportNotice = null;
+                return true;
+            }
+            return false;
+        }
+
+        return false;
+    };
+
     const resetCombatState = (currentState) => {
         currentState.isCombatActive.value = false;
         currentState.attacker.value = null;
         currentState.defender.value = null;
         currentState.mySupportCard.value = null;
         currentState.oppSupportCard.value = null;
+        currentState.supportInteraction.value = null;
         currentState.combatDecision.value = createInitialCombatDecision();
     };
 
@@ -79,9 +170,13 @@ export function createCombatCommands({ state, socket }) {
 
             if (isTargetMC) {
                 if (isMyAttacker) {
+                    const jewelBreakCount = currentState.combatStats.value.jewelBreakCount || 1;
                     if (currentState.oppJewels.value.length > 0) {
-                        currentState.oppJewels.value.pop();
-                        currentState.oppStats.value.hand++;
+                        const breakCount = Math.min(jewelBreakCount, currentState.oppJewels.value.length);
+                        for (let i = 0; i < breakCount; i++) {
+                            currentState.oppJewels.value.pop();
+                            currentState.oppStats.value.hand++;
+                        }
                     } else {
                         setTimeout(() => alert('🏆 决杀！你击破了对手没有宝玉的主人公，获得胜利！'), 600);
                     }
@@ -164,11 +259,24 @@ export function createCombatCommands({ state, socket }) {
     };
 
     const beginCombatResolution = (currentState) => {
+        const criticalLocked = !!currentState.combatStats.value.attackerCriticalLocked;
         const decisionContext = getInitialCombatDecisionContext(
             currentState.combatStats.value.myCardPower,
             currentState.combatStats.value.mySupportPower,
             currentState.combatStats.value.oppTotalPower
         );
+
+        if (criticalLocked && decisionContext.stage === 'awaiting-attacker-critical') {
+            currentState.combatDecision.value = {
+                ...decisionContext,
+                stage: 'auto-miss',
+                promptOwner: null,
+                finalAttackerWins: false
+            };
+            resolveCombat(currentState, false);
+            return;
+        }
+
         currentState.combatDecision.value = decisionContext;
 
         if (decisionContext.stage === 'auto-miss') {
@@ -211,21 +319,43 @@ export function createCombatCommands({ state, socket }) {
             myCardPower: attackerCard.attack || 0,
             mySupportPower: 0,
             myTotalPower: attackerCard.attack || 0,
-            oppTotalPower: defenderCard.attack || 0
+            oppTotalPower: defenderCard.attack || 0,
+            attackerCriticalLocked: false,
+            jewelBreakCount: 1,
+            attackerSupportApplied: 0,
+            defenderSupportApplied: 0,
+            supportNotice: null
         };
         currentState.combatDecision.value = createInitialCombatDecision();
         currentState.isCombatActive.value = true;
 
         setTimeout(() => {
             let mySupport = null;
+            let supportFailed = false;
             if (currentState.deck.value.length > 0) {
                 mySupport = currentState.deck.value.pop();
                 currentState.mySupportCard.value = mySupport;
-                const sp = mySupport.support || 0;
+                supportFailed = isSupportFailed(mySupport, attackerCard);
+                const sp = supportFailed ? 0 : (mySupport.support || 0);
                 currentState.combatStats.value.mySupportPower = sp;
+                currentState.combatStats.value.attackerSupportApplied = sp;
                 currentState.combatStats.value.myTotalPower += sp;
+
+                if (supportFailed) {
+                    currentState.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
+                }
+
+                if (!supportFailed) {
+                    const supportEffectResult = resolveSupportEffectResult({
+                        supportCard: mySupport,
+                        role: 'attacker',
+                        state: currentState
+                    });
+                    applyCombatSupportEffectResult(currentState, supportEffectResult, 'attacker');
+                    applyLocalSupportSideEffect(currentState, supportEffectResult);
+                }
             }
-            emitSyncAttack(socket, { attacker: attackerCard, defender: defenderCard, supportCard: mySupport });
+            emitSyncAttack(socket, { attacker: attackerCard, defender: defenderCard, supportCard: mySupport, supportFailed });
         }, 800);
     };
 
@@ -241,6 +371,7 @@ export function createCombatCommands({ state, socket }) {
         untapCard,
         resolveCombat,
         beginCombatResolution,
+        resolveSupportInteraction,
         respondCombatDecision,
         applyCombatDecision
     };

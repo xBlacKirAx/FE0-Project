@@ -245,6 +245,9 @@ export function createAreaCommands({ state, socket, refs }) {
         state.currentPhase.value = 'BEGINNING';
         state.hasPlacedBond.value = false;
         state.usedBondsThisTurn.value = 0;
+        if (state.supportInteraction) {
+            state.supportInteraction.value = null;
+        }
         if (state.hasBattledThisTurn) {
             state.hasBattledThisTurn.value = false;
         }

@@ -36,6 +36,14 @@ function main() {
         'createInitialCombatDecision',
         'getInitialCombatDecisionContext'
     ]);
+    const supportEffect = loadEsModuleFunctions('modules/engine/supportEffectEngine.js', [
+        'getCardCharaName',
+        'isSupportFailed',
+        'getSupportEffectIdByTitle',
+        'resolveSupportEffectMeta',
+        'resolveSupportEffectResult',
+        'getSupportEffectCatalogSize'
+    ]);
     const phase = loadEsModuleFunctions('modules/engine/phaseEngine.js', [
         'PHASE_ORDER',
         'PHASE_NAME_MAP',
@@ -63,6 +71,40 @@ function main() {
     const criticalWithSupport = decision.getInitialCombatDecisionContext(15, 5, 30);
     assert(criticalWithSupport.stage === 'awaiting-attacker-critical', '战斗决策引擎: 含支援时必杀公式计算错误');
     assert(criticalWithSupport.criticalPower === 35, '战斗决策引擎: criticalPower 应为 cardPower*2+support=35');
+
+    assert(supportEffect.getSupportEffectCatalogSize() >= 34, '支援效果引擎: 纹章效果目录数量异常');
+    assert(supportEffect.getSupportEffectIdByTitle('『攻击之纹章』') === 'EMBLEM_ATTACK', '支援效果引擎: 攻击之纹章映射异常');
+    const supportMeta = supportEffect.resolveSupportEffectMeta({
+        keywords: { title: ['『防御之纹章』'], timing: ['〖防御型〗'] }
+    });
+    assert(supportMeta.effectId === 'EMBLEM_DEFENSE', '支援效果引擎: 元数据 effectId 解析异常');
+    const supportResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『攻击之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(supportResult.powerDelta === 20, '支援效果引擎: 攻击之纹章应提供 +20 战力');
+
+    const prayerResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『祈祷之纹章』'], timing: ['〖防御型〗'] } } },
+        role: 'defender',
+        state: {}
+    });
+    assert(prayerResult.lockAttackerCritical === true, '支援效果引擎: 祈祷之纹章应禁止攻击方必杀');
+
+    const heroResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { force: '光之剑', supportAbility: { keywords: { title: ['『英雄之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: { attacker: { value: { force: '光之剑' } } }
+    });
+    assert(heroResult.jewelBreakCount === 2, '支援效果引擎: 英雄之纹章应将击破宝玉数提升为 2');
+
+    const magicResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『魔术之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(magicResult.sideEffect === 'draw1Discard1', '支援效果引擎: 魔术之纹章应返回抽1弃1侧效');
 
     assert(Array.isArray(phase.PHASE_ORDER), '阶段引擎: PHASE_ORDER 异常');
     assert(phase.PHASE_ORDER.join(',') === 'BEGINNING,BOND,DEPLOY,ATTACK,END', '阶段顺序异常');

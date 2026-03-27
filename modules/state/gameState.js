@@ -28,8 +28,14 @@ export function createGameFlowState() {
     const defender = ref(null);
     const mySupportCard = ref(null);
     const oppSupportCard = ref(null);
-    const combatStats = ref({ myTotalPower: 0, oppTotalPower: 0 });
+    const combatStats = ref({
+        myTotalPower: 0,
+        oppTotalPower: 0,
+        attackerCriticalLocked: false,
+        jewelBreakCount: 1
+    });
     const combatDecision = ref(createInitialCombatDecision());
+    const supportInteraction = ref(null);
 
     return {
         isDevMode,
@@ -47,6 +53,7 @@ export function createGameFlowState() {
         mySupportCard,
         oppSupportCard,
         combatStats,
-        combatDecision
+        combatDecision,
+        supportInteraction
     };
 }
