@@ -33,40 +33,35 @@ export function createRulesEngine(state) {
     const getFactionInfo = (faction) => FACTION_MAP[faction] || FACTION_MAP['无'];
 
     // 💰 + 🎨 出击费用的【双重校验】
+    // modules/rules.js 内部的 canDeployCard 函数
     const canDeployCard = (card) => {
         if (state.isDevMode.value) return { valid: true };
 
         const cost = parseInt(card.cost) || 0; 
-        // 兼容 JSON 中可能使用的字段名 (faction 或 symbol)
-        const cardFaction = card.faction || card.symbol || '无'; 
+        
+        // 🔑 致命修复：加上 `card.force`！因为你的 JSON 里字段名是 force！
+        const cardFaction = card.force || card.faction || card.symbol || '无'; 
 
-        // 1. 数量校验：剩余可用费用是否足够？
         const availableBonds = state.bonds.value.length - (state.usedBondsThisTurn?.value || 0);
         if (availableBonds < cost) {
-            return { 
-                valid: false, 
-                message: `费用不足！【${card.name || '此卡'}】需要 ${cost} 费，本回合仅剩 ${availableBonds} 费。` 
-            };
+            return { valid: false, message: `费用不足！需要 ${cost} 费，本回合仅剩 ${availableBonds} 费。` };
         }
 
-        // 2. 颜色（势力）校验：必须有至少一张【同势力】且【正面朝上】的羁绊卡
         if (cardFaction !== '无' && cost > 0) {
             const hasActiveMatchingBond = state.bonds.value.some(bond => {
-                if (bond.isFaceDown) return false; // 翻面卡视为无色，直接忽略
-                const bondFaction = bond.faction || bond.symbol || '无';
-                return bondFaction === cardFaction; // 严格对比势力名
+                if (bond.isFaceDown) return false; 
+                
+                // 🔑 这里也要加上 `bond.force`
+                const bondFaction = bond.force || bond.faction || bond.symbol || '无';
+                return bondFaction === cardFaction; 
             });
             
             if (!hasActiveMatchingBond) {
                 const colorInfo = getFactionInfo(cardFaction);
-                return { 
-                    valid: false, 
-                    message: `颜色限制！羁绊区缺少正面朝上的【${cardFaction} (${colorInfo.name})】势力卡牌。` 
-                };
+                return { valid: false, message: `颜色限制！缺少正面朝上的【${cardFaction} (${colorInfo.name})】羁绊。` };
             }
         }
-
-        return { valid: true }; // 校验全数通过
+        return { valid: true };
     };
 
     const getActionByArea = (areaName) => {

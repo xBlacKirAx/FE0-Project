@@ -23,8 +23,6 @@ export function createCardOperations(state) {
         if (area === boundless.value) return 'boundless'; if (area === deck.value) return 'deck'; return 'unknown';
     };
 
-    // 🚀 改造后的 moveTo：支持阶段状态快照和自动进入出击阶段
-    // modules/cardOps.js
     const moveTo = (card, toAreaName) => {
         const fromArea = getArea(card);
         if (!fromArea) return;
@@ -35,7 +33,7 @@ export function createCardOperations(state) {
         if (idx > -1) {
             const isDeploy = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
             
-            // 💡 修复 Bug 2: 如果处于 DEV 模式，强制算作 0 费，不再扣除可用费用！
+            // DEV 模式下强制算作 0 费
             const cost = (isDeploy && !state.isDevMode.value) ? (parseInt(card.cost) || 0) : 0;
 
             undoStack.value.push({ 
@@ -48,7 +46,7 @@ export function createCardOperations(state) {
             });
             if (undoStack.value.length > 10) undoStack.value.shift();
             
-            // 扣除费用
+            // 扣除可用费用
             if (isDeploy && state.usedBondsThisTurn !== undefined) {
                 state.usedBondsThisTurn.value += cost;
             }
@@ -59,6 +57,7 @@ export function createCardOperations(state) {
             selectedCard.value = null;
         }
 
+        // 羁绊阶段自动跳转出击阶段
         if (toAreaName === 'bonds') {
             hasPlacedBond.value = true;
             if (state.currentPhase.value === 'BOND' && !state.isDevMode.value) {
@@ -67,52 +66,21 @@ export function createCardOperations(state) {
         }
     };
 
-    // 在 cardOps.js 内部，找到下面这行：
-    // const playToField = (card, pos) => moveTo(card, pos); 
-    
-    // 👇 将其替换为这段包含双重校验的逻辑 👇
-    const playToField = (card, pos) => {
-        if (!rules.canPerformAction('deploy')) {
-            alert("只能在出击阶段 (DEPLOY) 部署单位！");
-            return;
-        }
-        
-        const deployCheck = rules.canDeployCard(card);
-        if (!deployCheck.valid) {
-            alert(deployCheck.message); // 会自动提示缺数量还是缺颜色
-            return;
-        }
-        
-        moveTo(card, pos);
-        state.selectedCard.value = null; // 出阵后自动关闭面板
-    };
+    // 💡 核心修复：清理掉多余的 rules 校验，直接调用底层移动，因为 app.js 已经做好了安检
+    const playToField = (card, pos) => moveTo(card, pos);
     const playToBond = (card) => moveTo(card, 'bonds');
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
-    const safePlayToField = (card, area) => {
-            if (!rules.canPerformAction('deploy')) {
-                alert("只能在出击阶段 (DEPLOY) 部署单位！");
-                return;
-            }
-            if (!rules.canDeployCard(card)) {
-                alert(`费用不足！需要 ${card.cost} 羁绊。`);
-                return;
-            }
-            cardOps.playToField(card, area);
-            state.selectedCard.value = null; // 出阵后关闭面板
-        };
-    // 🏆 终极原生 JS 抽牌动画 + 自动阶段过渡
+
     const drawCard = () => {
         if (hand.value.length >= 10 || deck.value.length === 0) return;
 
-        // 1. 撤销快照记录
         undoStack.value.push({ type: 'draw', previousPhase: state.currentPhase.value });
         if (undoStack.value.length > 10) undoStack.value.shift();
 
-        // 👑 2. 强制在整个网页的最外层 (body) 创建临时动画卡片
         const flyingCard = document.createElement('img');
-        flyingCard.src = 'images/card_back.jpg'; // 确保卡背路径正确
+        flyingCard.src = 'images/card_back.jpg'; 
         flyingCard.style.position = 'fixed';
-        flyingCard.style.zIndex = '9999999';     // 绝对最高层级防遮挡
+        flyingCard.style.zIndex = '9999999';     
         flyingCard.style.width = '80px';
         flyingCard.style.height = '112px';
         flyingCard.style.borderRadius = '6px';
@@ -120,12 +88,11 @@ export function createCardOperations(state) {
         flyingCard.style.pointerEvents = 'none';
         flyingCard.style.objectFit = 'cover';
 
-        // 🧮 3. 动态计算当前屏幕的长宽，画出绝对居中的飞行轨迹
-        const startX = window.innerWidth - 100;      // 起点：屏幕右下
+        const startX = window.innerWidth - 100;      
         const startY = window.innerHeight - 150;
-        const midX = window.innerWidth / 2 - 40;     // 中点：屏幕正中央
+        const midX = window.innerWidth / 2 - 40;     
         const midY = window.innerHeight / 2 - 56;
-        const endX = window.innerWidth / 2 - 40;     // 终点：手牌区中心
+        const endX = window.innerWidth / 2 - 40;     
         const endY = window.innerHeight - 50;
 
         flyingCard.style.left = `${startX}px`;
@@ -133,27 +100,17 @@ export function createCardOperations(state) {
         flyingCard.style.opacity = '0';
         document.body.appendChild(flyingCard);
 
-        // 🚀 4. 使用原生 JS 动画 (Web Animations API) 播放完美贝塞尔曲线
         const animation = flyingCard.animate([
             { transform: 'scale(0.5) rotateY(180deg) rotateZ(-15deg)', left: `${startX}px`, top: `${startY}px`, opacity: 0 },
             { opacity: 1, offset: 0.1 },
             { transform: 'scale(1.8) rotateY(90deg) rotateZ(5deg)', left: `${midX}px`, top: `${midY}px`, opacity: 1, offset: 0.5 },
             { transform: 'scale(0.8) rotateY(0deg) rotateZ(0deg)', left: `${endX}px`, top: `${endY}px`, opacity: 0 }
-        ], {
-            duration: 700, 
-            easing: 'cubic-bezier(0.2, 1, 0.3, 1)',
-            fill: 'forwards'
-        });
+        ], { duration: 700, easing: 'cubic-bezier(0.2, 1, 0.3, 1)', fill: 'forwards' });
 
-        // ✨ 5. 动画结束瞬间，把牌塞进手里并过渡阶段
         animation.onfinish = () => {
-            flyingCard.remove(); // 删除临时动画元素
-            
-            // 真实的加牌动作
+            flyingCard.remove(); 
             hand.value.push(deck.value.pop());
             if (socket) socket.emit('player-draw');
-
-            // 🚀 阶段自动过渡：抽牌后进入羁绊阶段
             if (state.currentPhase.value === 'BEGINNING' && !state.isDevMode.value) {
                 state.currentPhase.value = 'BOND';
             }
@@ -166,22 +123,19 @@ export function createCardOperations(state) {
         if (socket) socket.emit('sync-bond-flip', { instanceId: card.instanceId, isFaceDown: card.isFaceDown });
     };
 
-    // ⏪ 改造后的撤销逻辑：实现时光倒流
     const undoLastMove = () => {
         const last = undoStack.value.pop();
         if (!last) return;
 
-        // ⏪ 优先回退阶段和羁绊标记
         if (last.previousPhase) state.currentPhase.value = last.previousPhase;
         if (last.previousHasPlacedBond !== undefined) hasPlacedBond.value = last.previousHasPlacedBond;
 
-        // 特殊处理抽牌的撤销
         if (last.type === 'draw') {
             const card = hand.value.pop();
             if (card) deck.value.push(card); 
             return;
         }
-        // 💰 撤销时：返还刚才出击扣除的费用！
+        
         if (last.costUsed && state.usedBondsThisTurn !== undefined) {
             state.usedBondsThisTurn.value -= last.costUsed;
         }
@@ -199,9 +153,7 @@ export function createCardOperations(state) {
             console.warn("[规则拦截] 底层已拒绝：已横置的卡牌无法再次攻击！");
             return;
         }
-
         attackerCard.isTapped = true; 
-
         state.attacker.value = attackerCard;
         state.defender.value = defenderCard;
         state.combatStats.value = { myTotalPower: attackerCard.attack || 0, oppTotalPower: defenderCard.attack || 0 };
@@ -234,7 +186,6 @@ export function createCardOperations(state) {
             const isTargetMC = state.defender.value.isMainCharacter; 
 
             if (isTargetMC) {
-                console.log("👑 主人公被击破！");
                 if (isMyAttacker) {
                     if (state.oppJewels.value.length > 0) {
                         state.oppJewels.value.pop(); 
@@ -252,7 +203,6 @@ export function createCardOperations(state) {
                     }
                 }
             } else {
-                console.log("💥 普通单位被击破！");
                 ['fieldFront', 'fieldRear'].forEach(area => { const idx = state[area].value.findIndex(c => c.instanceId === targetId); if (idx > -1) state.graveyard.value.push(state[area].value.splice(idx, 1)[0]); });
                 ['opponentFront', 'opponentRear'].forEach(area => { const idx = state[area].value.findIndex(c => c.instanceId === targetId); if (idx > -1) state.oppGraveyard.value.push(state[area].value.splice(idx, 1)[0]); });
             }
@@ -308,8 +258,9 @@ export function createCardOperations(state) {
         setTimeout(() => { if (socket) socket.emit('full-state-sync', getMySyncData()); }, 600);
     };
 
+    // 💡 导出时，直接导出原生的 playToField 即可
     return {
-        getArea, getAreaArray, getAreaName, moveTo, playToField:safePlayToField, playToBond, returnToHandFromBoard,
+        getArea, getAreaArray, getAreaName, moveTo, playToField, playToBond, returnToHandFromBoard,
         drawCard, toggleBondFace, undoLastMove, initiateAttack, resolveCombat,
         getMySyncData, resetGame, untapCard
     };
