@@ -20,6 +20,7 @@
         :is-my-turn="isMyTurn"
         :on-toggle-dev-mode="toggleDevMode"
         :on-reset-game="resetByControlBar"
+        :on-open-deck-manager="openDeckManager"
         :remaining-cost="remainingCost"
         :total-bonds="totalBonds"
         :has-undo="undoStack.length > 0"
@@ -230,6 +231,11 @@
         :is-dev-mode="isDevMode"
         :on-close="closeActivePanel">
     </opp-deck-panel>
+
+    <deck-manager-modal
+        :visible="showDeckManager"
+        :on-close="closeDeckManager">
+    </deck-manager-modal>
 
     <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
         <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">

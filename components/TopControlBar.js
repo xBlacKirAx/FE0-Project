@@ -10,6 +10,10 @@ export const TopControlBar = {
             type: Function,
             required: true
         },
+        onOpenDeckManager: {
+            type: Function,
+            required: true
+        },
         remainingCost: {
             type: Number,
             default: 0
@@ -62,6 +66,10 @@ export const TopControlBar = {
 
                 <button @click="onResetGame()" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-1.5 py-1 rounded border border-red-500/50 uppercase">
                     重置
+                </button>
+
+                <button @click="onOpenDeckManager()" class="bg-cyan-900/80 hover:bg-cyan-700 text-white text-[9px] px-1.5 py-1 rounded border border-cyan-500/50 uppercase">
+                    卡组
                 </button>
             </div>
 

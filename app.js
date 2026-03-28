@@ -19,6 +19,7 @@ import { SidePanelButtons } from './components/SidePanelButtons.js';
 import { OppHandPanel } from './components/OppHandPanel.js';
 import { OppDeckPanel } from './components/OppDeckPanel.js';
 import { TopControlBar } from './components/TopControlBar.js';
+import { DeckManagerModal } from './components/DeckManagerModal.js';
 
 const { createApp, computed, onMounted, watch, ref } = Vue;
 
@@ -33,6 +34,7 @@ createApp({
         DeckWidget,
         SidePanelButtons,
         TopControlBar,
+        DeckManagerModal,
         CombatOverlay,
         RegionPanel,
         CardDetailModal,
@@ -72,6 +74,7 @@ createApp({
         ));
         const selectedCombatCostCardId = ref(null);
         const selectedCombatCostCardName = ref('');
+        const showDeckManager = ref(false);
 
         const getCardCharaName = (card) => {
             const direct = (card?.charaName || '').trim();
@@ -225,6 +228,14 @@ createApp({
 
         const resetByControlBar = () => {
             cardOps.resetGame(false);
+        };
+
+        const openDeckManager = () => {
+            showDeckManager.value = true;
+        };
+
+        const closeDeckManager = () => {
+            showDeckManager.value = false;
         };
 
         const setDraggingOver = (value) => {
@@ -393,6 +404,9 @@ createApp({
             openPanel,
             toggleDevMode,
             resetByControlBar,
+            openDeckManager,
+            closeDeckManager,
+            showDeckManager,
             setDraggingOver,
             clearDraggingOver,
             openBondsPanel,
