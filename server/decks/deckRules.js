@@ -9,6 +9,8 @@ function normalizeDeckInput(input = {}) {
         name: String(input.name || '未命名卡组').trim(),
         format: String(input.format || 'standard').trim(),
         notes: String(input.notes || '').trim(),
+        protagonistCardId: String(input.protagonistCardId || '').trim(),
+        protagonistCharaName: String(input.protagonistCharaName || '').trim(),
         cards: cards
             .map(item => ({
                 cardId: String(item?.cardId || '').trim(),
@@ -75,12 +77,8 @@ function validateDeck(rawDeck, cardPool, rules = DEFAULT_RULES, options = {}) {
     }
 
     const summary = summarizeDeck(deck, cardPoolById);
-    if (!allowDraft && summary.totalCards !== rules.exactDeckSize) {
-        errors.push(`卡组总数必须为 ${rules.exactDeckSize} 张，当前 ${summary.totalCards} 张。`);
-    }
-
-    if (allowDraft && summary.totalCards > rules.exactDeckSize) {
-        errors.push(`草稿卡组不能超过 ${rules.exactDeckSize} 张，当前 ${summary.totalCards} 张。`);
+    if (!allowDraft && summary.totalCards < rules.exactDeckSize) {
+        errors.push(`卡组总数至少需要 ${rules.exactDeckSize} 张，当前 ${summary.totalCards} 张。`);
     }
 
     if (Object.keys(summary.byForce).length > 3) {

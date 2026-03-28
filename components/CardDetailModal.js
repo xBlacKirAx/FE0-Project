@@ -1,6 +1,46 @@
 export const CardDetailModal = {
     props: {
         selectedCard: Object,
+        primaryActionLabel: {
+            type: String,
+            default: ''
+        },
+        onPrimaryAction: {
+            type: Function,
+            default: null
+        },
+        secondaryActionLabel: {
+            type: String,
+            default: ''
+        },
+        onSecondaryAction: {
+            type: Function,
+            default: null
+        },
+        tertiaryActionLabel: {
+            type: String,
+            default: ''
+        },
+        onTertiaryAction: {
+            type: Function,
+            default: null
+        },
+        quaternaryActionLabel: {
+            type: String,
+            default: ''
+        },
+        onQuaternaryAction: {
+            type: Function,
+            default: null
+        },
+        onNavigatePrev: {
+            type: Function,
+            default: null
+        },
+        onNavigateNext: {
+            type: Function,
+            default: null
+        },
         isMyCard: {
             type: Function,
             required: true
@@ -71,19 +111,66 @@ export const CardDetailModal = {
         },
         onOpenFullImage: {
             type: Function,
-            required: true
+            default: null
+        }
+    },
+    methods: {
+        getImageSrc(card) {
+            return card?.image || card?.imgSrc || '';
+        },
+        getDisplayName(card) {
+            return card?.cardName || card?.name || '';
+        },
+        handlePrimaryAction() {
+            if (!this.onPrimaryAction || !this.selectedCard) return;
+            this.onPrimaryAction(this.selectedCard);
+        },
+        handleSecondaryAction() {
+            if (!this.onSecondaryAction || !this.selectedCard) return;
+            this.onSecondaryAction(this.selectedCard);
+        },
+        handleTertiaryAction() {
+            if (!this.onTertiaryAction || !this.selectedCard) return;
+            this.onTertiaryAction(this.selectedCard);
+        },
+        handleQuaternaryAction() {
+            if (!this.onQuaternaryAction || !this.selectedCard) return;
+            this.onQuaternaryAction(this.selectedCard);
+        },
+        handleTouchStart(event) {
+            const touch = event.touches?.[0];
+            this._touchStartX = touch?.clientX || 0;
+        },
+        handleTouchEnd(event) {
+            const touch = event.changedTouches?.[0];
+            const endX = touch?.clientX || 0;
+            const deltaX = endX - (this._touchStartX || 0);
+            if (Math.abs(deltaX) < 48) return;
+            if (deltaX < 0 && this.onNavigateNext) {
+                this.onNavigateNext();
+                return;
+            }
+            if (deltaX > 0 && this.onNavigatePrev) {
+                this.onNavigatePrev();
+            }
         }
     },
     template: `
         <div v-if="selectedCard" class="fixed inset-0 z-detail flex items-center justify-center p-4">
             <div class="absolute inset-0 bg-black/90 backdrop-blur-sm" @click="onClose()"></div>
-            <div class="relative bg-gray-900 border border-blue-600 rounded-2xl w-full max-w-sm overflow-hidden flex flex-col animate-zoom">
+            <div class="relative bg-gray-900 border border-blue-600 rounded-2xl w-full max-w-sm overflow-hidden flex flex-col animate-zoom"
+                 @dblclick.prevent
+                 @touchstart="handleTouchStart"
+                 @touchend="handleTouchEnd">
                 <div class="flex p-4 gap-4 bg-gray-800/60">
-                    <div class="w-20 h-28 flex-shrink-0 shadow-lg" @click="onOpenFullImage()">
-                        <img :src="selectedCard.image" class="w-full h-full object-cover rounded shadow-md">
+                    <div class="w-20 h-28 flex-shrink-0 shadow-lg relative" @click="onOpenFullImage && onOpenFullImage()">
+                        <img :src="getImageSrc(selectedCard)" class="w-full h-full object-cover rounded shadow-md">
+                        <div v-if="selectedCard._deckCount" class="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-cyan-500 text-[10px] font-bold text-black flex items-center justify-center">
+                            {{ selectedCard._deckCount }}
+                        </div>
                     </div>
                     <div class="flex-1">
-                        <h3 class="font-bold text-white text-sm leading-tight">{{ selectedCard.cardName }}</h3>
+                        <h3 class="font-bold text-white text-sm leading-tight">{{ getDisplayName(selectedCard) }}</h3>
                         <div class="grid grid-cols-2 gap-x-2 mt-2 text-[10px] text-gray-400">
                             <div>费用: <span class="text-white">{{ selectedCard.cost }}</span></div>
                             <div>射程: <span class="text-white">{{ selectedCard.range }}</span></div>
@@ -110,6 +197,11 @@ export const CardDetailModal = {
                     </div>
                 </div>
                 <div class="p-4 bg-gray-800/20 space-y-2">
+                    <div v-if="onNavigatePrev || onNavigateNext" class="flex items-center justify-between text-[10px] text-gray-400">
+                        <button @click="onNavigatePrev && onNavigatePrev()" :disabled="!onNavigatePrev" class="px-2 py-1 rounded bg-white/5 disabled:opacity-30">上一张</button>
+                        <div>左右滑动可切换</div>
+                        <button @click="onNavigateNext && onNavigateNext()" :disabled="!onNavigateNext" class="px-2 py-1 rounded bg-white/5 disabled:opacity-30">下一张</button>
+                    </div>
                     <div v-if="isMyCard(selectedCard) && (isDevMode || isMyTurn)">
                         <div v-if="isCardInHand(selectedCard)" class="space-y-2">
                             <!-- 转职按钮（如果有转职目标） -->
@@ -190,7 +282,27 @@ export const CardDetailModal = {
                             <button @click="moveTo(selectedCard, 'hand')" class="py-1.5 bg-green-900/40 text-[9px] rounded border border-green-500/50">回手牌</button>
                         </template>
                     </div>
-                    <button @click="onOpenFullImage()" class="w-full py-1 text-indigo-400 text-[10px] uppercase font-bold">查看高清大图</button>
+                    <button v-if="primaryActionLabel && onPrimaryAction"
+                            @click="handlePrimaryAction()"
+                            class="w-full py-2 bg-cyan-700 hover:bg-cyan-600 rounded text-[10px] font-bold uppercase tracking-wide">
+                        {{ primaryActionLabel }}
+                    </button>
+                    <button v-if="secondaryActionLabel && onSecondaryAction"
+                            @click="handleSecondaryAction()"
+                            class="w-full py-2 bg-teal-700 hover:bg-teal-600 rounded text-[10px] font-bold uppercase tracking-wide">
+                        {{ secondaryActionLabel }}
+                    </button>
+                    <button v-if="tertiaryActionLabel && onTertiaryAction"
+                            @click="handleTertiaryAction()"
+                            class="w-full py-2 bg-amber-700 hover:bg-amber-600 rounded text-[10px] font-bold uppercase tracking-wide">
+                        {{ tertiaryActionLabel }}
+                    </button>
+                    <button v-if="quaternaryActionLabel && onQuaternaryAction"
+                            @click="handleQuaternaryAction()"
+                            class="w-full py-2 bg-rose-700 hover:bg-rose-600 rounded text-[10px] font-bold uppercase tracking-wide">
+                        {{ quaternaryActionLabel }}
+                    </button>
+                    <button v-if="onOpenFullImage" @click="onOpenFullImage()" class="w-full py-1 text-indigo-400 text-[10px] uppercase font-bold">查看高清大图</button>
                 </div>
             </div>
         </div>

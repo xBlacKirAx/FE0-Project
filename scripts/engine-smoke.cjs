@@ -85,6 +85,16 @@ function main() {
     });
     assert(supportResult.powerDelta === 20, '支援效果引擎: 攻击之纹章应提供 +20 战力');
 
+    const siblingResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            charaName: '艾瑞珂',
+            supportAbility: { keywords: { title: ['『兄妹之纹章』'], timing: ['〖攻防型〗'] } }
+        },
+        role: 'defender',
+        state: { defender: { value: { charaName: '伊弗列姆' } } }
+    });
+    assert(siblingResult.powerDelta === 20, '支援效果引擎: 兄妹之纹章满足条件时应提供 +20 战力');
+
     const prayerResult = supportEffect.resolveSupportEffectResult({
         supportCard: { supportAbility: { keywords: { title: ['『祈祷之纹章』'], timing: ['〖防御型〗'] } } },
         role: 'defender',
@@ -332,6 +342,116 @@ function main() {
     assert(phase.getNextPhase('BEGINNING') === 'BOND', '阶段推进 BEGINNING -> BOND 失败');
     assert(phase.getNextPhase('ATTACK') === 'END', '阶段推进 ATTACK -> END 失败');
     assert(phase.getNextPhase('END') === null, '阶段推进 END 应返回 null');
+
+    // ── 能力引擎测试
+    const abilityEngine = loadEsModuleFunctions('modules/engine/abilityEngine.js', [
+        'parseAbilitySegments',
+        'evaluatePassive',
+        'checkSpecialDeployCondition',
+        'checkAllSpecialDeployConditions',
+        'getActivatableAbilities',
+        'getAutoTriggers',
+        'computePassivePowerBonus',
+        'buildPassiveContext'
+    ]);
+
+    // parseAbilitySegments: 马尔斯 B01-001
+    const marsCard = {
+        ability: {
+            text: "『英雄的凯歌』【起】[翻面3，从自己的手牌将1张「马尔斯」放置到退避区]直到下个对手的回合结束为止，所有我方单位的战斗力+30。『法尔西昂』【常】这名单位攻击<龙>属性单位的期间，这名单位的战斗力+20。",
+            keywords: { type: ['【起】', '【常】'], title: [], timing: [] }
+        }
+    };
+    const marsSegs = abilityEngine.parseAbilitySegments(marsCard);
+    assert(marsSegs.length === 2, '能力引擎: 马尔斯应解析出2段能力');
+    assert(marsSegs[0].type === '起', '能力引擎: 第1段应为【起】');
+    assert(marsSegs[0].title === '英雄的凯歌', '能力引擎: 第1段标题应为英雄的凯歌');
+    assert(marsSegs[1].type === '常', '能力引擎: 第2段应为【常】');
+    assert(marsSegs[1].title === '法尔西昂', '能力引擎: 第2段标题应为法尔西昂');
+
+    // evaluatePassive: 攻击<龙>属性+20，攻击方且目标有龙 trait 时应生效
+    const passiveSeg = marsSegs[1];
+    const ctxWithDragonDef = {
+        unit: { instanceId: 'u1' },
+        attacker: { instanceId: 'u1' },
+        defender: { instanceId: 'u2', traits: ['龙'] },
+        myFront: [], myRear: [], oppFront: [], oppRear: []
+    };
+    const passiveResult = abilityEngine.evaluatePassive(passiveSeg, ctxWithDragonDef);
+    assert(passiveResult.matched === true, '能力引擎: 攻击<龙>属性【常】应匹配成功');
+    assert(passiveResult.powerDelta === 20, '能力引擎: 攻击<龙>属性时法尔西昂应提供+20');
+
+    // evaluatePassive: 防御单位无龙 trait，不应生效
+    const ctxNoDragonDef = {
+        unit: { instanceId: 'u1' },
+        attacker: { instanceId: 'u1' },
+        defender: { instanceId: 'u2', traits: ['重甲'] },
+        myFront: [], myRear: [], oppFront: [], oppRear: []
+    };
+    const passiveResultNo = abilityEngine.evaluatePassive(passiveSeg, ctxNoDragonDef);
+    assert(passiveResultNo.powerDelta === 0, '能力引擎: 非龙属性防守时法尔西昂不应生效');
+
+    // checkAllSpecialDeployConditions: B01-049 雅典娜 退避区限制
+    const athenaCard = {
+        id: 'B01-049',
+        charaName: '雅典娜',
+        ability: {
+            text: "『少女剑士的报恩』【特】这张卡仅限自己的退避区中的卡有5张以上时才能出击。",
+            keywords: { type: ['【特】'] }
+        }
+    };
+    const blockedCtx = {
+        card: athenaCard,
+        myFront: [], myRear: [],
+        myGraveyard: [1, 2, 3],
+        myGraveyardCount: 3
+    };
+    const allowedCtx = {
+        card: athenaCard,
+        myFront: [], myRear: [],
+        myGraveyard: [1, 2, 3, 4, 5],
+        myGraveyardCount: 5
+    };
+    const blockResult = abilityEngine.checkAllSpecialDeployConditions(athenaCard, blockedCtx);
+    assert(blockResult !== null && blockResult.blocked === true, '能力引擎: 雅典娜退避区不足时应阻止出击');
+    const allowResult = abilityEngine.checkAllSpecialDeployConditions(athenaCard, allowedCtx);
+    assert(allowResult === null, '能力引擎: 雅典娜退避区5张时应允许出击');
+
+    // getActivatableAbilities: 横置费用，已横置时不可用
+    const shidaCard = {
+        ability: {
+            text: "『翱翔天空者』【起】〖1回合1次〗将这名单位移动。这个能力只能在这名单位处于未行动状态时使用。",
+            keywords: { type: ['【起】'], timing: ['〖1回合1次〗'] }
+        }
+    };
+    const activeCtx = {
+        unit: { instanceId: 's1', isTapped: true },
+        fieldArea: 'front',
+        faceUpBonds: 3,
+        usedOnceThisTurn: {},
+        myHand: [], myFront: [], myRear: [], bonds: [], isMyTurn: true
+    };
+    const activatable = abilityEngine.getActivatableAbilities(shidaCard, activeCtx);
+    assert(activatable.length === 1, '能力引擎: 翱翔天空者应有1条激活候选');
+    assert(activatable[0].canActivate === false, '能力引擎: 单位已横置时翱翔天空者不可激活');
+
+    // getAutoTriggers: on-attack 时机
+    const kainCard = {
+        ability: {
+            text: "『赤绿之双击』【自】[将我方的「阿贝尔」转为已行动状态]这名单位攻击时，你可以支付费用。如果支付，则直到战斗结束为止，这名单位的战斗力+40。",
+            keywords: { type: ['【自】'] }
+        }
+    };
+    const autoCtx = {
+        timing: 'on-attack',
+        unit: { instanceId: 'k1' },
+        attacker: { instanceId: 'k1' },
+        defender: { instanceId: 'd1' },
+        myFront: [], myRear: [], fieldArea: 'front'
+    };
+    const autoTriggers = abilityEngine.getAutoTriggers(kainCard, autoCtx);
+    assert(autoTriggers.length === 1, '能力引擎: 赤绿之双击应在攻击时触发1次');
+    assert(autoTriggers[0].title === '赤绿之双击', '能力引擎: 触发名称应为赤绿之双击');
 
     console.log('纯函数引擎检查通过');
 }

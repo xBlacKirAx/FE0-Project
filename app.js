@@ -141,6 +141,15 @@ createApp({
             if (state.activePanel.value === 'supportStrategyTargetEnemy') {
                 return '计略之纹章：选择1名敌方单位移动';
             }
+            if (state.activePanel.value === 'supportNinjutsuHandToGrave') {
+                return '忍术之纹章：选择1张手牌放置到退避区';
+            }
+            if (state.activePanel.value === 'supportDespairZombieCandidates') {
+                return '绝望之纹章：选择1张尸兵出击';
+            }
+            if (state.activePanel.value === 'supportMoveAttackerPostBattleCandidates') {
+                return '援护之纹章：点击攻击单位执行移动';
+            }
             return activePanelTitle.value;
         });
 
@@ -177,6 +186,17 @@ createApp({
             if (state.activePanel.value === 'supportStrategyTargetEnemy') {
                 const excludedId = state.supportInteraction.value?.excludedId;
                 return [...state.opponentFront.value, ...state.opponentRear.value].filter(card => String(card.instanceId) !== String(excludedId));
+            }
+            if (state.activePanel.value === 'supportNinjutsuHandToGrave') {
+                return state.hand.value;
+            }
+            if (state.activePanel.value === 'supportDespairZombieCandidates') {
+                return state.supportInteraction.value?.candidates || [];
+            }
+            if (state.activePanel.value === 'supportMoveAttackerPostBattleCandidates') {
+                const attackerId = state.supportInteraction.value?.attackerId;
+                if (!attackerId) return [];
+                return [...state.fieldFront.value, ...state.fieldRear.value].filter(card => String(card.instanceId) === String(attackerId));
             }
             return activePanelCards.value;
         });
@@ -283,7 +303,10 @@ createApp({
                 state.activePanel.value === 'supportSkyMoveCandidates' ||
                 state.activePanel.value === 'supportDanceUntapCandidates' ||
                 state.activePanel.value === 'supportPeekOwnJewel' ||
-                state.activePanel.value === 'supportStrategyTargetEnemy'
+                state.activePanel.value === 'supportStrategyTargetEnemy' ||
+                state.activePanel.value === 'supportNinjutsuHandToGrave' ||
+                state.activePanel.value === 'supportDespairZombieCandidates' ||
+                state.activePanel.value === 'supportMoveAttackerPostBattleCandidates'
             ) {
                 const ok = cardOps.resolveSupportInteraction(state, card.instanceId);
                 if (ok) {
@@ -347,6 +370,23 @@ createApp({
                 state.activePanel.value = 'supportStrategyTargetEnemy';
                 return;
             }
+            if (type === 'ninjutsu-hand-to-grave') {
+                state.activePanel.value = 'supportNinjutsuHandToGrave';
+                return;
+            }
+            if (type === 'despair-select-zombie') {
+                state.activePanel.value = 'supportDespairZombieCandidates';
+                return;
+            }
+            if (type === 'support-move-attacker-post-battle') {
+                state.activePanel.value = 'supportMoveAttackerPostBattleCandidates';
+                return;
+            }
+            if (type === 'phantom-post-battle') {
+                const attackerId = state.supportInteraction.value?.attackerId || state.attacker.value?.instanceId || null;
+                cardOps.resolveSupportInteraction(state, attackerId);
+                return;
+            }
 
             if (
                 state.activePanel.value === 'supportMagicDiscardHand' ||
@@ -356,7 +396,10 @@ createApp({
                 state.activePanel.value === 'supportSkyMoveCandidates' ||
                 state.activePanel.value === 'supportDanceUntapCandidates' ||
                 state.activePanel.value === 'supportPeekOwnJewel' ||
-                state.activePanel.value === 'supportStrategyTargetEnemy'
+                state.activePanel.value === 'supportStrategyTargetEnemy' ||
+                state.activePanel.value === 'supportNinjutsuHandToGrave' ||
+                state.activePanel.value === 'supportDespairZombieCandidates' ||
+                state.activePanel.value === 'supportMoveAttackerPostBattleCandidates'
             ) {
                 closeActivePanel();
             }

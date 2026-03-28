@@ -1,1 +1,88 @@
-[]
+[
+  {
+    "id": "deck_0b06c7e6c7fd",
+    "name": "新卡组",
+    "format": "standard",
+    "notes": "",
+    "cards": [
+      {
+        "cardId": "B01-004",
+        "count": 3
+      },
+      {
+        "cardId": "B01-007",
+        "count": 4
+      },
+      {
+        "cardId": "B01-006",
+        "count": 4
+      }
+    ],
+    "createdAt": "2026-03-28T03:03:34.130Z",
+    "updatedAt": "2026-03-28T03:54:05.734Z"
+  },
+  {
+    "id": "deck_0fb0a57aa784",
+    "name": "新卡组",
+    "format": "standard",
+    "notes": "",
+    "cards": [],
+    "createdAt": "2026-03-28T03:33:22.777Z",
+    "updatedAt": "2026-03-28T03:33:22.777Z"
+  },
+  {
+    "id": "deck_db1d4a50a8da",
+    "name": "新卡组",
+    "format": "standard",
+    "notes": "",
+    "cards": [],
+    "createdAt": "2026-03-28T04:02:45.432Z",
+    "updatedAt": "2026-03-28T04:02:45.432Z"
+  },
+  {
+    "id": "deck_b6219100ed54",
+    "name": "新卡组",
+    "format": "standard",
+    "notes": "",
+    "cards": [
+      {
+        "cardId": "B01-003",
+        "count": 1
+      },
+      {
+        "cardId": "B01-041",
+        "count": 1
+      }
+    ],
+    "createdAt": "2026-03-28T04:11:07.943Z",
+    "updatedAt": "2026-03-28T04:12:21.172Z"
+  },
+  {
+    "id": "deck_0e449e79ee3e",
+    "name": "新卡组",
+    "format": "standard",
+    "notes": "",
+    "cards": [
+      {
+        "cardId": "B01-003",
+        "count": 1
+      }
+    ],
+    "createdAt": "2026-03-28T04:12:50.576Z",
+    "updatedAt": "2026-03-28T04:13:11.018Z"
+  },
+  {
+    "id": "deck_43977463376f",
+    "name": "红单阿贝尔",
+    "format": "standard",
+    "notes": "",
+    "cards": [
+      {
+        "cardId": "B01-010",
+        "count": 4
+      }
+    ],
+    "createdAt": "2026-03-28T05:26:40.867Z",
+    "updatedAt": "2026-03-28T05:26:40.867Z"
+  }
+]

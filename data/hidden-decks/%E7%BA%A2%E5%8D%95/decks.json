@@ -1,0 +1,74 @@
+[
+  {
+    "id": "deck_94df0bf33cd3",
+    "name": "红单马尔斯",
+    "format": "standard",
+    "notes": "",
+    "protagonistCardId": "B01-003",
+    "protagonistCharaName": "马尔斯",
+    "cards": [
+      {
+        "cardId": "B01-003",
+        "count": 4
+      },
+      {
+        "cardId": "B01-001",
+        "count": 4
+      },
+      {
+        "cardId": "B01-006",
+        "count": 4
+      },
+      {
+        "cardId": "B01-013",
+        "count": 2
+      },
+      {
+        "cardId": "B01-014",
+        "count": 4
+      },
+      {
+        "cardId": "B01-025",
+        "count": 3
+      },
+      {
+        "cardId": "B01-026",
+        "count": 2
+      },
+      {
+        "cardId": "B01-032",
+        "count": 2
+      },
+      {
+        "cardId": "B01-039",
+        "count": 4
+      },
+      {
+        "cardId": "B01-041",
+        "count": 4
+      },
+      {
+        "cardId": "B01-043",
+        "count": 4
+      },
+      {
+        "cardId": "B01-046",
+        "count": 3
+      },
+      {
+        "cardId": "B01-047",
+        "count": 4
+      },
+      {
+        "cardId": "B01-048",
+        "count": 4
+      },
+      {
+        "cardId": "B01-033",
+        "count": 2
+      }
+    ],
+    "createdAt": "2026-03-28T05:56:20.691Z",
+    "updatedAt": "2026-03-28T05:56:20.691Z"
+  }
+]

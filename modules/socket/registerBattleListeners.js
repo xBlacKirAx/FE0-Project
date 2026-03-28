@@ -1,7 +1,9 @@
 // modules/socket/registerBattleListeners.js
 
 import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
-import { emitPlayerDraw } from '../effects/cardSocketEffects.js';
+import { emitPlayerDraw, emitSyncCardMove } from '../effects/cardSocketEffects.js';
+
+const makeSupportRequestId = (tag = 'support') => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 function applyCombatSupportEffectResult(state, result, role) {
     if (!result) return;
@@ -28,8 +30,31 @@ function applyCombatSupportEffectResult(state, result, role) {
     }
 }
 
-function applyLocalSupportSideEffect(state, socket, result) {
+function applyLocalSupportSideEffect(state, socket, EVT, result) {
     if (!result || !result.sideEffect) return;
+    if (result.sideEffect === 'drawOnBreakMainCharacter') {
+        state.combatStats.value.encourageDrawOnBreakMainCharacter = true;
+        state.combatStats.value.supportNotice = '激励之纹章：若本次击破对方主人公，战斗结束时抽1张卡。';
+        return;
+    }
+
+    if (result.sideEffect === 'sealOpponentSupportEffect') {
+        state.combatStats.value.opponentSupportEffectSealed = true;
+        state.combatStats.value.supportNotice = '封咒之纹章：对手本次战斗支援能力无效。';
+        return;
+    }
+
+    if (result.sideEffect === 'drawIfHand4OrLess') {
+        if (state.hand.value.length > 4) return;
+        if (state.deck.value.length > 0) {
+            const drawnCard = state.deck.value.pop();
+            state.hand.value.push(drawnCard);
+            emitPlayerDraw(socket, { card: drawnCard });
+            state.combatStats.value.supportNotice = '筹措之纹章：已抽1张卡。';
+        }
+        return;
+    }
+
     if (result.sideEffect === 'draw1Discard1') {
         if (state.deck.value.length > 0) {
             const drawnCard = state.deck.value.pop();
@@ -58,6 +83,25 @@ function applyLocalSupportSideEffect(state, socket, result) {
         return;
     }
 
+    if (result.sideEffect === 'putHandCardToBond' || result.sideEffect === 'putHandCardToBondIfBehindOnBonds') {
+        state.supportInteraction.value = {
+            type: 'manakete-hand-to-bond',
+            source: 'support-effect'
+        };
+        state.combatStats.value.supportNotice = '龙血系纹章：请选择1张手牌置入羁绊区。';
+        return;
+    }
+
+    if (result.sideEffect === 'peekOwnJewel') {
+        if (!state.jewels.value.length) return;
+        state.supportInteraction.value = {
+            type: 'peek-own-jewel',
+            source: 'support-effect'
+        };
+        state.combatStats.value.supportNotice = '请选择1张自己的宝玉查看正面。';
+        return;
+    }
+
     if (result.sideEffect === 'moveAllyExceptAttacker') {
         state.supportInteraction.value = {
             type: 'sky-move',
@@ -67,6 +111,131 @@ function applyLocalSupportSideEffect(state, socket, result) {
         state.combatStats.value.supportNotice = result.effectId === 'EMBLEM_COMMAND'
             ? '指挥之纹章：请选择1名攻击单位以外的我方单位进行移动。'
             : '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
+        return;
+    }
+
+    if (result.sideEffect === 'untapAllyCost2OrLess') {
+        state.supportInteraction.value = {
+            type: 'dance-untap-ally',
+            source: 'support-effect',
+            excludedId: state.attacker.value?.instanceId || null
+        };
+        state.combatStats.value.supportNotice = '歌舞之纹章：请选择1名出击费用2以下的我方单位转为未行动状态。';
+        return;
+    }
+
+    if (result.sideEffect === 'peekOwnTopDeckOptionalMill') {
+        const topCard = state.deck.value[state.deck.value.length - 1] || null;
+        if (!topCard) return;
+        const topLabel = topCard.cardName || topCard.name || '未知卡牌';
+        const shouldMill = confirm(`预言之纹章：牌组顶为 ${topLabel}，是否将其置入退避区？`);
+        if (!shouldMill) {
+            state.combatStats.value.supportNotice = '预言之纹章：已查看牌组顶。';
+            return;
+        }
+        const milledCard = state.deck.value.pop();
+        state.graveyard.value.push(milledCard);
+        emitSyncCardMove(socket, { card: milledCard, from: 'deck', to: 'graveyard' });
+        state.combatStats.value.supportNotice = '预言之纹章：已将牌组顶置入退避区。';
+        return;
+    }
+
+    if (result.sideEffect === 'opponentTopDeckToGraveOptional') {
+        const shouldApply = confirm('盗贼之纹章：是否将对手牌组顶置入其退避区？');
+        if (!shouldApply) return;
+
+        const requestId = makeSupportRequestId('thief');
+        const requestPayload = {
+            requestId,
+            type: 'thief-mill-top-deck'
+        };
+        socket.emit(EVT.SYNC_SUPPORT_INTERACTION_REQUEST, requestPayload);
+        state.supportInteraction.value = {
+            type: 'thief-await-opponent',
+            source: 'support-effect',
+            requestId,
+            requestPayload
+        };
+        state.combatStats.value.supportNotice = '盗贼之纹章：等待对手公开并处理牌组顶。';
+        return;
+    }
+
+    if (result.sideEffect === 'opponentDiscard1IfHand5Plus') {
+        const requestId = makeSupportRequestId('dark');
+        const requestPayload = {
+            requestId,
+            type: 'dark-discard'
+        };
+        socket.emit(EVT.SYNC_SUPPORT_INTERACTION_REQUEST, requestPayload);
+        state.supportInteraction.value = {
+            type: 'dark-await-opponent',
+            source: 'support-effect',
+            requestId,
+            requestPayload
+        };
+        state.combatStats.value.supportNotice = '黑暗之纹章：等待对手选择并弃置1张手牌。';
+        return;
+    }
+
+    if (result.sideEffect === 'moveEnemyExceptDefender') {
+        const requestId = makeSupportRequestId('strategy');
+        state.supportInteraction.value = {
+            type: 'strategy-select-enemy',
+            source: 'support-effect',
+            requestId,
+            excludedId: state.defender.value?.instanceId || null
+        };
+        state.combatStats.value.supportNotice = '计略之纹章：请选择1名防御单位以外的敌方单位进行移动。';
+        return;
+    }
+
+    if (result.sideEffect === 'ninjutsuOptional') {
+        const shouldApply = confirm('忍术之纹章：是否从手牌选择1张卡放置到退避区？（战斗结束后将以已行动状态出击）');
+        if (!shouldApply) return;
+        state.supportInteraction.value = {
+            type: 'ninjutsu-hand-to-grave',
+            source: 'support-effect'
+        };
+        state.combatStats.value.supportNotice = '忍术之纹章：请选择1张手牌放置到退避区。';
+        return;
+    }
+
+    if (result.sideEffect === 'resistanceBattleEndStay') {
+        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
+        state.combatStats.value.postBattleEffects.push({ type: 'resistance-defender-stay', data: {} });
+        state.combatStats.value.supportNotice = '抵抗之纹章：防御单位击破时可以出击而非进入退避区。';
+        return;
+    }
+
+    if (result.sideEffect === 'trainingDefenderBreakToHand') {
+        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
+        state.combatStats.value.postBattleEffects.push({ type: 'training-defender-to-hand', data: {} });
+        state.combatStats.value.supportNotice = '锻炼之纹章：防御单位击破时可以进入手牌而非退避区。';
+        return;
+    }
+
+    if (result.sideEffect === 'supportMoveAttackerPostBattle') {
+        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
+        state.combatStats.value.postBattleEffects.push({ type: 'support-move-attacker', data: {} });
+        state.combatStats.value.supportNotice = '援护之纹章：战斗结束后可以移动攻击单位。';
+        return;
+    }
+
+    if (result.sideEffect === 'phantomBattleEndReplace') {
+        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
+        state.combatStats.value.postBattleEffects.push({
+            type: 'phantom-replace-to-area',
+            data: { charaName: result.sideEffectData?.charaName || null }
+        });
+        const charaName = result.sideEffectData?.charaName || '指定角色';
+        state.combatStats.value.supportNotice = `幻影之纹章：战斗结束后可以出击到${charaName}所在区域。`;
+        return;
+    }
+
+    if (result.sideEffect === 'resurrectZombieFromGraveyard') {
+        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
+        state.combatStats.value.postBattleEffects.push({ type: 'despair-resurrect-zombie', data: {} });
+        state.combatStats.value.supportNotice = '绝望之纹章：战斗结束后可从退避区选择1张«尸兵»出击。';
     }
 }
 
@@ -111,6 +280,7 @@ export function registerBattleListeners({
             jewelBreakCount: 1,
             attackerSupportApplied: supportFailed ? 0 : (supportCard?.support || 0),
             defenderSupportApplied: 0,
+            postBattleEffects: [],
             supportNotice: supportFailed ? '支援失效：支援单位与被支援单位角色名相同。' : null
         };
         state.combatDecision.value = {
@@ -158,7 +328,7 @@ export function registerBattleListeners({
                             state
                         });
                         applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
-                        applyLocalSupportSideEffect(state, socket, supportEffectResult);
+                        applyLocalSupportSideEffect(state, socket, EVT, supportEffectResult);
                     }
                 }
             }

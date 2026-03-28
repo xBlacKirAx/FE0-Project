@@ -8,6 +8,7 @@ import {
     emitFullStateSync
 } from '../effects/cardSocketEffects.js';
 import { emitSyncPhase } from '../effects/socketEffects.js';
+import { checkAllSpecialDeployConditions } from '../engine/abilityEngine.js';
 
 export function createAreaCommands({ state, socket, refs }) {
     const {
@@ -91,15 +92,30 @@ export function createAreaCommands({ state, socket, refs }) {
         }
     };
 
+    const getSelectedDeckPassword = () => {
+        try {
+            return globalThis?.localStorage?.getItem('fe0.selectedDeckPassword') || '';
+        } catch {
+            return '';
+        }
+    };
+
     const loadCardsForReset = async () => {
         const selectedDeckId = getSelectedDeckId();
         if (selectedDeckId) {
             try {
-                const deckRes = await fetch(`/api/decks/${selectedDeckId}/expanded-cards`);
+                const selectedDeckPassword = getSelectedDeckPassword();
+                const passwordQuery = selectedDeckPassword ? `?password=${encodeURIComponent(selectedDeckPassword)}` : '';
+                const deckRes = await fetch(`/api/decks/${selectedDeckId}/expanded-cards${passwordQuery}`);
                 if (deckRes.ok) {
                     const deckPayload = await deckRes.json();
                     const deckCards = Array.isArray(deckPayload?.cards) ? deckPayload.cards : [];
-                    if (deckCards.length) return deckCards;
+                    if (deckCards.length) {
+                        return {
+                            cards: deckCards,
+                            protagonistCardId: String(deckPayload?.protagonistCardId || '').trim()
+                        };
+                    }
                 }
             } catch (err) {
                 console.warn('加载已选卡组失败，回退到默认卡池。', err);
@@ -107,7 +123,10 @@ export function createAreaCommands({ state, socket, refs }) {
         }
 
         const res = await fetch('/api/cards');
-        return res.json();
+        return {
+            cards: await res.json(),
+            protagonistCardId: ''
+        };
     };
 
     const recycleGraveyardIntoDeckIfNeeded = () => {
@@ -219,6 +238,23 @@ export function createAreaCommands({ state, socket, refs }) {
         if (idx > -1) {
             const isDeploy = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
             const cost = (isDeploy && !state.isDevMode.value) ? (parseInt(card.cost) || 0) : 0;
+
+                // ── 【特】出击条件检查（非开发模式下拦截）
+                if (isDeploy && !state.isDevMode.value) {
+                    const specialCtx = {
+                        card,
+                        myFront: state.fieldFront?.value || [],
+                        myRear: state.fieldRear?.value || [],
+                        myGraveyard: graveyard.value,
+                        myGraveyardCount: graveyard.value.length,
+                        protagonistCharaName: state.protagonistCharaName?.value || null
+                    };
+                    const blocked = checkAllSpecialDeployConditions(card, specialCtx);
+                    if (blocked) {
+                        console.warn(`[规则拦截] 【特】条件不满足，无法出击：${blocked.note}`);
+                        return;
+                    }
+                }
 
             undoStack.value.push({
                 card,
@@ -582,7 +618,10 @@ export function createAreaCommands({ state, socket, refs }) {
         }
 
         try {
-            const data = await loadCardsForReset();
+            const payload = await loadCardsForReset();
+            const data = Array.isArray(payload?.cards) ? payload.cards : [];
+            const protagonistCardId = String(payload?.protagonistCardId || '').trim();
+
             deck.value = data.map(c => ({
                 ...c,
                 instanceId: Math.random() + Date.now(),
@@ -591,7 +630,16 @@ export function createAreaCommands({ state, socket, refs }) {
             })).sort(() => Math.random() - 0.5);
 
             if (deck.value.length > 0) {
-                const mc = deck.value.pop();
+                let mc = null;
+                if (protagonistCardId) {
+                    const idx = deck.value.findIndex(card => String(card.id || '').trim() === protagonistCardId);
+                    if (idx > -1) {
+                        mc = deck.value.splice(idx, 1)[0];
+                    }
+                }
+                if (!mc) {
+                    mc = deck.value.pop();
+                }
                 mc.isMainCharacter = true;
                 fieldFront.value.push(mc);
             }

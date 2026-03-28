@@ -28,6 +28,14 @@ function main() {
     assert(result.valid === true, '合法卡组应通过校验');
     assert(result.summary.totalCards === 50, '卡组总数应为 50');
 
+    const overSized = {
+        ...legal,
+        cards: legal.cards.map((item, idx) => idx === 0 ? { ...item, count: item.count + 1 } : item)
+    };
+    const overSizedResult = deckRules.validateDeck(overSized, cards);
+    assert(overSizedResult.valid === true, '超过50张的卡组应允许保存');
+    assert(overSizedResult.summary.totalCards > 50, '超过50张校验样例构造失败');
+
     const illegal = {
         name: '非法卡组',
         cards: [{ cardId: cards[0].id, count: 5 }]
@@ -60,6 +68,17 @@ function main() {
 
     const removed = repo.remove(created.id);
     assert(removed === true, '删除卡组应成功');
+
+    const hiddenPassword = `smoke-${Date.now()}`;
+    assert(repo.hiddenPasswordExists(hiddenPassword) === false, '新口令初始不应存在');
+    const hiddenCreated = repo.create(result.normalizedDeck, { password: hiddenPassword });
+    assert(repo.hiddenPasswordExists(hiddenPassword) === true, '创建隐藏卡组后口令目录应存在');
+    const hiddenFetched = repo.getById(hiddenCreated.id, { password: hiddenPassword });
+    assert(!!hiddenFetched, '隐藏卡组应可按口令读取');
+    const hiddenRemoved = repo.remove(hiddenCreated.id, { password: hiddenPassword });
+    assert(hiddenRemoved === true, '隐藏卡组应可删除');
+    const hiddenStoreDir = path.join(projectRoot, 'data', 'hidden-decks', encodeURIComponent(hiddenPassword));
+    fs.rmSync(hiddenStoreDir, { recursive: true, force: true });
 
     // restore original deck store content to avoid污染仓库数据
     const storePath = path.join(projectRoot, 'data', 'decks.json');

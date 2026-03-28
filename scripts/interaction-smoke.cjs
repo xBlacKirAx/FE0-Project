@@ -286,6 +286,42 @@ function main() {
         assert(state.combatDecision.value.finalAttackerWins === true, '必中之纹章应在可击破时禁止神速回避并直接判定攻击方胜');
     }
 
+    {
+        const socket = makeSocket();
+        const state = makeState({
+            fieldFront: ref([{ instanceId: 'atk-post', cardName: '攻击单位' }, { instanceId: 'ally-post', cardName: '其他单位' }]),
+            fieldRear: ref([]),
+            supportInteraction: ref({ type: 'support-move-attacker-post-battle', attackerId: 'atk-post' }),
+            combatStats: ref({ supportNotice: '援护之纹章' })
+        });
+        const commands = createCombatCommands({ state, socket });
+        const invalid = commands.resolveSupportInteraction(state, 'ally-post');
+        assert(invalid === false, '援护之纹章不应允许选择非攻击单位');
+        const ok = commands.resolveSupportInteraction(state, 'atk-post');
+        assert(ok === true, '援护之纹章应允许选择攻击单位执行移动');
+        assert(state.fieldFront.value.length === 1 && state.fieldRear.value.length === 1, '援护之纹章应完成攻击单位前后排切换');
+    }
+
+    {
+        const socket = makeSocket();
+        const state = makeState({
+            fieldFront: ref([{ instanceId: 'atk-phantom', cardName: '攻击单位' }]),
+            fieldRear: ref([]),
+            supportInteraction: ref({
+                type: 'phantom-post-battle',
+                attackerId: 'atk-phantom',
+                targetArea: 'rear',
+                targetCharaName: '伊弗列姆'
+            }),
+            combatStats: ref({ supportNotice: null })
+        });
+        const commands = createCombatCommands({ state, socket });
+        const ok = commands.resolveSupportInteraction(state, 'atk-phantom');
+        assert(ok === true, '幻影之纹章应可以完成战后区域移动');
+        assert(state.fieldFront.value.length === 0 && state.fieldRear.value.length === 1, '幻影之纹章应将攻击单位移动到目标区域');
+        assert(String(state.combatStats.value.supportNotice || '').includes('伊弗列姆'), '幻影之纹章应更新结算提示');
+    }
+
     console.log('交互烟测检查通过');
 }
 

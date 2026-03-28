@@ -4,6 +4,7 @@ import { isAttackerFromMyField, getCombatWinner } from '../engine/combatEngine.j
 import { createInitialCombatDecision, getInitialCombatDecisionContext } from '../engine/combatDecisionEngine.js';
 import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
 import { emitSyncAttack, emitSyncCardMove, emitPlayerDraw, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
+import { computePassivePowerBonus, buildPassiveContext, getAutoTriggers } from '../engine/abilityEngine.js';
 import {
     emitSyncCombatDecision,
     emitSyncSupportInteractionRequest,
@@ -479,8 +480,11 @@ export function createCombatCommands({ state, socket }) {
         }
 
         if (interaction.type === 'support-move-attacker-post-battle') {
-            const fromFront = currentState.fieldFront.value.findIndex(c => c.instanceId === targetCardId);
-            const fromRear = currentState.fieldRear.value.findIndex(c => c.instanceId === targetCardId);
+            const attackerId = interaction.attackerId || currentState.attacker.value?.instanceId || null;
+            if (!attackerId || String(targetCardId) !== String(attackerId)) return false;
+
+            const fromFront = currentState.fieldFront.value.findIndex(c => c.instanceId === attackerId);
+            const fromRear = currentState.fieldRear.value.findIndex(c => c.instanceId === attackerId);
 
             if (fromFront > -1) {
                 const moved = currentState.fieldFront.value.splice(fromFront, 1)[0];
@@ -502,12 +506,26 @@ export function createCombatCommands({ state, socket }) {
         }
 
         if (interaction.type === 'phantom-post-battle') {
-            // 幻影之纹章的特殊处理：出击到指定角色的区域
-            // 这需要通过移动或特殊出击逻辑来实现
-            // 暂时使用简化处理：标记为已处理
-            const targetCharaName = interaction.targetCharaName;
+            const attackerId = interaction.attackerId || currentState.attacker.value?.instanceId || null;
+            const targetArea = interaction.targetArea === 'rear' ? 'rear' : 'front';
+            const targetCharaName = interaction.targetCharaName || '目标角色';
+            if (!attackerId) return false;
+
+            const fromFront = currentState.fieldFront.value.findIndex(c => c.instanceId === attackerId);
+            const fromRear = currentState.fieldRear.value.findIndex(c => c.instanceId === attackerId);
+
+            if (targetArea === 'front' && fromRear > -1) {
+                const moved = currentState.fieldRear.value.splice(fromRear, 1)[0];
+                currentState.fieldFront.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'rear', to: 'front' });
+            } else if (targetArea === 'rear' && fromFront > -1) {
+                const moved = currentState.fieldFront.value.splice(fromFront, 1)[0];
+                currentState.fieldRear.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'front', to: 'rear' });
+            }
+
             currentState.supportInteraction.value = null;
-            currentState.combatStats.value.supportNotice = `幻影之纹章：已出击到${targetCharaName}所在区域。`;
+            currentState.combatStats.value.supportNotice = `幻影之纹章：已移动到${targetCharaName}所在区域。`;
             return true;
         }
 
@@ -800,7 +818,8 @@ export function createCombatCommands({ state, socket }) {
                 if (shouldMove) {
                     currentState.supportInteraction.value = {
                         type: 'support-move-attacker-post-battle',
-                        source: 'post-battle-effect'
+                        source: 'post-battle-effect',
+                        attackerId: currentState.attacker.value?.instanceId || null
                     };
                     // 需要用户选择目标区域，稍后在panel中处理
                 }
@@ -822,18 +841,20 @@ export function createCombatCommands({ state, socket }) {
             }
             if (effect.type === 'phantom-replace-to-area') {
                 const charaName = effect.data?.charaName;
-                const targetField = currentState.fieldFront.value.concat(currentState.fieldRear.value)
-                    .concat(currentState.opponentFront.value, currentState.opponentRear.value)
+                const targetInFront = currentState.fieldFront.value.concat(currentState.opponentFront.value)
                     .find(c => (c.charaName || '').includes(charaName));
-                if (targetField) {
+                const targetInRear = currentState.fieldRear.value.concat(currentState.opponentRear.value)
+                    .find(c => (c.charaName || '').includes(charaName));
+                const targetArea = targetInFront ? 'front' : (targetInRear ? 'rear' : null);
+                if (targetArea) {
                     const shouldPhantom = confirm(`幻影之纹章：是否将攻击卡出击到${charaName}所在区域？`);
                     if (shouldPhantom) {
-                        // 攻击卡从当前位置移动到目标位置，标记为已出击
-                        // 这需要特殊处理，可能需要UI交互
                         currentState.supportInteraction.value = {
                             type: 'phantom-post-battle',
                             source: 'post-battle-effect',
-                            targetCharaName: charaName
+                            targetCharaName: charaName,
+                            targetArea,
+                            attackerId: currentState.attacker.value?.instanceId || null
                         };
                     }
                 }
@@ -988,7 +1009,25 @@ export function createCombatCommands({ state, socket }) {
         currentState.isCombatActive.value = true;
 
         setTimeout(() => {
-            let mySupport = null;
+                // ── 【常】被动战斗力加成（攻击方）
+                const attackerPassiveCtx = buildPassiveContext(currentState, attackerCard, attackerCard, defenderCard, null);
+                const attackerPassive = computePassivePowerBonus(attackerCard, attackerPassiveCtx);
+                if (attackerPassive.totalDelta) {
+                    currentState.combatStats.value.myTotalPower += attackerPassive.totalDelta;
+                    currentState.combatStats.value.passiveNotice = attackerPassive.breakdown
+                        .filter(b => b.powerDelta)
+                        .map(b => `${b.title}：+${b.powerDelta}`)
+                        .join('；');
+                }
+
+                // ── 【常】被动战斗力加成（防御方）
+                const defenderPassiveCtx = buildPassiveContext(currentState, defenderCard, attackerCard, defenderCard, null);
+                const defenderPassive = computePassivePowerBonus(defenderCard, defenderPassiveCtx);
+                if (defenderPassive.totalDelta) {
+                    currentState.combatStats.value.oppTotalPower += defenderPassive.totalDelta;
+                }
+
+                let mySupport = null;
             let supportFailed = false;
             if (currentState.deck.value.length > 0) {
                 mySupport = currentState.deck.value.pop();

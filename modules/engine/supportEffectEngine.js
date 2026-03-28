@@ -118,6 +118,19 @@ function hasForce(force) {
     return String(force || '').trim().length > 0;
 }
 
+function isSiblingPairMatched(supportCharaName, battleCharaName) {
+    const supportName = String(supportCharaName || '').trim();
+    const battleName = String(battleCharaName || '').trim();
+    if (!supportName || !battleName) return false;
+
+    const siblingPairs = {
+        '艾瑞珂': '伊弗列姆',
+        '伊弗列姆': '艾瑞珂'
+    };
+
+    return siblingPairs[supportName] === battleName;
+}
+
 function getBattleUnitByRole(role, state) {
     if (role === 'defender') {
         return state?.defender?.value || null;
@@ -127,6 +140,25 @@ function getBattleUnitByRole(role, state) {
 
 const SUPPORT_EFFECT_HANDLERS = {
     EMBLEM_ATTACK: () => ({ applied: true, powerDelta: 20 }),
+    EMBLEM_SIBLING: ({ supportCard, state, role, meta }) => {
+        const battleUnitName = getCardCharaName(getBattleUnitByRole(role, state));
+        const requiredNames = Array.isArray(meta?.params?.requiredBattleCharaNames)
+            ? meta.params.requiredBattleCharaNames.map(name => String(name || '').trim()).filter(Boolean)
+            : null;
+        const requiredName = String(meta?.params?.requiredBattleCharaName || '').trim();
+
+        const matched = requiredNames?.length
+            ? requiredNames.includes(battleUnitName)
+            : (requiredName
+                ? requiredName === battleUnitName
+                : isSiblingPairMatched(getCardCharaName(supportCard), battleUnitName));
+
+        if (!matched) {
+            return { applied: false, note: '兄妹之纹章条件未满足：战斗单位角色名不匹配' };
+        }
+
+        return { applied: true, powerDelta: 20 };
+    },
     EMBLEM_COOP: ({ state, role, meta }) => {
         const battleForce = getBattleUnitByRole(role, state)?.force || null;
         const requireHasForce = !!meta?.params?.requireHasForce;
