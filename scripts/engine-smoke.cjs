@@ -336,6 +336,75 @@ function main() {
     });
     assert(trainingResult.sideEffect === 'trainingDefenderBreakToHand', '支援效果引擎: 锻炼之纹章应返回防守单位进手牌侧效');
 
+    // ── 纹章发动时机测试：攻击型纹章被防御方翻出 → 不生效
+    const skyByDefenderResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『天空之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'defender',
+        state: {}
+    });
+    assert(skyByDefenderResult.applied === false, '时机测试: 天空之纹章被防御方翻出应不生效');
+    assert(skyByDefenderResult.timingMismatch === true, '时机测试: 天空之纹章被防御方翻出应标记 timingMismatch');
+    assert(skyByDefenderResult.powerDelta === 0, '时机测试: 天空之纹章被防御方翻出战力差值应为0');
+
+    // ── 纹章发动时机测试：防御型纹章被攻击方翻出 → 不生效
+    const prayerByAttackerResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『祈祷之纹章』'], timing: ['〖防御型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(prayerByAttackerResult.applied === false, '时机测试: 祈祷之纹章被攻击方翻出应不生效');
+    assert(prayerByAttackerResult.timingMismatch === true, '时机测试: 祈祷之纹章被攻击方翻出应标记 timingMismatch');
+    assert(prayerByAttackerResult.lockAttackerCritical === false, '时机测试: 祈祷之纹章被攻击方翻出不应锁定必杀');
+
+    // ── 纹章发动时机测试：攻击型纹章被攻击方翻出 → 正常生效
+    const skyByAttackerResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『天空之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(skyByAttackerResult.applied === true, '时机测试: 天空之纹章被攻击方翻出应正常生效');
+    assert(!skyByAttackerResult.timingMismatch, '时机测试: 天空之纹章被攻击方翻出不应标记 timingMismatch');
+
+    // ── 纹章发动时机测试：防御型纹章被防御方翻出 → 正常生效
+    const prayerByDefenderResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『祈祷之纹章』'], timing: ['〖防御型〗'] } } },
+        role: 'defender',
+        state: {}
+    });
+    assert(prayerByDefenderResult.applied === true, '时机测试: 祈祷之纹章被防御方翻出应正常生效');
+    assert(!prayerByDefenderResult.timingMismatch, '时机测试: 祈祷之纹章被防御方翻出不应标记 timingMismatch');
+    assert(prayerByDefenderResult.lockAttackerCritical === true, '时机测试: 祈祷之纹章被防御方翻出应锁定攻击方必杀');
+
+    // ── 纹章发动时机测试：攻防型纹章双方均可发动
+    const coopByAttackerResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『共斗之纹章』'], timing: ['〖攻防型〗'] },
+                effectParams: { requireHasForce: true }
+            }
+        },
+        role: 'attacker',
+        state: { attacker: { value: { force: '圣痕' } } }
+    });
+    assert(!coopByAttackerResult.timingMismatch, '时机测试: 攻防型纹章被攻击方翻出不应标记 timingMismatch');
+
+    const coopByDefenderResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『共斗之纹章』'], timing: ['〖攻防型〗'] },
+                effectParams: { requireHasForce: true }
+            }
+        },
+        role: 'defender',
+        state: { defender: { value: { force: '圣痕' } } }
+    });
+    assert(!coopByDefenderResult.timingMismatch, '时机测试: 攻防型纹章被防御方翻出不应标记 timingMismatch');
+
+    // ── 纹章发动时机测试：时机不符时应含纹章名与 timingMismatch 字段
+    assert(skyByDefenderResult.effectName !== undefined, '时机测试: 时机不符结果应含 effectName 字段');
+    assert(skyByDefenderResult.timing === '〖攻击型〗', '时机测试: 时机不符结果应保留原始 timing 字段');
+    assert(prayerByAttackerResult.timing === '〖防御型〗', '时机测试: 防御型纹章时机不符结果应保留原始 timing 字段');
+
     assert(Array.isArray(phase.PHASE_ORDER), '阶段引擎: PHASE_ORDER 异常');
     assert(phase.PHASE_ORDER.join(',') === 'BEGINNING,BOND,DEPLOY,ATTACK,END', '阶段顺序异常');
     assert(phase.PHASE_NAME_MAP.ATTACK === '行动阶段', '阶段名称映射异常');

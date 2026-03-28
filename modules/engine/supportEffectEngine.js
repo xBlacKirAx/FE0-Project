@@ -44,6 +44,8 @@ const NO_EFFECT_RESULT = Object.freeze({
     lockDefenderEvasion: false,
     jewelBreakCount: null,
     sideEffect: null,
+    effectName: null,
+    timingMismatch: false,
     note: null
 });
 
@@ -348,7 +350,9 @@ export function resolveSupportEffectResult({ supportCard, role, state }) {
         return {
             ...NO_EFFECT_RESULT,
             effectId: meta.effectId,
+            effectName: meta.effectName,
             timing: meta.timing,
+            timingMismatch: true,
             note: '时机不匹配，支援效果未生效'
         };
     }

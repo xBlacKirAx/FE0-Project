@@ -68,6 +68,13 @@ export function createCombatCommands({ state, socket }) {
 
     const applyCombatSupportEffectResult = (currentState, result, role) => {
         if (!result) return;
+        if (result.timingMismatch) {
+            const name = result.effectName || '支援纹章';
+            const timingLabel = result.timing === '〖攻击型〗' ? '攻击型' : result.timing === '〖防御型〗' ? '防御型' : result.timing || '';
+            const roleLabel = role === 'attacker' ? '进攻方' : '防御方';
+            currentState.combatStats.value.supportNotice = `${name}（${timingLabel}）：时机不符，仅在${result.timing === '〖攻击型〗' ? '进攻方' : '防御方'}翻出时发动，本次由${roleLabel}翻出，效果无效。`;
+            return;
+        }
         if (result.powerDelta) {
             if (role === 'attacker') {
                 currentState.combatStats.value.myTotalPower += result.powerDelta;
