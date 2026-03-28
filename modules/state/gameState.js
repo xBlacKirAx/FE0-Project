@@ -35,7 +35,8 @@ export function createGameFlowState() {
         defenderEvasionLocked: false,
         encourageDrawOnBreakMainCharacter: false,
         opponentSupportEffectSealed: false,
-        jewelBreakCount: 1
+        jewelBreakCount: 1,
+        postBattleEffects: []
     });
     const combatDecision = ref(createInitialCombatDecision());
     const supportInteraction = ref(null);

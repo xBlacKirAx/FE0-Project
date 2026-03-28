@@ -282,6 +282,25 @@ const SUPPORT_EFFECT_HANDLERS = {
             return { applied: false, note: '计略之纹章条件未满足：攻击单位非对应势力' };
         }
         return { applied: true, sideEffect: 'moveEnemyExceptDefender' };
+    },
+    EMBLEM_DESPAIR: () => {
+        return { applied: true, sideEffect: 'resurrectZombieFromGraveyard' };
+    },
+    EMBLEM_NINJUTSU: () => {
+        return { applied: true, sideEffect: 'ninjutsuOptional' };
+    },
+    EMBLEM_PHANTOM: ({ supportCard }) => {
+        const cardCharaName = getCardCharaName(supportCard);
+        return { applied: true, sideEffect: 'phantomBattleEndReplace', sideEffectData: { charaName: cardCharaName } };
+    },
+    EMBLEM_RESISTANCE: () => {
+        return { applied: true, sideEffect: 'resistanceBattleEndStay' };
+    },
+    EMBLEM_SUPPORT: () => {
+        return { applied: true, sideEffect: 'supportMoveAttackerPostBattle' };
+    },
+    EMBLEM_TRAINING: () => {
+        return { applied: true, sideEffect: 'trainingDefenderBreakToHand' };
     }
 };
 

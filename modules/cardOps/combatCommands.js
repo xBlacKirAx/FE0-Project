@@ -251,6 +251,69 @@ export function createCombatCommands({ state, socket }) {
                 excludedId: currentState.defender.value?.instanceId || null
             };
             currentState.combatStats.value.supportNotice = '计略之纹章：请选择1名防御单位以外的敌方单位进行移动。';
+            return;
+        }
+
+        if (result.sideEffect === 'ninjutsuOptional') {
+            const shouldApply = confirm('忍术之纹章：是否从手牌选择1张卡放置到退避区？（战斗结束后将以已行动状态出击）');
+            if (!shouldApply) return;
+            currentState.supportInteraction.value = {
+                type: 'ninjutsu-hand-to-grave',
+                source: 'support-effect'
+            };
+            currentState.combatStats.value.supportNotice = '忍术之纹章：请选择1张手牌放置到退避区。';
+            return;
+        }
+
+        if (result.sideEffect === 'resistanceBattleEndStay') {
+            currentState.combatStats.value.postBattleEffects = currentState.combatStats.value.postBattleEffects || [];
+            currentState.combatStats.value.postBattleEffects.push({
+                type: 'resistance-defender-stay',
+                data: {}
+            });
+            currentState.combatStats.value.supportNotice = '抵抗之纹章：防御单位击破时可以出击而非进入退避区。';
+            return;
+        }
+
+        if (result.sideEffect === 'trainingDefenderBreakToHand') {
+            currentState.combatStats.value.postBattleEffects = currentState.combatStats.value.postBattleEffects || [];
+            currentState.combatStats.value.postBattleEffects.push({
+                type: 'training-defender-to-hand',
+                data: {}
+            });
+            currentState.combatStats.value.supportNotice = '锻炼之纹章：防御单位击破时可以进入手牌而非退避区。';
+            return;
+        }
+
+        if (result.sideEffect === 'supportMoveAttackerPostBattle') {
+            currentState.combatStats.value.postBattleEffects = currentState.combatStats.value.postBattleEffects || [];
+            currentState.combatStats.value.postBattleEffects.push({
+                type: 'support-move-attacker',
+                data: {}
+            });
+            currentState.combatStats.value.supportNotice = '援护之纹章：战斗结束后可以移动攻击单位。';
+            return;
+        }
+
+        if (result.sideEffect === 'phantomBattleEndReplace') {
+            currentState.combatStats.value.postBattleEffects = currentState.combatStats.value.postBattleEffects || [];
+            currentState.combatStats.value.postBattleEffects.push({
+                type: 'phantom-replace-to-area',
+                data: { charaName: result.sideEffectData?.charaName || null }
+            });
+            const charaName = result.sideEffectData?.charaName || '指定角色';
+            currentState.combatStats.value.supportNotice = `幻影之纹章：战斗结束后可以出击到${charaName}所在区域。`;
+            return;
+        }
+
+        if (result.sideEffect === 'resurrectZombieFromGraveyard') {
+            currentState.combatStats.value.postBattleEffects = currentState.combatStats.value.postBattleEffects || [];
+            currentState.combatStats.value.postBattleEffects.push({
+                type: 'despair-resurrect-zombie',
+                data: {}
+            });
+            currentState.combatStats.value.supportNotice = '绝望之纹章：战斗结束后可从退避区选择1张«尸兵»出击。';
+            return;
         }
     };
 
@@ -378,6 +441,67 @@ export function createCombatCommands({ state, socket }) {
                 requestId: interaction.requestId
             };
             currentState.combatStats.value.supportNotice = '计略之纹章：等待对手执行单位移动。';
+            return true;
+        }
+
+        if (interaction.type === 'ninjutsu-hand-to-grave') {
+            const idx = currentState.hand.value.findIndex(c => c.instanceId === targetCardId);
+            if (idx === -1) return false;
+            const ninjutsuCard = currentState.hand.value.splice(idx, 1)[0];
+            ninjutsuCard._ninjutsuRejoin = true; // 标记此卡在战斗结束后需要以已行动状态出击
+            currentState.graveyard.value.push(ninjutsuCard);
+            emitSyncCardMove(socket, { card: ninjutsuCard, from: 'hand', to: 'graveyard' });
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = '忍术之纹章：已放置到退避区，战斗结束后以已行动状态出击。';
+            return true;
+        }
+
+        if (interaction.type === 'despair-select-zombie') {
+            const candidates = interaction.candidates || [];
+            const selectedCard = candidates.find(c => c.instanceId === targetCardId);
+            if (!selectedCard) return false;
+            
+            const idx = currentState.graveyard.value.findIndex(c => c.instanceId === selectedCard.instanceId);
+            if (idx !== -1) {
+                const resurrectedCard = currentState.graveyard.value.splice(idx, 1)[0];
+                currentState.fieldFront.value.push(resurrectedCard);
+                emitSyncCardMove(socket, { card: resurrectedCard, from: 'graveyard', to: 'front' });
+            }
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = '绝望之纹章：已出击«尸兵»。';
+            return true;
+        }
+
+        if (interaction.type === 'support-move-attacker-post-battle') {
+            const fromFront = currentState.fieldFront.value.findIndex(c => c.instanceId === targetCardId);
+            const fromRear = currentState.fieldRear.value.findIndex(c => c.instanceId === targetCardId);
+
+            if (fromFront > -1) {
+                const moved = currentState.fieldFront.value.splice(fromFront, 1)[0];
+                currentState.fieldRear.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'front', to: 'rear' });
+                currentState.supportInteraction.value = null;
+                currentState.combatStats.value.supportNotice = '援护之纹章：已移动攻击单位。';
+                return true;
+            }
+            if (fromRear > -1) {
+                const moved = currentState.fieldRear.value.splice(fromRear, 1)[0];
+                currentState.fieldFront.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'rear', to: 'front' });
+                currentState.supportInteraction.value = null;
+                currentState.combatStats.value.supportNotice = '援护之纹章：已移动攻击单位。';
+                return true;
+            }
+            return false;
+        }
+
+        if (interaction.type === 'phantom-post-battle') {
+            // 幻影之纹章的特殊处理：出击到指定角色的区域
+            // 这需要通过移动或特殊出击逻辑来实现
+            // 暂时使用简化处理：标记为已处理
+            const targetCharaName = interaction.targetCharaName;
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = `幻影之纹章：已出击到${targetCharaName}所在区域。`;
             return true;
         }
 
@@ -528,6 +652,9 @@ export function createCombatCommands({ state, socket }) {
             currentState.combatStats.value.oppTotalPower
         );
 
+        const postBattleEffects = currentState.combatStats.value.postBattleEffects || [];
+        let defenderHandledByPostEffect = false;
+
         if (attackerWins) {
             const targetId = currentState.defender.value.instanceId;
             const isTargetMC = currentState.defender.value.isMainCharacter;
@@ -557,14 +684,64 @@ export function createCombatCommands({ state, socket }) {
                     setTimeout(() => alert('💀 败北... 你的主人公在没有宝玉的情况下被击破。'), 600);
                 }
             } else {
-                ['fieldFront', 'fieldRear'].forEach(area => {
-                    const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
-                    if (idx > -1) currentState.graveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
-                });
-                ['opponentFront', 'opponentRear'].forEach(area => {
-                    const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
-                    if (idx > -1) currentState.oppGraveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
-                });
+                // 检查是否有post-battle effect改变defender的处理
+                const resistanceEffect = postBattleEffects.find(e => e.type === 'resistance-defender-stay');
+                const trainingEffect = postBattleEffects.find(e => e.type === 'training-defender-to-hand');
+
+                if (resistanceEffect) {
+                    // 抵抗之纹章：防御单位不进graveyard，而是保持（或出击）
+                    // 暂时保持在原位，标记为handled
+                    defenderHandledByPostEffect = true;
+                    const shouldStay = confirm('抵抗之纹章：是否让防御单位出击而非进入退避区？');
+                    if (shouldStay) {
+                        // 防御单位保持在场，不做任何处理
+                    } else {
+                        // 正常进入graveyard
+                        ['fieldFront', 'fieldRear'].forEach(area => {
+                            const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
+                            if (idx > -1) currentState.graveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                        });
+                        ['opponentFront', 'opponentRear'].forEach(area => {
+                            const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
+                            if (idx > -1) currentState.oppGraveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                        });
+                    }
+                } else if (trainingEffect) {
+                    // 锻炼之纹章：防御单位进入手牌而不是graveyard
+                    const shouldTraining = confirm('锻炼之纹章：是否让防御单位进入手牌而非退避区？');
+                    if (shouldTraining) {
+                        let defeatedCard = null;
+                        ['fieldFront', 'fieldRear'].forEach(area => {
+                            const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
+                            if (idx > -1) defeatedCard = currentState[area].value.splice(idx, 1)[0];
+                        });
+                        ['opponentFront', 'opponentRear'].forEach(area => {
+                            const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
+                            if (idx > -1) defeatedCard = currentState[area].value.splice(idx, 1)[0];
+                        });
+                        if (defeatedCard) {
+                            if (isMyAttacker) {
+                                currentState.oppHand.value = currentState.oppHand.value || [];
+                                currentState.oppHand.value.push(defeatedCard);
+                            } else {
+                                currentState.hand.value.push(defeatedCard);
+                            }
+                        }
+                        defenderHandledByPostEffect = true;
+                    }
+                }
+
+                // 如果没有被post-effect处理，正常放入graveyard
+                if (!defenderHandledByPostEffect) {
+                    ['fieldFront', 'fieldRear'].forEach(area => {
+                        const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
+                        if (idx > -1) currentState.graveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                    });
+                    ['opponentFront', 'opponentRear'].forEach(area => {
+                        const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
+                        if (idx > -1) currentState.oppGraveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                    });
+                }
             }
         }
 
@@ -575,6 +752,53 @@ export function createCombatCommands({ state, socket }) {
             if (currentState.mySupportCard.value) currentState.oppGraveyard.value.push(currentState.mySupportCard.value);
             if (currentState.oppSupportCard.value) currentState.graveyard.value.push(currentState.oppSupportCard.value);
         }
+
+        // 处理其他post-battle effects
+        postBattleEffects.forEach(effect => {
+            if (effect.type === 'support-move-attacker') {
+                const shouldMove = confirm('援护之纹章：是否移动攻击单位？');
+                if (shouldMove) {
+                    currentState.supportInteraction.value = {
+                        type: 'support-move-attacker-post-battle',
+                        source: 'post-battle-effect'
+                    };
+                    // 需要用户选择目标区域，稍后在panel中处理
+                }
+            }
+            if (effect.type === 'despair-resurrect-zombie') {
+                const zombieCards = currentState.graveyard.value.filter(c => 
+                    (c.cardName || c.name || '').includes('尸兵')
+                );
+                if (zombieCards.length > 0) {
+                    const shouldResurrect = confirm('绝望之纹章：是否从退避区选择1张«尸兵»出击？');
+                    if (shouldResurrect) {
+                        currentState.supportInteraction.value = {
+                            type: 'despair-select-zombie',
+                            source: 'post-battle-effect',
+                            candidates: zombieCards
+                        };
+                    }
+                }
+            }
+            if (effect.type === 'phantom-replace-to-area') {
+                const charaName = effect.data?.charaName;
+                const targetField = currentState.fieldFront.value.concat(currentState.fieldRear.value)
+                    .concat(currentState.opponentFront.value, currentState.opponentRear.value)
+                    .find(c => (c.charaName || '').includes(charaName));
+                if (targetField) {
+                    const shouldPhantom = confirm(`幻影之纹章：是否将攻击卡出击到${charaName}所在区域？`);
+                    if (shouldPhantom) {
+                        // 攻击卡从当前位置移动到目标位置，标记为已出击
+                        // 这需要特殊处理，可能需要UI交互
+                        currentState.supportInteraction.value = {
+                            type: 'phantom-post-battle',
+                            source: 'post-battle-effect',
+                            targetCharaName: charaName
+                        };
+                    }
+                }
+            }
+        });
 
         currentState.combatDecision.value = {
             ...currentState.combatDecision.value,

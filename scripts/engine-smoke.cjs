@@ -280,6 +280,52 @@ function main() {
     });
     assert(dragonBloodResult.sideEffect === 'putHandCardToBondIfBehindOnBonds', '支援效果引擎: 龙血之纹章满足条件时应返回手牌转羁绊侧效');
 
+    const despairResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『绝望之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(despairResult.sideEffect === 'resurrectZombieFromGraveyard', '支援效果引擎: 绝望之纹章应返回僵尸复活侧效');
+
+    const ninjutsuResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『忍术之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(ninjutsuResult.sideEffect === 'ninjutsuOptional', '支援效果引擎: 忍术之纹章应返回可选放入退避区侧效');
+
+    const phantomResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { 
+            cardName: '织部翼 龙回的轨迹',
+            supportAbility: { keywords: { title: ['『幻影之纹章』'], timing: ['〖攻击型〗'] } } 
+        },
+        role: 'attacker',
+        state: {}
+    });
+    assert(phantomResult.sideEffect === 'phantomBattleEndReplace', '支援效果引擎: 幻影之纹章应返回战斗结束后替换出击侧效');
+    assert(phantomResult.sideEffectData?.charaName, '支援效果引擎: 幻影之纹章应提供角色名数据');
+
+    const resistanceResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『抵抗之纹章』'], timing: ['〖防御型〗'] } } },
+        role: 'defender',
+        state: {}
+    });
+    assert(resistanceResult.sideEffect === 'resistanceBattleEndStay', '支援效果引擎: 抵抗之纹章应返回防守单位保留侧效');
+
+    const supportResult2 = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『援护之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(supportResult2.sideEffect === 'supportMoveAttackerPostBattle', '支援效果引擎: 援护之纹章应返回攻击单位战后移动侧效');
+
+    const trainingResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『锻炼之纹章』'], timing: ['〖防御型〗'] } } },
+        role: 'defender',
+        state: {}
+    });
+    assert(trainingResult.sideEffect === 'trainingDefenderBreakToHand', '支援效果引擎: 锻炼之纹章应返回防守单位进手牌侧效');
+
     assert(Array.isArray(phase.PHASE_ORDER), '阶段引擎: PHASE_ORDER 异常');
     assert(phase.PHASE_ORDER.join(',') === 'BEGINNING,BOND,DEPLOY,ATTACK,END', '阶段顺序异常');
     assert(phase.PHASE_NAME_MAP.ATTACK === '攻击阶段', '阶段名称映射异常');
