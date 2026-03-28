@@ -143,6 +143,41 @@ function main() {
 
     {
         const socket = makeSocket();
+        const oldTop = { instanceId: 'f10', cardName: '旧上级', charaName: '艾克', isMainCharacter: false, _stackedCards: [] };
+        const handCard = { instanceId: 'h10', cardName: '新上级', charaName: '艾克', promoteCost: '1', cost: '3' };
+        const lastDeckCard = { instanceId: 'd10', cardName: '最后一张牌组卡' };
+        const g1 = { instanceId: 'g10', cardName: '弃牌A' };
+        const g2 = { instanceId: 'g11', cardName: '弃牌B' };
+
+        const refs = makeRefs({
+            hand: ref([handCard]),
+            fieldFront: ref([oldTop]),
+            deck: ref([lastDeckCard]),
+            graveyard: ref([g1, g2])
+        });
+        const state = makeState({
+            fieldFront: refs.fieldFront,
+            fieldRear: refs.fieldRear,
+            hand: refs.hand,
+            deck: refs.deck,
+            graveyard: refs.graveyard,
+            usedBondsThisTurn: ref(0)
+        });
+
+        const commands = createAreaCommands({ state, socket, refs });
+        commands.performClassChange(handCard, oldTop);
+
+        assert(refs.deck.value.length === 2, '转职抽空牌组后应立刻把弃牌区洗回牌组');
+        assert(refs.graveyard.value.length === 0, '转职抽空牌组后弃牌区应被清空并洗回');
+        assert(socket.__moves.some(m => m.from === 'graveyard' && m.to === 'deck' && m.card.instanceId === 'g10'), '转职触发洗回时应同步弃牌区到牌组');
+
+        commands.undoLastMove();
+        assert(refs.deck.value.some(c => c.instanceId === 'd10'), '撤销转职后应恢复原牌组顶卡');
+        assert(refs.graveyard.value.some(c => c.instanceId === 'g10') && refs.graveyard.value.some(c => c.instanceId === 'g11'), '撤销转职后应恢复被洗回的弃牌区卡');
+    }
+
+    {
+        const socket = makeSocket();
         const oldTop = { instanceId: 'f2', cardName: '场上旧卡', charaName: '罗伊', isMainCharacter: false };
         const handCard = { instanceId: 'h2', cardName: '可升级新卡', charaName: '罗伊', promoteCost: 'N/A', cost: '3' };
 
@@ -191,6 +226,39 @@ function main() {
         assert(refs.fieldFront.value[0].instanceId === 'h3', '同名且可转职时，普通出击应自动转为转职执行');
         assert(state.usedBondsThisTurn.value === 1, '自动转职应按 promoteCost 扣费');
         assert(socket.__moves.some(m => m.from === 'front' && m.to === 'stacked' && m.card.instanceId === 'f3'), '自动转职应广播旧顶层离场');
+    }
+
+    {
+        const socket = makeSocket();
+        const lastDeckCard = { instanceId: 'd20', cardName: '最后一张牌组卡' };
+        const g1 = { instanceId: 'g20', cardName: '弃牌A' };
+        const g2 = { instanceId: 'g21', cardName: '弃牌B' };
+
+        const refs = makeRefs({
+            hand: ref([]),
+            deck: ref([lastDeckCard]),
+            graveyard: ref([g1, g2]),
+            undoStack: ref([])
+        });
+        const state = makeState({
+            currentPhase: ref('BEGINNING'),
+            isMyTurn: ref(true),
+            hand: refs.hand,
+            deck: refs.deck,
+            graveyard: refs.graveyard
+        });
+
+        const commands = createAreaCommands({ state, socket, refs });
+        commands.drawCard();
+
+        assert(refs.hand.value.some(c => c.instanceId === 'd20'), '抽牌应拿到牌组顶卡');
+        assert(refs.deck.value.length === 2, '抽空牌组后应立刻把弃牌区洗回牌组');
+        assert(refs.graveyard.value.length === 0, '抽空牌组后弃牌区应被清空并洗回');
+
+        commands.undoLastMove();
+        assert(refs.hand.value.length === 0, '撤销抽牌后手牌应恢复');
+        assert(refs.deck.value.some(c => c.instanceId === 'd20'), '撤销抽牌后应恢复原牌组顶卡');
+        assert(refs.graveyard.value.some(c => c.instanceId === 'g20') && refs.graveyard.value.some(c => c.instanceId === 'g21'), '撤销抽牌后应恢复被洗回的弃牌区卡');
     }
 
     console.log('升级/转职烟测检查通过');

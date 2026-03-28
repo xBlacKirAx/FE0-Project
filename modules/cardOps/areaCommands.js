@@ -83,6 +83,48 @@ export function createAreaCommands({ state, socket, refs }) {
         }
     };
 
+    const recycleGraveyardIntoDeckIfNeeded = () => {
+        if (deck.value.length !== 0 || graveyard.value.length === 0) return [];
+
+        const recycledCards = graveyard.value.splice(0, graveyard.value.length);
+        deck.value.push(...recycledCards);
+        shuffleInPlace(deck.value);
+
+        recycledCards.forEach(card => {
+            emitSyncCardMove(socket, { card, from: 'graveyard', to: 'deck' });
+        });
+
+        return recycledCards.map(card => card.instanceId);
+    };
+
+    const drawOneWithAutoRecycle = () => {
+        const recycledCardIds = [];
+
+        recycledCardIds.push(...recycleGraveyardIntoDeckIfNeeded());
+        if (deck.value.length === 0) {
+            return { drawnCard: null, recycledCardIds };
+        }
+
+        const drawnCard = deck.value.pop();
+
+        // 若本次操作把卡组抽空，立即把弃牌区洗回卡组。
+        recycledCardIds.push(...recycleGraveyardIntoDeckIfNeeded());
+
+        return { drawnCard, recycledCardIds };
+    };
+
+    const revertRecycledCards = (recycledCardIds = []) => {
+        if (!Array.isArray(recycledCardIds) || recycledCardIds.length === 0) return;
+
+        recycledCardIds.forEach(cardId => {
+            const idx = deck.value.findIndex(c => c.instanceId === cardId);
+            if (idx === -1) return;
+            const card = deck.value.splice(idx, 1)[0];
+            graveyard.value.push(card);
+            emitSyncCardMove(socket, { card, from: 'deck', to: 'graveyard' });
+        });
+    };
+
     const moveTo = (card, toAreaName) => {
         const fromArea = getArea(card);
         if (!fromArea) return;
@@ -234,9 +276,8 @@ export function createAreaCommands({ state, socket, refs }) {
         newCard.isMainCharacter = !!removedFieldCard.isMainCharacter;
 
         // 转职抽1卡（与转职作为同一次可撤销动作）
-        let drawnCard = null;
-        if (deck.value.length > 0) {
-            drawnCard = deck.value.pop();
+        const { drawnCard, recycledCardIds } = drawOneWithAutoRecycle();
+        if (drawnCard) {
             hand.value.push(drawnCard);
             scrollHandToLatest();
             emitPlayerDraw(socket, { card: drawnCard });
@@ -254,6 +295,7 @@ export function createAreaCommands({ state, socket, refs }) {
             removedFieldCard,
             fieldArea,
             drawnCardId: drawnCard?.instanceId || null,
+            recycledCardIds,
             oldWasMainCharacter: !!removedFieldCard.isMainCharacter,
             previousPhase: state.currentPhase.value,
             previousHasPlacedBond: hasPlacedBond.value,
@@ -275,9 +317,15 @@ export function createAreaCommands({ state, socket, refs }) {
             // 修复3：正常抽牌仅限BEGINNING阶段；转职后抽牌绕过此限制
             if (!bypassPhaseCheck && state.currentPhase.value !== 'BEGINNING') return;
         }
-        if (deck.value.length === 0) return;
+        if (deck.value.length === 0 && graveyard.value.length === 0) return;
 
-        undoStack.value.push({ type: 'draw', previousPhase: state.currentPhase.value });
+        const drawUndoEntry = {
+            type: 'draw',
+            previousPhase: state.currentPhase.value,
+            drawnCardId: null,
+            recycledCardIds: []
+        };
+        undoStack.value.push(drawUndoEntry);
         if (undoStack.value.length > 10) undoStack.value.shift();
 
         const flyingCard = document.createElement('img');
@@ -316,7 +364,12 @@ export function createAreaCommands({ state, socket, refs }) {
             if (drawSettled) return;
             drawSettled = true;
             flyingCard.remove();
-            const drawnCard = deck.value.pop();
+            const { drawnCard, recycledCardIds } = drawOneWithAutoRecycle();
+            if (!drawnCard) return;
+
+            drawUndoEntry.drawnCardId = drawnCard.instanceId;
+            drawUndoEntry.recycledCardIds = recycledCardIds;
+
             hand.value.push(drawnCard);
             scrollHandToLatest();
             emitPlayerDraw(socket, { card: drawnCard });
@@ -355,9 +408,16 @@ export function createAreaCommands({ state, socket, refs }) {
         }
 
         if (last.type === 'draw') {
-            const card = hand.value.pop();
+            const cardIdx = last.drawnCardId
+                ? hand.value.findIndex(c => c.instanceId === last.drawnCardId)
+                : hand.value.length - 1;
+            const card = cardIdx > -1 ? hand.value.splice(cardIdx, 1)[0] : null;
             console.log(`[撤销] 撤回抽牌 → ${card?.cardName || '未知卡牌'}`);
-            if (card) deck.value.push(card);
+            if (card) {
+                deck.value.push(card);
+                emitSyncCardMove(socket, { card, from: 'hand', to: 'deck' });
+            }
+            revertRecycledCards(last.recycledCardIds);
             return;
         }
 
@@ -372,10 +432,10 @@ export function createAreaCommands({ state, socket, refs }) {
                 if (drawnIdx > -1) {
                     const drawnCard = hand.value.splice(drawnIdx, 1)[0];
                     deck.value.push(drawnCard);
-                    shuffleInPlace(deck.value);
                     emitSyncCardMove(socket, { card: drawnCard, from: 'hand', to: 'deck' });
                 }
             }
+            revertRecycledCards(last.recycledCardIds);
             // 在战场找到新卡，退回手牌
             const fieldAreaArr = getAreaArray(last.fieldArea);
             const newCardIdx = fieldAreaArr.findIndex(c => c.instanceId === last.newCard.instanceId);
