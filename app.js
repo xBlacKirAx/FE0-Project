@@ -171,6 +171,10 @@ createApp({
             if (state.activePanel.value === 'supportPeekOwnJewel') {
                 return '光明/希望之纹章：选择1张宝玉查看正面';
             }
+            if (state.activePanel.value === 'supportMainCharacterJewelSelect') {
+                const remaining = state.supportInteraction.value?.remainingCount || 1;
+                return `主人公被击破：选择1张宝玉加入手牌（剩余${remaining}张）`;
+            }
             if (state.activePanel.value === 'supportStrategyTargetEnemy') {
                 return '计略之纹章：选择1名敌方单位移动';
             }
@@ -214,6 +218,9 @@ createApp({
                 });
             }
             if (state.activePanel.value === 'supportPeekOwnJewel') {
+                return state.jewels.value;
+            }
+            if (state.activePanel.value === 'supportMainCharacterJewelSelect') {
                 return state.jewels.value;
             }
             if (state.activePanel.value === 'supportStrategyTargetEnemy') {
@@ -422,6 +429,7 @@ createApp({
                 state.activePanel.value === 'supportSkyMoveCandidates' ||
                 state.activePanel.value === 'supportDanceUntapCandidates' ||
                 state.activePanel.value === 'supportPeekOwnJewel' ||
+                state.activePanel.value === 'supportMainCharacterJewelSelect' ||
                 state.activePanel.value === 'supportStrategyTargetEnemy' ||
                 state.activePanel.value === 'supportNinjutsuHandToGrave' ||
                 state.activePanel.value === 'supportDespairZombieCandidates' ||
@@ -485,6 +493,10 @@ createApp({
                 state.activePanel.value = 'supportPeekOwnJewel';
                 return;
             }
+            if (type === 'main-character-jewel-select') {
+                state.activePanel.value = 'supportMainCharacterJewelSelect';
+                return;
+            }
             if (type === 'strategy-select-enemy') {
                 state.activePanel.value = 'supportStrategyTargetEnemy';
                 return;
@@ -515,6 +527,7 @@ createApp({
                 state.activePanel.value === 'supportSkyMoveCandidates' ||
                 state.activePanel.value === 'supportDanceUntapCandidates' ||
                 state.activePanel.value === 'supportPeekOwnJewel' ||
+                state.activePanel.value === 'supportMainCharacterJewelSelect' ||
                 state.activePanel.value === 'supportStrategyTargetEnemy' ||
                 state.activePanel.value === 'supportNinjutsuHandToGrave' ||
                 state.activePanel.value === 'supportDespairZombieCandidates' ||

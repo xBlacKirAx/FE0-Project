@@ -29,8 +29,9 @@ export const RegionPanel = {
             flippedIds.value = new Set();
         });
 
-        const isJewelPanel = computed(() => props.activePanel === 'jewels' || props.activePanel === 'oppJewels');
-        const isMyJewelPanel = computed(() => props.activePanel === 'jewels');
+        const isMainCharacterJewelSelectPanel = computed(() => props.activePanel === 'supportMainCharacterJewelSelect');
+        const isJewelPanel = computed(() => props.activePanel === 'jewels' || props.activePanel === 'oppJewels' || isMainCharacterJewelSelectPanel.value);
+        const isMyJewelPanel = computed(() => props.activePanel === 'jewels' || isMainCharacterJewelSelectPanel.value);
 
         const displayCards = computed(() => {
             if (!isJewelPanel.value) return props.panelCards;
@@ -42,6 +43,12 @@ export const RegionPanel = {
 
         const handleCardClick = (card) => {
             if (isJewelPanel.value) {
+                // 主人公被击破后的宝玉选择：单击直接选择，不走翻面详情流程。
+                if (isMainCharacterJewelSelectPanel.value) {
+                    props.onCardClick(card);
+                    return;
+                }
+
                 // 己方宝玉：第一次点击翻开，翻开后再次点击进入详情。
                 if (isMyJewelPanel.value) {
                     if (!card.localFlipped) {
@@ -68,6 +75,7 @@ export const RegionPanel = {
         return {
             isJewelPanel,
             isMyJewelPanel,
+            isMainCharacterJewelSelectPanel,
             displayCards,
             handleCardClick
         };
@@ -82,7 +90,8 @@ export const RegionPanel = {
                         {{ isOpponentPanel ? '对手的' : '我的' }} {{ panelTitle }}
                     </span>
                     <div class="flex items-center gap-2">
-                        <span v-if="isMyJewelPanel" class="text-[9px] text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">己方宝玉 · 先翻开再查看详情</span>
+                        <span v-if="isMainCharacterJewelSelectPanel" class="text-[9px] text-cyan-300 border border-cyan-500/40 px-1.5 py-0.5 rounded">请选择要拿取的宝玉</span>
+                        <span v-else-if="isMyJewelPanel" class="text-[9px] text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">己方宝玉 · 先翻开再查看详情</span>
                         <span v-else-if="isJewelPanel && isDevMode" class="text-[9px] text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded">DEV · 点击翻面</span>
                         <button @click="onClose()" class="text-white p-1">✕</button>
                     </div>
@@ -93,7 +102,7 @@ export const RegionPanel = {
                          :key="card.instanceId"
                          @click="handleCardClick(card)"
                          :class="[isJewelPanel ? ((isMyJewelPanel || isDevMode) ? 'cursor-pointer active:scale-95' : 'cursor-default') : 'cursor-pointer', 'aspect-[55/76] relative group transition-transform']">
-                        <img :src="isJewelPanel ? (card.localFlipped ? card.image : 'images/card_back.jpg') : (card.isFaceDown ? 'images/card_back.jpg' : card.image)"
+                                <img :src="isMainCharacterJewelSelectPanel ? 'images/card_back.jpg' : (isJewelPanel ? (card.localFlipped ? card.image : 'images/card_back.jpg') : (card.isFaceDown ? 'images/card_back.jpg' : card.image))"
                              class="w-full h-full object-cover rounded shadow-md transition-all"
                                 :class="{ 'opacity-50 grayscale': !isJewelPanel && card.isFaceDown }">
 
@@ -104,6 +113,11 @@ export const RegionPanel = {
                         <div v-if="isJewelPanel && ((isMyJewelPanel && !card.localFlipped) || (!isMyJewelPanel && isDevMode && !card.localFlipped))"
                              class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                             <div class="bg-black/70 px-1.5 py-0.5 rounded text-[9px]" :class="isMyJewelPanel ? 'text-emerald-300' : 'text-amber-400'">翻面</div>
+                        </div>
+
+                        <div v-if="isMainCharacterJewelSelectPanel"
+                             class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                            <div class="bg-cyan-900/70 border border-cyan-400/40 px-1.5 py-0.5 rounded text-[9px] text-cyan-200">选择</div>
                         </div>
                     </div>
 

@@ -225,6 +225,29 @@ function main() {
     {
         const socket = makeSocket();
         const state = makeState({
+            jewels: ref([
+                { instanceId: 'j2', cardName: '宝玉B', isFaceDown: true },
+                { instanceId: 'j3', cardName: '宝玉C', isFaceDown: true }
+            ]),
+            hand: ref([]),
+            supportInteraction: ref({ type: 'main-character-jewel-select', remainingCount: 1 }),
+            combatDecision: ref({ stage: 'resolved', promptOwner: null }),
+            combatStats: ref({ supportNotice: '主人公被击破' }),
+            isCombatActive: ref(true),
+            attacker: ref({ instanceId: 'atk-jewel' }),
+            defender: ref({ instanceId: 'def-jewel' })
+        });
+        const commands = createCombatCommands({ state, socket });
+        const ok = commands.resolveSupportInteraction(state, 'j3');
+        assert(ok === true, '主人公被击破时应允许手动选择宝玉');
+        assert(state.jewels.value.length === 1 && state.hand.value.length === 1, '手动选择后应将宝玉从宝玉区移动到手牌');
+        assert(state.hand.value[0].instanceId === 'j3' && state.hand.value[0].isFaceDown === false, '加入手牌的宝玉应被翻为正面');
+        assert(socket.__moves[0]?.from === 'jewels' && socket.__moves[0]?.to === 'hand', '宝玉手动选择应同步 jewels -> hand');
+    }
+
+    {
+        const socket = makeSocket();
+        const state = makeState({
             opponentFront: ref([{ instanceId: 'enemy-1', cardName: '敌前排' }]),
             opponentRear: ref([]),
             defender: ref({ instanceId: 'def-1' }),

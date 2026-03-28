@@ -357,6 +357,32 @@ export function createCombatCommands({ state, socket }) {
             return true;
         }
 
+        if (interaction.type === 'main-character-jewel-select') {
+            const idx = currentState.jewels.value.findIndex(c => c.instanceId === targetCardId);
+            if (idx === -1) return false;
+
+            const pickedJewel = currentState.jewels.value.splice(idx, 1)[0];
+            pickedJewel.isFaceDown = false;
+            currentState.hand.value.push(pickedJewel);
+            emitSyncCardMove(socket, { card: pickedJewel, from: 'jewels', to: 'hand' });
+
+            const remaining = Math.max(0, (interaction.remainingCount || 1) - 1);
+            if (remaining > 0 && currentState.jewels.value.length > 0) {
+                interaction.remainingCount = remaining;
+                currentState.combatStats.value.supportNotice = `主人公被击破：请继续选择宝玉加入手牌（剩余${remaining}张）`;
+                return true;
+            }
+
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = '主人公被击破：已将选择的宝玉加入手牌。';
+            if (currentState.combatDecision.value?.stage === 'resolved') {
+                setTimeout(() => {
+                    resetCombatState(currentState);
+                }, 300);
+            }
+            return true;
+        }
+
         if (interaction.type === 'courage-topdeck') {
             const idx = currentState.hand.value.findIndex(c => c.instanceId === targetCardId);
             if (idx === -1) return false;
@@ -701,9 +727,14 @@ export function createCombatCommands({ state, socket }) {
                         setTimeout(() => alert('🏆 决杀！你击破了对手没有宝玉的主人公，获得胜利！'), 600);
                     }
                 } else if (currentState.jewels.value.length > 0) {
-                    const brokenJewel = currentState.jewels.value.pop();
-                    brokenJewel.isFaceDown = false;
-                    currentState.hand.value.push(brokenJewel);
+                    const jewelBreakCount = currentState.combatStats.value.jewelBreakCount || 1;
+                    const selectableCount = Math.min(jewelBreakCount, currentState.jewels.value.length);
+                    currentState.supportInteraction.value = {
+                        type: 'main-character-jewel-select',
+                        source: 'combat-main-character-break',
+                        remainingCount: selectableCount
+                    };
+                    currentState.combatStats.value.supportNotice = `主人公被击破：请选择1张宝玉加入手牌（共${selectableCount}张）`;
                 } else {
                     setTimeout(() => alert('💀 败北... 你的主人公在没有宝玉的情况下被击破。'), 600);
                 }
@@ -866,6 +897,10 @@ export function createCombatCommands({ state, socket }) {
             stage: 'resolved',
             finalAttackerWins: attackerWins
         };
+
+        if (currentState.supportInteraction.value?.type === 'main-character-jewel-select') {
+            return;
+        }
 
         setTimeout(() => {
             resetCombatState(currentState);
