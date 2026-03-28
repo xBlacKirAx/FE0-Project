@@ -39,6 +39,14 @@
         TURN_END: 'turn-end',
         OPPONENT_TURN_END: 'opponent-turn-end',
         SYNC_DEV_MODE: 'sync-dev-mode',
-        OPPONENT_DEV_MODE_CHANGED: 'opponent-dev-mode-changed'
+        OPPONENT_DEV_MODE_CHANGED: 'opponent-dev-mode-changed',
+        ROOM_CREATE: 'room-create',
+        ROOM_JOIN: 'room-join',
+        ROOM_QUICK_MATCH: 'room-quick-match',
+        ROOM_LEAVE: 'room-leave',
+        ROOM_STATE: 'room-state',
+        ROOM_ERROR: 'room-error',
+        ROOM_START_GAME: 'room-start-game',
+        ROOM_GAME_STARTED: 'room-game-started'
     });
 });

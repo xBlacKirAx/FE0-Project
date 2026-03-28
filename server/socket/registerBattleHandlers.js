@@ -2,7 +2,7 @@ function cardName(c) {
     return c?.cardName || c?.id || '未知卡牌';
 }
 
-function registerBattleHandlers({ socket, EVT, log, combatState }) {
+function registerBattleHandlers({ socket, EVT, log, combatState, relayToRoomPeers }) {
     socket.on(EVT.SYNC_ATTACK, (data) => {
         combatState.pendingCombat = {
             atkName: cardName(data?.attacker),
@@ -11,7 +11,7 @@ function registerBattleHandlers({ socket, EVT, log, combatState }) {
             atkSupport: data?.supportCard?.support || 0,
             defBase: data?.defender?.attack || 0
         };
-        socket.broadcast.emit(EVT.OPPONENT_ATTACK, data);
+        relayToRoomPeers(socket, EVT.OPPONENT_ATTACK, data);
     });
 
     socket.on(EVT.SYNC_DEFENSE_SUPPORT, (data) => {
@@ -26,7 +26,7 @@ function registerBattleHandlers({ socket, EVT, log, combatState }) {
                 combatState.pendingCombat = null;
             }
         }
-        socket.broadcast.emit(EVT.OPPONENT_DEFENSE_SUPPORT, data);
+        relayToRoomPeers(socket, EVT.OPPONENT_DEFENSE_SUPPORT, data);
     });
 
     socket.on(EVT.SYNC_COMBAT_DECISION, (data) => {
@@ -49,25 +49,25 @@ function registerBattleHandlers({ socket, EVT, log, combatState }) {
             log(socket.id, `战斗 → ${combatState.pendingCombat.atkName} 未发动必杀，结果为未击破`);
             combatState.pendingCombat = null;
         }
-        socket.broadcast.emit(EVT.OPPONENT_COMBAT_DECISION, data);
+        relayToRoomPeers(socket, EVT.OPPONENT_COMBAT_DECISION, data);
     });
 
     socket.on(EVT.SYNC_SUPPORT_INTERACTION_REQUEST, (data) => {
-        socket.broadcast.emit(EVT.OPPONENT_SUPPORT_INTERACTION_REQUEST, data);
+        relayToRoomPeers(socket, EVT.OPPONENT_SUPPORT_INTERACTION_REQUEST, data);
     });
 
     socket.on(EVT.SYNC_SUPPORT_INTERACTION_RESOLVE, (data) => {
-        socket.broadcast.emit(EVT.OPPONENT_SUPPORT_INTERACTION_RESOLVE, data);
+        relayToRoomPeers(socket, EVT.OPPONENT_SUPPORT_INTERACTION_RESOLVE, data);
     });
 
     socket.on(EVT.SYNC_CARD_UNTAP, (data) => {
         log(socket.id, `回正 → instanceId:${data?.instanceId}`);
-        socket.broadcast.emit(EVT.OPPONENT_CARD_UNTAP, data);
+        relayToRoomPeers(socket, EVT.OPPONENT_CARD_UNTAP, data);
     });
 
     socket.on(EVT.SYNC_UNTAP_ALL, () => {
         log(socket.id, '全体回正');
-        socket.broadcast.emit(EVT.OPPONENT_UNTAP_ALL);
+        relayToRoomPeers(socket, EVT.OPPONENT_UNTAP_ALL);
     });
 }
 

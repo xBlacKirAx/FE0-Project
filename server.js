@@ -23,7 +23,7 @@ app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); }
 app.get('/api/cards', (req, res) => { res.json(cardsData); });
 app.use('/api/decks', createDeckRouter({ cardPool: cardsData }));
 
-const connectionRegistry = createConnectionRegistry(io);
+const connectionRegistry = createConnectionRegistry(io, EVT);
 const { log } = connectionRegistry;
 
 // 暂存每场战斗的攻击方数据，等防御支援到来后合并成一条日志
@@ -31,14 +31,35 @@ const combatState = { pendingCombat: null };
 
 io.on('connection', (socket) => {
     connectionRegistry.onConnect(socket);
+
+    socket.on(EVT.ROOM_CREATE, (payload = {}) => {
+        connectionRegistry.createRoom(socket, payload);
+    });
+
+    socket.on(EVT.ROOM_JOIN, (payload = {}) => {
+        connectionRegistry.joinRoom(socket, payload.roomId, payload);
+    });
+
+    socket.on(EVT.ROOM_QUICK_MATCH, () => {
+        connectionRegistry.quickMatch(socket);
+    });
+
+    socket.on(EVT.ROOM_LEAVE, () => {
+        connectionRegistry.leaveCurrentRoom(socket);
+    });
+
+    socket.on(EVT.ROOM_START_GAME, () => {
+        connectionRegistry.startRoomGame(socket);
+    });
+
     socket.on('disconnect', () => {
         connectionRegistry.onDisconnect(socket.id);
     });
 
-    registerGameplayHandlers({ socket, EVT, log });
-    registerBattleHandlers({ socket, EVT, log, combatState });
-    registerSyncHandlers({ socket, EVT, log });
-    registerTurnModeHandlers({ socket, EVT, log });
+    registerGameplayHandlers({ socket, EVT, log, relayToRoomPeers: connectionRegistry.relayToRoomPeers });
+    registerBattleHandlers({ socket, EVT, log, combatState, relayToRoomPeers: connectionRegistry.relayToRoomPeers });
+    registerSyncHandlers({ socket, EVT, log, relayToRoomPeers: connectionRegistry.relayToRoomPeers });
+    registerTurnModeHandlers({ socket, EVT, log, relayToRoomPeers: connectionRegistry.relayToRoomPeers });
 });
 
 function resolvePort() {

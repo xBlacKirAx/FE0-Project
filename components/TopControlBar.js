@@ -43,6 +43,34 @@ export const TopControlBar = {
         onNextPhase: {
             type: Function,
             required: true
+        },
+        roomStatusText: {
+            type: String,
+            default: '未加入房间'
+        },
+        onCreateRoom: {
+            type: Function,
+            required: true
+        },
+        onJoinRoom: {
+            type: Function,
+            required: true
+        },
+        onQuickMatch: {
+            type: Function,
+            required: true
+        },
+        onLeaveRoom: {
+            type: Function,
+            required: true
+        },
+        roomCanStart: {
+            type: Boolean,
+            default: false
+        },
+        onStartRoomGame: {
+            type: Function,
+            required: true
         }
     },
     methods: {
@@ -71,6 +99,30 @@ export const TopControlBar = {
                 <button @click="onOpenDeckManager()" class="bg-cyan-900/80 hover:bg-cyan-700 text-white text-[9px] px-1.5 py-1 rounded border border-cyan-500/50 uppercase">
                     卡组
                 </button>
+
+                <button @click="onCreateRoom()" class="bg-indigo-900/80 hover:bg-indigo-700 text-white text-[9px] px-1.5 py-1 rounded border border-indigo-500/50 uppercase">
+                    建房
+                </button>
+
+                <button @click="onJoinRoom()" class="bg-blue-900/80 hover:bg-blue-700 text-white text-[9px] px-1.5 py-1 rounded border border-blue-500/50 uppercase">
+                    加入
+                </button>
+
+                <button @click="onQuickMatch()" class="bg-violet-900/80 hover:bg-violet-700 text-white text-[9px] px-1.5 py-1 rounded border border-violet-500/50 uppercase">
+                    匹配
+                </button>
+
+                <button @click="onLeaveRoom()" class="bg-slate-900/80 hover:bg-slate-700 text-white text-[9px] px-1.5 py-1 rounded border border-slate-500/50 uppercase">
+                    离房
+                </button>
+
+                <button
+                    @click="onStartRoomGame()"
+                    :disabled="!roomCanStart"
+                    :class="roomCanStart ? 'bg-emerald-900/80 hover:bg-emerald-700 border-emerald-500/50 text-white' : 'bg-emerald-900/30 border-emerald-900/60 text-emerald-300/50 cursor-not-allowed'"
+                    class="text-[9px] px-1.5 py-1 rounded border uppercase">
+                    开局
+                </button>
             </div>
 
             <div class="flex items-center gap-2">
@@ -96,6 +148,7 @@ export const TopControlBar = {
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
+                <span class="hidden sm:inline text-[9px] text-cyan-300 max-w-[180px] truncate" :title="roomStatusText">{{ roomStatusText }}</span>
                 <span class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">{{ phaseName || 'BEGINNING' }}</span>
 
                 <button v-if="showNextPhaseButton"

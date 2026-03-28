@@ -23,6 +23,36 @@ import { DeckManagerModal } from './components/DeckManagerModal.js';
 
 const { createApp, computed, onMounted, watch, ref } = Vue;
 
+const ROOM_CACHE_KEY = 'fe0.roomCache';
+
+function saveRoomCache(cache) {
+    try {
+        localStorage.setItem(ROOM_CACHE_KEY, JSON.stringify(cache || {}));
+    } catch {
+        // ignore
+    }
+}
+
+function loadRoomCache() {
+    try {
+        const raw = localStorage.getItem(ROOM_CACHE_KEY);
+        if (!raw) return null;
+        const parsed = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object') return null;
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function clearRoomCache() {
+    try {
+        localStorage.removeItem(ROOM_CACHE_KEY);
+    } catch {
+        // ignore
+    }
+}
+
 // 可选: 'theme1' (默认熔岩对峙), 'theme2' (金属桌垫)
 const BATTLE_THEME = 'theme1';
 
@@ -49,6 +79,7 @@ createApp({
         const dragDrop = createDragDropHandler(state, cardOps, rules)
         const turnMgr = createTurnManager(state);
         const socketHandler = createSocketHandler(state, cardOps);
+        const EVT = globalThis.SOCKET_EVENTS || {};
 
         const isMyCard = (card) => !!cardOps.getArea(card);
         const isCardInHand = (card) => state.hand.value.some(c => c.instanceId === card.instanceId);
@@ -75,6 +106,8 @@ createApp({
         const selectedCombatCostCardId = ref(null);
         const selectedCombatCostCardName = ref('');
         const showDeckManager = ref(false);
+        const cachedRoomPassword = ref('');
+        const canStartRoomGame = computed(() => state.roomRole.value === 'host' && state.roomReady.value);
 
         const getCardCharaName = (card) => {
             const direct = (card?.charaName || '').trim();
@@ -246,6 +279,92 @@ createApp({
             });
         };
 
+        const updateRoomState = (payload = {}) => {
+            const roomId = String(payload.roomId || '');
+            const hostId = payload.hostId || null;
+            const guestId = payload.guestId || null;
+            const playerCount = Number(payload.playerCount || 0);
+            const queueing = !!payload.queueing;
+            const ready = !!payload.ready;
+            const isPrivate = !!payload.isPrivate;
+
+            state.roomId.value = roomId;
+            state.roomPlayerCount.value = playerCount;
+            state.roomQueueing.value = queueing;
+            state.roomReady.value = ready;
+            state.roomIsPrivate.value = isPrivate;
+
+            const myId = state.socket.id;
+            if (roomId && myId) {
+                if (hostId === myId) state.roomRole.value = 'host';
+                else if (guestId === myId) state.roomRole.value = 'guest';
+                else state.roomRole.value = '';
+            } else {
+                state.roomRole.value = '';
+            }
+
+            if (queueing) {
+                state.roomStatusText.value = '匹配中...';
+                return;
+            }
+            if (!roomId) {
+                state.roomStatusText.value = '未加入房间';
+                clearRoomCache();
+                return;
+            }
+
+            const roleText = state.roomRole.value === 'host' ? '房主' : (state.roomRole.value === 'guest' ? '客方' : '成员');
+            const privateText = isPrivate ? '私密' : '公开';
+            state.roomStatusText.value = ready
+                ? `房间 ${roomId}（${privateText}/${roleText}，已就绪）`
+                : `房间 ${roomId}（${privateText}/${roleText}，等待对手）`;
+
+            saveRoomCache({
+                roomId,
+                password: cachedRoomPassword.value || ''
+            });
+        };
+
+        const createRoom = () => {
+            if (!EVT.ROOM_CREATE) return;
+            const password = prompt('可选：输入房间口令（留空=公开房）') || '';
+            cachedRoomPassword.value = String(password || '').trim();
+            state.socket.emit(EVT.ROOM_CREATE, { password: cachedRoomPassword.value });
+        };
+
+        const joinRoom = () => {
+            if (!EVT.ROOM_JOIN) return;
+            const roomId = prompt('输入房间号（6位）');
+            if (!roomId) return;
+            const password = prompt('若为私密房请输入口令（公开房可留空）') || '';
+            cachedRoomPassword.value = String(password || '').trim();
+            state.socket.emit(EVT.ROOM_JOIN, {
+                roomId: roomId.trim(),
+                password: cachedRoomPassword.value
+            });
+        };
+
+        const quickMatch = () => {
+            if (!EVT.ROOM_QUICK_MATCH) return;
+            state.socket.emit(EVT.ROOM_QUICK_MATCH);
+        };
+
+        const leaveRoom = () => {
+            if (!EVT.ROOM_LEAVE) return;
+            clearRoomCache();
+            cachedRoomPassword.value = '';
+            state.socket.emit(EVT.ROOM_LEAVE);
+        };
+
+        const startRoomGame = () => {
+            if (!EVT.ROOM_START_GAME) return;
+            if (!canStartRoomGame.value) {
+                alert('仅房主可在双方就绪后开局。');
+                return;
+            }
+            state.socket.emit(EVT.ROOM_START_GAME);
+        };
+
         const resetByControlBar = () => {
             cardOps.resetGame(false);
         };
@@ -415,6 +534,36 @@ createApp({
             socketHandler.setupSocketListeners();
             turnMgr.setupTurnListener();
 
+            if (EVT.ROOM_STATE) {
+                state.socket.on(EVT.ROOM_STATE, (payload) => {
+                    updateRoomState(payload || {});
+                });
+            }
+            if (EVT.ROOM_ERROR) {
+                state.socket.on(EVT.ROOM_ERROR, (payload) => {
+                    const message = payload?.message || '房间操作失败';
+                    alert(message);
+                });
+            }
+            if (EVT.ROOM_GAME_STARTED) {
+                state.socket.on(EVT.ROOM_GAME_STARTED, async () => {
+                    alert('房主已开局，正在同步重置对局。');
+                    await cardOps.resetGame(false);
+                });
+            }
+
+            state.socket.on('connect', () => {
+                const cache = loadRoomCache();
+                if (!cache?.roomId) return;
+                cachedRoomPassword.value = String(cache.password || '');
+                if (EVT.ROOM_JOIN) {
+                    state.socket.emit(EVT.ROOM_JOIN, {
+                        roomId: String(cache.roomId || '').trim(),
+                        password: cachedRoomPassword.value
+                    });
+                }
+            });
+
             // 🚀 直接用 cardOps 的终极重置初始化游戏！
             await cardOps.resetGame(true); 
         });
@@ -450,6 +599,12 @@ createApp({
             openDeckManager,
             closeDeckManager,
             showDeckManager,
+            createRoom,
+            joinRoom,
+            quickMatch,
+            leaveRoom,
+            canStartRoomGame,
+            startRoomGame,
             setDraggingOver,
             clearDraggingOver,
             openBondsPanel,
