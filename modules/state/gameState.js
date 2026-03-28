@@ -32,6 +32,7 @@ export function createGameFlowState() {
         myTotalPower: 0,
         oppTotalPower: 0,
         attackerCriticalLocked: false,
+        defenderEvasionLocked: false,
         jewelBreakCount: 1
     });
     const combatDecision = ref(createInitialCombatDecision());

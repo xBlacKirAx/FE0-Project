@@ -52,6 +52,14 @@ function registerBattleHandlers({ socket, EVT, log, combatState }) {
         socket.broadcast.emit(EVT.OPPONENT_COMBAT_DECISION, data);
     });
 
+    socket.on(EVT.SYNC_SUPPORT_INTERACTION_REQUEST, (data) => {
+        socket.broadcast.emit(EVT.OPPONENT_SUPPORT_INTERACTION_REQUEST, data);
+    });
+
+    socket.on(EVT.SYNC_SUPPORT_INTERACTION_RESOLVE, (data) => {
+        socket.broadcast.emit(EVT.OPPONENT_SUPPORT_INTERACTION_RESOLVE, data);
+    });
+
     socket.on(EVT.SYNC_CARD_UNTAP, (data) => {
         log(socket.id, `回正 → instanceId:${data?.instanceId}`);
         socket.broadcast.emit(EVT.OPPONENT_CARD_UNTAP, data);

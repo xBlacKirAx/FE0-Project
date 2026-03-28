@@ -121,12 +121,18 @@ function parseSupportEffect(text) {
     const effectTiming = timingMatch ? `〖${timingMatch[1].trim()}〗` : null;
     const effectId = effectName ? (SUPPORT_EFFECT_ID_MAP[effectName] || null) : null;
 
+    const effectParams = {};
+
+    const requiredAttackerForceMatch = supportText.match(/自己的攻击单位是<(.*?)>势力的场合/);
+    if (requiredAttackerForceMatch) {
+        effectParams.requiredAttackerForce = requiredAttackerForceMatch[1].trim();
+    }
+
     return {
         effectName,
         effectId,
         effectTiming,
-        // 预留参数位，后续可按效果类型补充数值参数（如加值、目标范围）
-        effectParams: {}
+        effectParams
     };
 }
 

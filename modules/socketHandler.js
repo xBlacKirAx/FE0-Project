@@ -10,12 +10,27 @@ export function createSocketHandler(state, cardOps) {
         throw new Error('SOCKET_EVENTS is missing. Load /shared/socketEvents.js before app.js.');
     }
 
-    const { beginCombatResolution, applyCombatDecision, getMySyncData, resetGame } = cardOps;
+    const {
+        beginCombatResolution,
+        applyCombatDecision,
+        getMySyncData,
+        resetGame,
+        handleIncomingSupportInteractionRequest,
+        handleIncomingSupportInteractionResolve
+    } = cardOps;
     const areaStore = createOpponentAreaStore(state);
 
     const setupSocketListeners = () => {
         registerStateListeners({ state, socket, EVT, getMySyncData, resetGame, areaStore });
-        registerBattleListeners({ state, socket, EVT, beginCombatResolution, applyCombatDecision });
+        registerBattleListeners({
+            state,
+            socket,
+            EVT,
+            beginCombatResolution,
+            applyCombatDecision,
+            handleIncomingSupportInteractionRequest,
+            handleIncomingSupportInteractionResolve
+        });
     };
 
     return { setupSocketListeners };

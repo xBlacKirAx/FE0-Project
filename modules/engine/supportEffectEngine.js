@@ -41,6 +41,7 @@ const NO_EFFECT_RESULT = Object.freeze({
     applied: false,
     powerDelta: 0,
     lockAttackerCritical: false,
+    lockDefenderEvasion: false,
     jewelBreakCount: null,
     sideEffect: null,
     note: null
@@ -100,20 +101,83 @@ function isTimingMatched(timing, role) {
     return true;
 }
 
+function isForceMatched(requiredForce, actualForce) {
+    const required = String(requiredForce || '').trim();
+    const actual = String(actualForce || '').trim();
+    if (!required) return false;
+    if (!actual) return false;
+    return actual.includes(required);
+}
+
+function getBattleUnitByRole(role, state) {
+    if (role === 'defender') {
+        return state?.defender?.value || null;
+    }
+    return state?.attacker?.value || null;
+}
+
 const SUPPORT_EFFECT_HANDLERS = {
     EMBLEM_ATTACK: () => ({ applied: true, powerDelta: 20 }),
     EMBLEM_DEFENSE: () => ({ applied: true, powerDelta: 20 }),
     EMBLEM_PRAYER: () => ({ applied: true, lockAttackerCritical: true }),
-    EMBLEM_HERO: ({ supportCard, state }) => {
+    EMBLEM_CERTAINTY: ({ state }) => {
+        if (state?.defender?.value?.isMainCharacter) {
+            return { applied: false, note: '必中之纹章对主人公无效' };
+        }
+        return { applied: true, lockDefenderEvasion: true };
+    },
+    EMBLEM_COMMAND: () => ({ applied: true, sideEffect: 'moveAllyExceptAttacker' }),
+    EMBLEM_COURAGE: ({ supportCard, state, role }) => {
+        const battleUnitForce = getBattleUnitByRole(role, state)?.force || null;
+        const requiredForce = supportCard?.force || null;
+        if (!isForceMatched(requiredForce, battleUnitForce)) {
+            return { applied: false, note: '勇气之纹章条件未满足' };
+        }
+        return { applied: true, sideEffect: 'draw1Topdeck1' };
+    },
+    EMBLEM_DANCE: ({ supportCard, state }) => {
         const attackerForce = state?.attacker?.value?.force || null;
-        const supportForce = supportCard?.force || null;
-        if (!attackerForce || !supportForce || attackerForce !== supportForce) {
+        const requiredForce = supportCard?.force || null;
+        if (!isForceMatched(requiredForce, attackerForce)) {
+            return { applied: false, note: '歌舞之纹章条件未满足' };
+        }
+        return { applied: true, sideEffect: 'untapAllyCost2OrLess' };
+    },
+    EMBLEM_HERO: ({ supportCard, state, meta }) => {
+        const attackerForce = state?.attacker?.value?.force || null;
+        const requiredForce = meta?.params?.requiredAttackerForce || supportCard?.force || null;
+        if (!isForceMatched(requiredForce, attackerForce)) {
             return { applied: false, note: '英雄之纹章条件未满足' };
         }
         return { applied: true, jewelBreakCount: 2 };
     },
     EMBLEM_MAGIC: () => ({ applied: true, sideEffect: 'draw1Discard1' }),
-    EMBLEM_SKY: () => ({ applied: true, sideEffect: 'moveAllyExceptAttacker' })
+    EMBLEM_PROPHECY: () => ({ applied: true, sideEffect: 'peekOwnTopDeckOptionalMill' }),
+    EMBLEM_SKY: () => ({ applied: true, sideEffect: 'moveAllyExceptAttacker' }),
+    EMBLEM_MANAKETE: ({ supportCard, state, meta }) => {
+        const attackerForce = state?.attacker?.value?.force || null;
+        const requiredForce = meta?.params?.requiredAttackerForce || supportCard?.force || null;
+        if (!isForceMatched(requiredForce, attackerForce)) {
+            return { applied: false, note: '龙人之纹章条件未满足：攻击单位非对应势力' };
+        }
+        return { applied: true, sideEffect: 'putHandCardToBond' };
+    },
+    EMBLEM_THIEF: () => ({ applied: true, sideEffect: 'opponentTopDeckToGraveOptional' }),
+    EMBLEM_DARK: ({ state }) => {
+        const oppHandCount = Number(state?.oppStats?.value?.hand || 0);
+        if (oppHandCount < 5) {
+            return { applied: false, note: '黑暗之纹章条件未满足：对手手牌不足5张' };
+        }
+        return { applied: true, sideEffect: 'opponentDiscard1IfHand5Plus' };
+    },
+    EMBLEM_STRATEGY: ({ supportCard, state, meta }) => {
+        const attackerForce = state?.attacker?.value?.force || null;
+        const requiredForce = meta?.params?.requiredAttackerForce || supportCard?.force || null;
+        if (!isForceMatched(requiredForce, attackerForce)) {
+            return { applied: false, note: '计略之纹章条件未满足：攻击单位非对应势力' };
+        }
+        return { applied: true, sideEffect: 'moveEnemyExceptDefender' };
+    }
 };
 
 export function resolveSupportEffectResult({ supportCard, role, state }) {

@@ -62,6 +62,8 @@ function main() {
         'modules/effects/socketEffects.js',
         'modules/effects/cardSocketEffects.js',
         'modules/effects/combatSocketEffects.js',
+        'scripts/interaction-smoke.cjs',
+        'scripts/crawl-emblems-full.cjs',
         'server/socket/registerGameplayHandlers.js',
         'server/socket/registerBattleHandlers.js',
         'server/socket/registerSyncHandlers.js',
@@ -97,6 +99,8 @@ function main() {
     assertContains('app.js', "createPanelViewModels", 'view model 装配');
     assertContains('app.js', "createUiActions", 'UI actions 装配');
     assertContains('server.js', 'startServer', '可测试化 server 入口');
+    assertContains('package.json', 'check:interactions', '交互烟测脚本');
+    assertContains('package.json', 'crawl:emblems', '全量纹章爬虫脚本');
 
     console.log('结构回归检查通过');
   }

@@ -117,8 +117,23 @@ createApp({
             if (state.activePanel.value === 'supportMagicDiscardHand') {
                 return '魔术之纹章：选择1张手牌弃置';
             }
+            if (state.activePanel.value === 'supportCourageTopdeckHand') {
+                return '勇气之纹章：选择1张手牌放回牌组顶';
+            }
+            if (state.activePanel.value === 'supportManaketeHandToBond') {
+                return '龙人之纹章：选择1张手牌置入羁绊区';
+            }
+            if (state.activePanel.value === 'supportDarkSelfDiscardHand') {
+                return '黑暗之纹章：选择1张手牌弃置';
+            }
             if (state.activePanel.value === 'supportSkyMoveCandidates') {
                 return '天空之纹章：选择1名我方单位移动';
+            }
+            if (state.activePanel.value === 'supportDanceUntapCandidates') {
+                return '歌舞之纹章：选择1名出击费用2以下的我方单位';
+            }
+            if (state.activePanel.value === 'supportStrategyTargetEnemy') {
+                return '计略之纹章：选择1名敌方单位移动';
             }
             return activePanelTitle.value;
         });
@@ -130,11 +145,38 @@ createApp({
             if (state.activePanel.value === 'supportMagicDiscardHand') {
                 return state.hand.value;
             }
+            if (state.activePanel.value === 'supportCourageTopdeckHand') {
+                return state.hand.value;
+            }
+            if (state.activePanel.value === 'supportManaketeHandToBond') {
+                return state.hand.value;
+            }
+            if (state.activePanel.value === 'supportDarkSelfDiscardHand') {
+                return state.hand.value;
+            }
             if (state.activePanel.value === 'supportSkyMoveCandidates') {
                 const excludedId = state.supportInteraction.value?.excludedId;
                 return [...state.fieldFront.value, ...state.fieldRear.value].filter(card => String(card.instanceId) !== String(excludedId));
             }
+            if (state.activePanel.value === 'supportDanceUntapCandidates') {
+                const excludedId = state.supportInteraction.value?.excludedId;
+                return [...state.fieldFront.value, ...state.fieldRear.value].filter(card => {
+                    if (String(card.instanceId) === String(excludedId)) return false;
+                    return (parseInt(card.cost, 10) || 0) <= 2;
+                });
+            }
+            if (state.activePanel.value === 'supportStrategyTargetEnemy') {
+                const excludedId = state.supportInteraction.value?.excludedId;
+                return [...state.opponentFront.value, ...state.opponentRear.value].filter(card => String(card.instanceId) !== String(excludedId));
+            }
             return activePanelCards.value;
+        });
+
+        const resolvedIsOpponentPanel = computed(() => {
+            if (state.activePanel.value === 'supportStrategyTargetEnemy') {
+                return true;
+            }
+            return isOpponentPanel.value;
         });
 
         const closeActivePanel = () => {
@@ -216,7 +258,15 @@ createApp({
                 closeActivePanel();
                 return;
             }
-            if (state.activePanel.value === 'supportMagicDiscardHand' || state.activePanel.value === 'supportSkyMoveCandidates') {
+            if (
+                state.activePanel.value === 'supportMagicDiscardHand' ||
+                state.activePanel.value === 'supportCourageTopdeckHand' ||
+                state.activePanel.value === 'supportManaketeHandToBond' ||
+                state.activePanel.value === 'supportDarkSelfDiscardHand' ||
+                state.activePanel.value === 'supportSkyMoveCandidates' ||
+                state.activePanel.value === 'supportDanceUntapCandidates' ||
+                state.activePanel.value === 'supportStrategyTargetEnemy'
+            ) {
                 const ok = cardOps.resolveSupportInteraction(state, card.instanceId);
                 if (ok) {
                     closeActivePanel();
@@ -251,12 +301,40 @@ createApp({
                 state.activePanel.value = 'supportMagicDiscardHand';
                 return;
             }
+            if (type === 'courage-topdeck') {
+                state.activePanel.value = 'supportCourageTopdeckHand';
+                return;
+            }
+            if (type === 'manakete-hand-to-bond') {
+                state.activePanel.value = 'supportManaketeHandToBond';
+                return;
+            }
+            if (type === 'dark-self-discard') {
+                state.activePanel.value = 'supportDarkSelfDiscardHand';
+                return;
+            }
             if (type === 'sky-move') {
                 state.activePanel.value = 'supportSkyMoveCandidates';
                 return;
             }
+            if (type === 'dance-untap-ally') {
+                state.activePanel.value = 'supportDanceUntapCandidates';
+                return;
+            }
+            if (type === 'strategy-select-enemy') {
+                state.activePanel.value = 'supportStrategyTargetEnemy';
+                return;
+            }
 
-            if (state.activePanel.value === 'supportMagicDiscardHand' || state.activePanel.value === 'supportSkyMoveCandidates') {
+            if (
+                state.activePanel.value === 'supportMagicDiscardHand' ||
+                state.activePanel.value === 'supportCourageTopdeckHand' ||
+                state.activePanel.value === 'supportManaketeHandToBond' ||
+                state.activePanel.value === 'supportDarkSelfDiscardHand' ||
+                state.activePanel.value === 'supportSkyMoveCandidates' ||
+                state.activePanel.value === 'supportDanceUntapCandidates' ||
+                state.activePanel.value === 'supportStrategyTargetEnemy'
+            ) {
                 closeActivePanel();
             }
         });
@@ -286,7 +364,7 @@ createApp({
             activePanelCards,
             resolvedPanelTitle,
             resolvedPanelCards,
-            isOpponentPanel,
+            isOpponentPanel: resolvedIsOpponentPanel,
             remainingCost,
             totalBonds,
             currentPhaseName,

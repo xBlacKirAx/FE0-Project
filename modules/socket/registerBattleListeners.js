@@ -16,6 +16,10 @@ function applyCombatSupportEffectResult(state, result, role) {
         state.combatStats.value.attackerCriticalLocked = true;
         state.combatStats.value.supportNotice = '祈祷之纹章生效：攻击方本次战斗不能发动必杀。';
     }
+    if (result.lockDefenderEvasion) {
+        state.combatStats.value.defenderEvasionLocked = true;
+        state.combatStats.value.supportNotice = '必中之纹章生效：该防御单位本次战斗不能进行神速回避。';
+    }
     if (result.jewelBreakCount) {
         state.combatStats.value.jewelBreakCount = Math.max(
             state.combatStats.value.jewelBreakCount || 1,
@@ -37,6 +41,21 @@ function applyLocalSupportSideEffect(state, socket, result) {
             source: 'support-effect'
         };
         state.combatStats.value.supportNotice = '魔术之纹章：请从手牌选择1张卡弃置。';
+        return;
+    }
+
+    if (result.sideEffect === 'draw1Topdeck1') {
+        if (state.deck.value.length > 0) {
+            const drawnCard = state.deck.value.pop();
+            state.hand.value.push(drawnCard);
+            emitPlayerDraw(socket, { card: drawnCard });
+        }
+        state.supportInteraction.value = {
+            type: 'courage-topdeck',
+            source: 'support-effect'
+        };
+        state.combatStats.value.supportNotice = '勇气之纹章：请从手牌选择1张卡放回牌组顶。';
+        return;
     }
 
     if (result.sideEffect === 'moveAllyExceptAttacker') {
@@ -45,11 +64,21 @@ function applyLocalSupportSideEffect(state, socket, result) {
             source: 'support-effect',
             excludedId: state.attacker.value?.instanceId || null
         };
-        state.combatStats.value.supportNotice = '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
+        state.combatStats.value.supportNotice = result.effectId === 'EMBLEM_COMMAND'
+            ? '指挥之纹章：请选择1名攻击单位以外的我方单位进行移动。'
+            : '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
     }
 }
 
-export function registerBattleListeners({ state, socket, EVT, beginCombatResolution, applyCombatDecision }) {
+export function registerBattleListeners({
+    state,
+    socket,
+    EVT,
+    beginCombatResolution,
+    applyCombatDecision,
+    handleIncomingSupportInteractionRequest,
+    handleIncomingSupportInteractionResolve
+}) {
     socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard, supportFailed }) => {
         if (state.hasBattledThisTurn) {
             state.hasBattledThisTurn.value = true;
@@ -76,6 +105,7 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
             myTotalPower: (attacker.attack || 0) + (supportFailed ? 0 : (supportCard?.support || 0)),
             oppTotalPower: defender.attack || 0,
             attackerCriticalLocked: false,
+            defenderEvasionLocked: false,
             jewelBreakCount: 1,
             attackerSupportApplied: supportFailed ? 0 : (supportCard?.support || 0),
             defenderSupportApplied: 0,
@@ -89,6 +119,16 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
             evaded: false,
             finalAttackerWins: null
         };
+
+        if (!supportFailed && supportCard) {
+            const attackerSupportEffect = resolveSupportEffectResult({
+                supportCard,
+                role: 'attacker',
+                state
+            });
+            applyCombatSupportEffectResult(state, attackerSupportEffect, 'attacker');
+        }
+
         state.isCombatActive.value = true;
 
         setTimeout(() => {
@@ -173,5 +213,17 @@ export function registerBattleListeners({ state, socket, EVT, beginCombatResolut
 
     socket.on(EVT.OPPONENT_COMBAT_DECISION, (payload) => {
         if (applyCombatDecision) applyCombatDecision(state, payload);
+    });
+
+    socket.on(EVT.OPPONENT_SUPPORT_INTERACTION_REQUEST, (payload) => {
+        if (handleIncomingSupportInteractionRequest) {
+            handleIncomingSupportInteractionRequest(state, payload);
+        }
+    });
+
+    socket.on(EVT.OPPONENT_SUPPORT_INTERACTION_RESOLVE, (payload) => {
+        if (handleIncomingSupportInteractionResolve) {
+            handleIncomingSupportInteractionResolve(state, payload);
+        }
     });
 }

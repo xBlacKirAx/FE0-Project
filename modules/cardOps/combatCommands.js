@@ -4,9 +4,15 @@ import { isAttackerFromMyField, getCombatWinner } from '../engine/combatEngine.j
 import { createInitialCombatDecision, getInitialCombatDecisionContext } from '../engine/combatDecisionEngine.js';
 import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
 import { emitSyncAttack, emitSyncCardMove, emitPlayerDraw, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
-import { emitSyncCombatDecision } from '../effects/combatSocketEffects.js';
+import {
+    emitSyncCombatDecision,
+    emitSyncSupportInteractionRequest,
+    emitSyncSupportInteractionResolve
+} from '../effects/combatSocketEffects.js';
 
 export function createCombatCommands({ state, socket }) {
+    const makeSupportRequestId = (tag = 'support') => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
     const getCardCharaName = (card) => {
         const direct = (card?.charaName || '').trim();
         if (direct) return direct;
@@ -71,6 +77,10 @@ export function createCombatCommands({ state, socket }) {
             currentState.combatStats.value.attackerCriticalLocked = true;
             currentState.combatStats.value.supportNotice = '祈祷之纹章生效：攻击方本次战斗不能发动必杀。';
         }
+        if (result.lockDefenderEvasion) {
+            currentState.combatStats.value.defenderEvasionLocked = true;
+            currentState.combatStats.value.supportNotice = '必中之纹章生效：该防御单位本次战斗不能进行神速回避。';
+        }
         if (result.jewelBreakCount) {
             currentState.combatStats.value.jewelBreakCount = Math.max(
                 currentState.combatStats.value.jewelBreakCount || 1,
@@ -92,15 +102,113 @@ export function createCombatCommands({ state, socket }) {
                 source: 'support-effect'
             };
             currentState.combatStats.value.supportNotice = '魔术之纹章：请从手牌选择1张卡弃置。';
+            return;
+        }
+
+        if (result.sideEffect === 'draw1Topdeck1') {
+            if (currentState.deck.value.length > 0) {
+                const drawnCard = currentState.deck.value.pop();
+                currentState.hand.value.push(drawnCard);
+                emitPlayerDraw(socket, { card: drawnCard });
+            }
+            currentState.supportInteraction.value = {
+                type: 'courage-topdeck',
+                source: 'support-effect'
+            };
+            currentState.combatStats.value.supportNotice = '勇气之纹章：请从手牌选择1张卡放回牌组顶。';
+            return;
+        }
+
+        if (result.sideEffect === 'putHandCardToBond') {
+            currentState.supportInteraction.value = {
+                type: 'manakete-hand-to-bond',
+                source: 'support-effect'
+            };
+            currentState.combatStats.value.supportNotice = '龙人之纹章：请选择1张手牌置入羁绊区。';
+            return;
         }
 
         if (result.sideEffect === 'moveAllyExceptAttacker') {
+            const effectId = result.effectId || null;
             currentState.supportInteraction.value = {
                 type: 'sky-move',
                 source: 'support-effect',
                 excludedId: currentState.attacker.value?.instanceId || null
             };
-            currentState.combatStats.value.supportNotice = '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
+            currentState.combatStats.value.supportNotice = effectId === 'EMBLEM_COMMAND'
+                ? '指挥之纹章：请选择1名攻击单位以外的我方单位进行移动。'
+                : '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
+            return;
+        }
+
+        if (result.sideEffect === 'untapAllyCost2OrLess') {
+            currentState.supportInteraction.value = {
+                type: 'dance-untap-ally',
+                source: 'support-effect',
+                excludedId: currentState.attacker.value?.instanceId || null
+            };
+            currentState.combatStats.value.supportNotice = '歌舞之纹章：请选择1名出击费用2以下的我方单位转为未行动状态。';
+            return;
+        }
+
+        if (result.sideEffect === 'peekOwnTopDeckOptionalMill') {
+            const topCard = currentState.deck.value[currentState.deck.value.length - 1] || null;
+            if (!topCard) return;
+            const topLabel = topCard.cardName || topCard.name || '未知卡牌';
+            const shouldMill = confirm(`预言之纹章：牌组顶为 ${topLabel}，是否将其置入退避区？`);
+            if (!shouldMill) {
+                currentState.combatStats.value.supportNotice = '预言之纹章：已查看牌组顶。';
+                return;
+            }
+            const milledCard = currentState.deck.value.pop();
+            currentState.graveyard.value.push(milledCard);
+            emitSyncCardMove(socket, { card: milledCard, from: 'deck', to: 'graveyard' });
+            currentState.combatStats.value.supportNotice = '预言之纹章：已将牌组顶置入退避区。';
+            return;
+        }
+
+        if (result.sideEffect === 'opponentTopDeckToGraveOptional') {
+            const shouldApply = confirm('盗贼之纹章：是否将对手牌组顶置入其退避区？');
+            if (!shouldApply) return;
+
+            const requestId = makeSupportRequestId('thief');
+            emitSyncSupportInteractionRequest(socket, {
+                requestId,
+                type: 'thief-mill-top-deck'
+            });
+            currentState.supportInteraction.value = {
+                type: 'thief-await-opponent',
+                source: 'support-effect',
+                requestId
+            };
+            currentState.combatStats.value.supportNotice = '盗贼之纹章：等待对手公开并处理牌组顶。';
+            return;
+        }
+
+        if (result.sideEffect === 'opponentDiscard1IfHand5Plus') {
+            const requestId = makeSupportRequestId('dark');
+            emitSyncSupportInteractionRequest(socket, {
+                requestId,
+                type: 'dark-discard'
+            });
+            currentState.supportInteraction.value = {
+                type: 'dark-await-opponent',
+                source: 'support-effect',
+                requestId
+            };
+            currentState.combatStats.value.supportNotice = '黑暗之纹章：等待对手选择并弃置1张手牌。';
+            return;
+        }
+
+        if (result.sideEffect === 'moveEnemyExceptDefender') {
+            const requestId = makeSupportRequestId('strategy');
+            currentState.supportInteraction.value = {
+                type: 'strategy-select-enemy',
+                source: 'support-effect',
+                requestId,
+                excludedId: currentState.defender.value?.instanceId || null
+            };
+            currentState.combatStats.value.supportNotice = '计略之纹章：请选择1名防御单位以外的敌方单位进行移动。';
         }
     };
 
@@ -114,6 +222,48 @@ export function createCombatCommands({ state, socket }) {
             const discardCard = currentState.hand.value.splice(idx, 1)[0];
             currentState.graveyard.value.push(discardCard);
             emitSyncCardMove(socket, { card: discardCard, from: 'hand', to: 'graveyard' });
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = null;
+            return true;
+        }
+
+        if (interaction.type === 'manakete-hand-to-bond') {
+            const idx = currentState.hand.value.findIndex(c => c.instanceId === targetCardId);
+            if (idx === -1) return false;
+
+            const bondCard = currentState.hand.value.splice(idx, 1)[0];
+            currentState.bonds.value.push(bondCard);
+            emitSyncCardMove(socket, { card: bondCard, from: 'hand', to: 'bonds' });
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = null;
+            return true;
+        }
+
+        if (interaction.type === 'courage-topdeck') {
+            const idx = currentState.hand.value.findIndex(c => c.instanceId === targetCardId);
+            if (idx === -1) return false;
+
+            const topdeckCard = currentState.hand.value.splice(idx, 1)[0];
+            currentState.deck.value.push(topdeckCard);
+            emitSyncCardMove(socket, { card: topdeckCard, from: 'hand', to: 'deck' });
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = null;
+            return true;
+        }
+
+        if (interaction.type === 'dark-self-discard') {
+            const idx = currentState.hand.value.findIndex(c => c.instanceId === targetCardId);
+            if (idx === -1) return false;
+
+            const discardCard = currentState.hand.value.splice(idx, 1)[0];
+            currentState.graveyard.value.push(discardCard);
+            emitSyncCardMove(socket, { card: discardCard, from: 'hand', to: 'graveyard' });
+            emitSyncSupportInteractionResolve(socket, {
+                requestId: interaction.requestId,
+                type: 'dark-discard',
+                success: true,
+                cardId: discardCard.instanceId
+            });
             currentState.supportInteraction.value = null;
             currentState.combatStats.value.supportNotice = null;
             return true;
@@ -144,7 +294,171 @@ export function createCombatCommands({ state, socket }) {
             return false;
         }
 
+        if (interaction.type === 'dance-untap-ally') {
+            const excludedId = interaction.excludedId;
+            if (excludedId && String(targetCardId) === String(excludedId)) return false;
+            const targetCard = [...currentState.fieldFront.value, ...currentState.fieldRear.value].find(c => c.instanceId === targetCardId);
+            if (!targetCard) return false;
+            if ((parseInt(targetCard.cost, 10) || 0) > 2) return false;
+
+            targetCard.isTapped = false;
+            emitSyncCardUntap(socket, { instanceId: targetCard.instanceId });
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = null;
+            return true;
+        }
+
+        if (interaction.type === 'strategy-select-enemy') {
+            const fromFront = currentState.opponentFront.value.some(c => c.instanceId === targetCardId);
+            const fromRear = currentState.opponentRear.value.some(c => c.instanceId === targetCardId);
+            const excludedId = interaction.excludedId;
+            if (excludedId && String(targetCardId) === String(excludedId)) return false;
+            if (!fromFront && !fromRear) return false;
+
+            const toArea = fromFront ? 'rear' : 'front';
+            emitSyncSupportInteractionRequest(socket, {
+                requestId: interaction.requestId,
+                type: 'strategy-move-enemy',
+                targetCardId,
+                toArea
+            });
+            currentState.supportInteraction.value = {
+                type: 'strategy-await-opponent',
+                source: 'support-effect',
+                requestId: interaction.requestId
+            };
+            currentState.combatStats.value.supportNotice = '计略之纹章：等待对手执行单位移动。';
+            return true;
+        }
+
         return false;
+    };
+
+    const handleIncomingSupportInteractionRequest = (currentState, payload = {}) => {
+        const requestId = payload.requestId || null;
+        const type = payload.type;
+
+        if (type === 'thief-mill-top-deck') {
+            let movedCard = null;
+            if (currentState.deck.value.length > 0) {
+                movedCard = currentState.deck.value.pop();
+                currentState.graveyard.value.push(movedCard);
+                emitSyncCardMove(socket, { card: movedCard, from: 'deck', to: 'graveyard' });
+            }
+            emitSyncSupportInteractionResolve(socket, {
+                requestId,
+                type,
+                success: !!movedCard,
+                cardId: movedCard?.instanceId || null
+            });
+            return;
+        }
+
+        if (type === 'dark-discard') {
+            if (!currentState.hand.value.length) {
+                emitSyncSupportInteractionResolve(socket, {
+                    requestId,
+                    type,
+                    success: false,
+                    reason: 'no-hand-card'
+                });
+                return;
+            }
+
+            currentState.supportInteraction.value = {
+                type: 'dark-self-discard',
+                source: 'opponent-request',
+                requestId
+            };
+            currentState.combatStats.value.supportNotice = '黑暗之纹章：请选择1张手牌弃置。';
+            return;
+        }
+
+        if (type === 'strategy-move-enemy') {
+            const targetCardId = payload.targetCardId;
+            const requestedToArea = payload.toArea === 'rear' ? 'rear' : 'front';
+            const defenderId = currentState.defender.value?.instanceId || null;
+
+            if (defenderId && String(targetCardId) === String(defenderId)) {
+                emitSyncSupportInteractionResolve(socket, {
+                    requestId,
+                    type,
+                    success: false,
+                    reason: 'target-is-defender'
+                });
+                return;
+            }
+
+            const frontIdx = currentState.fieldFront.value.findIndex(c => c.instanceId === targetCardId);
+            const rearIdx = currentState.fieldRear.value.findIndex(c => c.instanceId === targetCardId);
+
+            if (frontIdx === -1 && rearIdx === -1) {
+                emitSyncSupportInteractionResolve(socket, {
+                    requestId,
+                    type,
+                    success: false,
+                    reason: 'target-not-found'
+                });
+                return;
+            }
+
+            if (frontIdx > -1 && requestedToArea === 'rear') {
+                const moved = currentState.fieldFront.value.splice(frontIdx, 1)[0];
+                currentState.fieldRear.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'front', to: 'rear' });
+                emitSyncSupportInteractionResolve(socket, {
+                    requestId,
+                    type,
+                    success: true,
+                    cardId: moved.instanceId,
+                    toArea: 'rear'
+                });
+                return;
+            }
+
+            if (rearIdx > -1 && requestedToArea === 'front') {
+                const moved = currentState.fieldRear.value.splice(rearIdx, 1)[0];
+                currentState.fieldFront.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'rear', to: 'front' });
+                emitSyncSupportInteractionResolve(socket, {
+                    requestId,
+                    type,
+                    success: true,
+                    cardId: moved.instanceId,
+                    toArea: 'front'
+                });
+                return;
+            }
+
+            emitSyncSupportInteractionResolve(socket, {
+                requestId,
+                type,
+                success: false,
+                reason: 'invalid-target-area'
+            });
+        }
+    };
+
+    const handleIncomingSupportInteractionResolve = (currentState, payload = {}) => {
+        const requestId = payload.requestId || null;
+        const interaction = currentState.supportInteraction.value;
+        if (!interaction || !interaction.requestId || interaction.requestId !== requestId) return;
+
+        if (payload.success) {
+            if (payload.type === 'thief-mill-top-deck') {
+                currentState.combatStats.value.supportNotice = '盗贼之纹章：对手已处理牌组顶。';
+            } else if (payload.type === 'dark-discard') {
+                currentState.combatStats.value.supportNotice = '黑暗之纹章：对手已弃置1张手牌。';
+            } else if (payload.type === 'strategy-move-enemy') {
+                currentState.combatStats.value.supportNotice = '计略之纹章：敌方单位移动完成。';
+            } else {
+                currentState.combatStats.value.supportNotice = null;
+            }
+        } else {
+            currentState.combatStats.value.supportNotice = '支援交互未生效。';
+        }
+
+        currentState.supportInteraction.value = null;
     };
 
     const resetCombatState = (currentState) => {
@@ -230,6 +544,16 @@ export function createCombatCommands({ state, socket }) {
             }
 
             currentState.combatStats.value.myTotalPower = currentDecision.criticalPower;
+            if (currentState.combatStats.value.defenderEvasionLocked) {
+                currentState.combatDecision.value = {
+                    ...currentDecision,
+                    criticalUsed: true,
+                    finalAttackerWins: true
+                };
+                resolveCombat(currentState, true);
+                return;
+            }
+
             currentState.combatDecision.value = {
                 ...currentDecision,
                 stage: 'awaiting-defender-evasion-after-critical',
@@ -260,6 +584,7 @@ export function createCombatCommands({ state, socket }) {
 
     const beginCombatResolution = (currentState) => {
         const criticalLocked = !!currentState.combatStats.value.attackerCriticalLocked;
+        const defenderEvasionLocked = !!currentState.combatStats.value.defenderEvasionLocked;
         const decisionContext = getInitialCombatDecisionContext(
             currentState.combatStats.value.myCardPower,
             currentState.combatStats.value.mySupportPower,
@@ -274,6 +599,17 @@ export function createCombatCommands({ state, socket }) {
                 finalAttackerWins: false
             };
             resolveCombat(currentState, false);
+            return;
+        }
+
+        if (defenderEvasionLocked && decisionContext.stage === 'awaiting-defender-evasion') {
+            currentState.combatDecision.value = {
+                ...decisionContext,
+                stage: 'resolved',
+                promptOwner: null,
+                finalAttackerWins: true
+            };
+            resolveCombat(currentState, true);
             return;
         }
 
@@ -321,6 +657,7 @@ export function createCombatCommands({ state, socket }) {
             myTotalPower: attackerCard.attack || 0,
             oppTotalPower: defenderCard.attack || 0,
             attackerCriticalLocked: false,
+            defenderEvasionLocked: false,
             jewelBreakCount: 1,
             attackerSupportApplied: 0,
             defenderSupportApplied: 0,
@@ -372,6 +709,8 @@ export function createCombatCommands({ state, socket }) {
         resolveCombat,
         beginCombatResolution,
         resolveSupportInteraction,
+        handleIncomingSupportInteractionRequest,
+        handleIncomingSupportInteractionResolve,
         respondCombatDecision,
         applyCombatDecision
     };

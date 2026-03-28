@@ -2427,7 +2427,9 @@
       "effectName": "龙人之纹章",
       "effectId": "EMBLEM_MANAKETE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "光之剑"
+      }
     },
     "image": "/images/cards/B01-047.png"
   },
@@ -2976,7 +2978,9 @@
       "effectName": "计略之纹章",
       "effectId": "EMBLEM_STRATEGY",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B01-058.png"
   },
@@ -4073,7 +4077,9 @@
       "effectName": "龙人之纹章",
       "effectId": "EMBLEM_MANAKETE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B01-079.png"
   },

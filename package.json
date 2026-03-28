@@ -5,11 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "npm run check",
-    "check": "npm run check:structure && npm run check:engine && npm run check:rules",
+    "check": "npm run check:structure && npm run check:engine && npm run check:interactions && npm run check:rules",
     "start": "node server.js",
     "start:3001": "node server.js --port=3001",
+    "crawl:emblems": "node scripts/crawl-emblems-full.cjs",
     "check:structure": "node scripts/structure-smoke.cjs",
     "check:engine": "node scripts/engine-smoke.cjs",
+    "check:interactions": "node scripts/interaction-smoke.cjs",
     "check:rules": "node scripts/rules-smoke.cjs"
   },
   "keywords": [],

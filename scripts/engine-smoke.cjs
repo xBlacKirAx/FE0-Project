@@ -93,9 +93,15 @@ function main() {
     assert(prayerResult.lockAttackerCritical === true, '支援效果引擎: 祈祷之纹章应禁止攻击方必杀');
 
     const heroResult = supportEffect.resolveSupportEffectResult({
-        supportCard: { force: '光之剑', supportAbility: { keywords: { title: ['『英雄之纹章』'], timing: ['〖攻击型〗'] } } },
+        supportCard: {
+            force: '圣痕',
+            supportAbility: {
+                keywords: { title: ['『英雄之纹章』'], timing: ['〖攻击型〗'] },
+                effectParams: { requiredAttackerForce: '圣痕' }
+            }
+        },
         role: 'attacker',
-        state: { attacker: { value: { force: '光之剑' } } }
+        state: { attacker: { value: { force: '圣痕' } } }
     });
     assert(heroResult.jewelBreakCount === 2, '支援效果引擎: 英雄之纹章应将击破宝玉数提升为 2');
 
@@ -105,6 +111,79 @@ function main() {
         state: {}
     });
     assert(magicResult.sideEffect === 'draw1Discard1', '支援效果引擎: 魔术之纹章应返回抽1弃1侧效');
+
+    const thiefResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『盗贼之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(thiefResult.sideEffect === 'opponentTopDeckToGraveOptional', '支援效果引擎: 盗贼之纹章应返回处理对手牌组顶侧效');
+
+    const darkResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『黑暗之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: { oppStats: { value: { hand: 5 } } }
+    });
+    assert(darkResult.sideEffect === 'opponentDiscard1IfHand5Plus', '支援效果引擎: 黑暗之纹章满足条件时应返回弃手侧效');
+
+    const strategyResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『计略之纹章』'], timing: ['〖攻击型〗'] },
+                effectParams: { requiredAttackerForce: '圣痕' }
+            }
+        },
+        role: 'attacker',
+        state: { attacker: { value: { force: '圣痕' } } }
+    });
+    assert(strategyResult.sideEffect === 'moveEnemyExceptDefender', '支援效果引擎: 计略之纹章满足条件时应返回敌方移动侧效');
+
+    const manaketeResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『龙人之纹章』'], timing: ['〖攻击型〗'] },
+                effectParams: { requiredAttackerForce: '光之剑' }
+            }
+        },
+        role: 'attacker',
+        state: { attacker: { value: { force: '光之剑' } } }
+    });
+    assert(manaketeResult.sideEffect === 'putHandCardToBond', '支援效果引擎: 龙人之纹章满足条件时应返回手牌置羁绊侧效');
+
+    const certaintyResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『必中之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: { defender: { value: { isMainCharacter: false } } }
+    });
+    assert(certaintyResult.lockDefenderEvasion === true, '支援效果引擎: 必中之纹章应锁定神速回避');
+
+    const commandResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『指挥之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(commandResult.sideEffect === 'moveAllyExceptAttacker', '支援效果引擎: 指挥之纹章应返回我方移动侧效');
+
+    const courageResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { force: '神器', supportAbility: { keywords: { title: ['『勇气之纹章』'], timing: ['〖攻防型〗'] } } },
+        role: 'attacker',
+        state: { attacker: { value: { force: '神器' } } }
+    });
+    assert(courageResult.sideEffect === 'draw1Topdeck1', '支援效果引擎: 勇气之纹章满足条件时应返回抽1顶1侧效');
+
+    const danceResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { force: '白夜', supportAbility: { keywords: { title: ['『歌舞之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: { attacker: { value: { force: '白夜' } } }
+    });
+    assert(danceResult.sideEffect === 'untapAllyCost2OrLess', '支援效果引擎: 歌舞之纹章满足条件时应返回回正侧效');
+
+    const prophecyResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『预言之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(prophecyResult.sideEffect === 'peekOwnTopDeckOptionalMill', '支援效果引擎: 预言之纹章应返回看顶并可入墓侧效');
 
     assert(Array.isArray(phase.PHASE_ORDER), '阶段引擎: PHASE_ORDER 异常');
     assert(phase.PHASE_ORDER.join(',') === 'BEGINNING,BOND,DEPLOY,ATTACK,END', '阶段顺序异常');
