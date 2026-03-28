@@ -185,6 +185,101 @@ function main() {
     });
     assert(prophecyResult.sideEffect === 'peekOwnTopDeckOptionalMill', '支援效果引擎: 预言之纹章应返回看顶并可入墓侧效');
 
+    const strongResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『强者之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(strongResult.powerDelta === 30, '支援效果引擎: 强者之纹章应提供 +30 战力');
+
+    const fateResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『命运之纹章』'], timing: ['〖攻击型〗'] },
+                effectParams: { requiredAttackerForce: '圣痕' }
+            }
+        },
+        role: 'attacker',
+        state: { attacker: { value: { force: '圣痕' } } }
+    });
+    assert(fateResult.sideEffect === 'draw1Topdeck1', '支援效果引擎: 命运之纹章满足条件时应返回抽1顶1侧效');
+
+    const linkResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『连携之纹章』'], timing: ['〖攻击型〗'] },
+                effectParams: { requiredAttackerForce: '圣痕' }
+            }
+        },
+        role: 'attacker',
+        state: { attacker: { value: { force: '圣痕' } } }
+    });
+    assert(linkResult.powerDelta === 10, '支援效果引擎: 连携之纹章满足条件时应提供 +10 战力');
+
+    const encourageResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『激励之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(encourageResult.sideEffect === 'drawOnBreakMainCharacter', '支援效果引擎: 激励之纹章应返回击破主人公后抽牌侧效');
+
+    const coopResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『共斗之纹章』'], timing: ['〖攻防型〗'] },
+                effectParams: { requireHasForce: true }
+            }
+        },
+        role: 'defender',
+        state: { defender: { value: { force: '圣痕' } } }
+    });
+    assert(coopResult.powerDelta === 10, '支援效果引擎: 共斗之纹章满足条件时应提供 +10 战力');
+
+    const sealResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『封咒之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: {}
+    });
+    assert(sealResult.sideEffect === 'sealOpponentSupportEffect', '支援效果引擎: 封咒之纹章应返回封印对手支援侧效');
+
+    const lightResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『光明之纹章』'], timing: ['〖攻击型〗'] },
+                effectParams: { requireHasForce: true }
+            }
+        },
+        role: 'attacker',
+        state: { attacker: { value: { force: '白夜' } } }
+    });
+    assert(lightResult.sideEffect === 'peekOwnJewel', '支援效果引擎: 光明之纹章满足条件时应返回查看宝玉侧效');
+
+    const hopeResult = supportEffect.resolveSupportEffectResult({
+        supportCard: {
+            supportAbility: {
+                keywords: { title: ['『希望之纹章』'], timing: ['〖防御型〗'] },
+                effectParams: { requiredAttackerForce: '圣痕' }
+            }
+        },
+        role: 'defender',
+        state: { defender: { value: { force: '圣痕' } } }
+    });
+    assert(hopeResult.sideEffect === 'peekOwnJewel', '支援效果引擎: 希望之纹章满足条件时应返回查看宝玉侧效');
+
+    const procurementResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『筹措之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: { hand: { value: [1, 2, 3, 4] } }
+    });
+    assert(procurementResult.sideEffect === 'drawIfHand4OrLess', '支援效果引擎: 筹措之纹章满足条件时应返回抽牌侧效');
+
+    const dragonBloodResult = supportEffect.resolveSupportEffectResult({
+        supportCard: { supportAbility: { keywords: { title: ['『龙血之纹章』'], timing: ['〖攻击型〗'] } } },
+        role: 'attacker',
+        state: { bonds: { value: [1, 2] }, oppBonds: { value: [1, 2, 3] } }
+    });
+    assert(dragonBloodResult.sideEffect === 'putHandCardToBondIfBehindOnBonds', '支援效果引擎: 龙血之纹章满足条件时应返回手牌转羁绊侧效');
+
     assert(Array.isArray(phase.PHASE_ORDER), '阶段引擎: PHASE_ORDER 异常');
     assert(phase.PHASE_ORDER.join(',') === 'BEGINNING,BOND,DEPLOY,ATTACK,END', '阶段顺序异常');
     assert(phase.PHASE_NAME_MAP.ATTACK === '攻击阶段', '阶段名称映射异常');

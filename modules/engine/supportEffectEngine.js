@@ -109,6 +109,15 @@ function isForceMatched(requiredForce, actualForce) {
     return actual.includes(required);
 }
 
+function isAnyForceMatched(requiredForces, actualForce) {
+    if (!Array.isArray(requiredForces) || requiredForces.length === 0) return false;
+    return requiredForces.some(force => isForceMatched(force, actualForce));
+}
+
+function hasForce(force) {
+    return String(force || '').trim().length > 0;
+}
+
 function getBattleUnitByRole(role, state) {
     if (role === 'defender') {
         return state?.defender?.value || null;
@@ -118,6 +127,14 @@ function getBattleUnitByRole(role, state) {
 
 const SUPPORT_EFFECT_HANDLERS = {
     EMBLEM_ATTACK: () => ({ applied: true, powerDelta: 20 }),
+    EMBLEM_COOP: ({ state, role, meta }) => {
+        const battleForce = getBattleUnitByRole(role, state)?.force || null;
+        const requireHasForce = !!meta?.params?.requireHasForce;
+        if (requireHasForce && !hasForce(battleForce)) {
+            return { applied: false, note: '共斗之纹章条件未满足：战斗单位不具备势力' };
+        }
+        return { applied: true, powerDelta: 10 };
+    },
     EMBLEM_DEFENSE: () => ({ applied: true, powerDelta: 20 }),
     EMBLEM_PRAYER: () => ({ applied: true, lockAttackerCritical: true }),
     EMBLEM_CERTAINTY: ({ state }) => {
@@ -143,6 +160,25 @@ const SUPPORT_EFFECT_HANDLERS = {
         }
         return { applied: true, sideEffect: 'untapAllyCost2OrLess' };
     },
+    EMBLEM_ENCOURAGE: () => ({ applied: true, sideEffect: 'drawOnBreakMainCharacter' }),
+    EMBLEM_FATE: ({ supportCard, state, meta }) => {
+        const attackerForce = state?.attacker?.value?.force || null;
+        const requiredForces = meta?.params?.requiredAttackerForces || null;
+        const requiredForce = meta?.params?.requiredAttackerForce || supportCard?.force || null;
+        const matched = requiredForces ? isAnyForceMatched(requiredForces, attackerForce) : isForceMatched(requiredForce, attackerForce);
+        if (!matched) {
+            return { applied: false, note: '命运之纹章条件未满足' };
+        }
+        return { applied: true, sideEffect: 'draw1Topdeck1' };
+    },
+    EMBLEM_HOLY_BLOOD: ({ state }) => {
+        const myBonds = Number(state?.bonds?.value?.length || 0);
+        const oppBonds = Number(state?.oppBonds?.value?.length || 0);
+        if (myBonds > oppBonds) {
+            return { applied: false, note: '圣血之纹章条件未满足：羁绊数领先' };
+        }
+        return { applied: true, sideEffect: 'putHandCardToBondIfBehindOnBonds' };
+    },
     EMBLEM_HERO: ({ supportCard, state, meta }) => {
         const attackerForce = state?.attacker?.value?.force || null;
         const requiredForce = meta?.params?.requiredAttackerForce || supportCard?.force || null;
@@ -152,7 +188,43 @@ const SUPPORT_EFFECT_HANDLERS = {
         return { applied: true, jewelBreakCount: 2 };
     },
     EMBLEM_MAGIC: () => ({ applied: true, sideEffect: 'draw1Discard1' }),
+    EMBLEM_LIGHT: ({ state, meta }) => {
+        const attackerForce = state?.attacker?.value?.force || null;
+        const requiredForces = meta?.params?.requiredAttackerForces || null;
+        const requiredForce = meta?.params?.requiredAttackerForce || null;
+        if (requiredForces && !isAnyForceMatched(requiredForces, attackerForce)) {
+            return { applied: false, note: '光明之纹章条件未满足' };
+        }
+        if (!requiredForces && requiredForce && !isForceMatched(requiredForce, attackerForce)) {
+            return { applied: false, note: '光明之纹章条件未满足' };
+        }
+        if (!requiredForces && !requiredForce && !hasForce(attackerForce)) {
+            return { applied: false, note: '光明之纹章条件未满足：攻击单位不具备势力' };
+        }
+        return { applied: true, sideEffect: 'peekOwnJewel' };
+    },
+    EMBLEM_STRONG: () => ({ applied: true, powerDelta: 30 }),
     EMBLEM_PROPHECY: () => ({ applied: true, sideEffect: 'peekOwnTopDeckOptionalMill' }),
+    EMBLEM_HOPE: ({ state, meta }) => {
+        const defenderForce = state?.defender?.value?.force || null;
+        const requiredForces = meta?.params?.requiredAttackerForces || null;
+        const requiredForce = meta?.params?.requiredAttackerForce || null;
+        if (requiredForces && !isAnyForceMatched(requiredForces, defenderForce)) {
+            return { applied: false, note: '希望之纹章条件未满足' };
+        }
+        if (!requiredForces && requiredForce && !isForceMatched(requiredForce, defenderForce)) {
+            return { applied: false, note: '希望之纹章条件未满足' };
+        }
+        return { applied: true, sideEffect: 'peekOwnJewel' };
+    },
+    EMBLEM_PROCUREMENT: ({ state }) => {
+        const handCount = Number(state?.hand?.value?.length || 0);
+        if (handCount > 4) {
+            return { applied: false, note: '筹措之纹章条件未满足：手牌数大于4' };
+        }
+        return { applied: true, sideEffect: 'drawIfHand4OrLess' };
+    },
+    EMBLEM_SEAL_CURSE: () => ({ applied: true, sideEffect: 'sealOpponentSupportEffect' }),
     EMBLEM_SKY: () => ({ applied: true, sideEffect: 'moveAllyExceptAttacker' }),
     EMBLEM_MANAKETE: ({ supportCard, state, meta }) => {
         const attackerForce = state?.attacker?.value?.force || null;
@@ -162,6 +234,22 @@ const SUPPORT_EFFECT_HANDLERS = {
         }
         return { applied: true, sideEffect: 'putHandCardToBond' };
     },
+    EMBLEM_DRAGON_BLOOD: ({ state }) => {
+        const myBonds = Number(state?.bonds?.value?.length || 0);
+        const oppBonds = Number(state?.oppBonds?.value?.length || 0);
+        if (myBonds > oppBonds) {
+            return { applied: false, note: '龙血之纹章条件未满足：羁绊数领先' };
+        }
+        return { applied: true, sideEffect: 'putHandCardToBondIfBehindOnBonds' };
+    },
+    EMBLEM_DRAGON_SCALE: ({ state }) => {
+        const myBonds = Number(state?.bonds?.value?.length || 0);
+        const oppBonds = Number(state?.oppBonds?.value?.length || 0);
+        if (myBonds > oppBonds) {
+            return { applied: false, note: '龙鳞之纹章条件未满足：羁绊数领先' };
+        }
+        return { applied: true, sideEffect: 'putHandCardToBondIfBehindOnBonds' };
+    },
     EMBLEM_THIEF: () => ({ applied: true, sideEffect: 'opponentTopDeckToGraveOptional' }),
     EMBLEM_DARK: ({ state }) => {
         const oppHandCount = Number(state?.oppStats?.value?.hand || 0);
@@ -169,6 +257,23 @@ const SUPPORT_EFFECT_HANDLERS = {
             return { applied: false, note: '黑暗之纹章条件未满足：对手手牌不足5张' };
         }
         return { applied: true, sideEffect: 'opponentDiscard1IfHand5Plus' };
+    },
+    EMBLEM_LINK: ({ supportCard, state, role, meta }) => {
+        const battleForce = getBattleUnitByRole(role, state)?.force || null;
+        const requiredForces = meta?.params?.requiredAttackerForces || null;
+        const requiredForce = meta?.params?.requiredAttackerForce || supportCard?.force || null;
+        const requireNoForce = !!meta?.params?.requireNoForce;
+
+        if (requireNoForce && hasForce(battleForce)) {
+            return { applied: false, note: '连携之纹章条件未满足：战斗单位具备势力' };
+        }
+        if (!requireNoForce) {
+            const matched = requiredForces ? isAnyForceMatched(requiredForces, battleForce) : isForceMatched(requiredForce, battleForce);
+            if (!matched) {
+                return { applied: false, note: '连携之纹章条件未满足' };
+            }
+        }
+        return { applied: true, powerDelta: 10 };
     },
     EMBLEM_STRATEGY: ({ supportCard, state, meta }) => {
         const attackerForce = state?.attacker?.value?.force || null;

@@ -33,6 +33,8 @@ export function createGameFlowState() {
         oppTotalPower: 0,
         attackerCriticalLocked: false,
         defenderEvasionLocked: false,
+        encourageDrawOnBreakMainCharacter: false,
+        opponentSupportEffectSealed: false,
         jewelBreakCount: 1
     });
     const combatDecision = ref(createInitialCombatDecision());

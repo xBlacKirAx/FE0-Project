@@ -91,6 +91,29 @@ export function createCombatCommands({ state, socket }) {
 
     const applyLocalSupportSideEffect = (currentState, result) => {
         if (!result || !result.sideEffect) return;
+        if (result.sideEffect === 'drawOnBreakMainCharacter') {
+            currentState.combatStats.value.encourageDrawOnBreakMainCharacter = true;
+            currentState.combatStats.value.supportNotice = '激励之纹章：若本次击破对方主人公，战斗结束时抽1张卡。';
+            return;
+        }
+
+        if (result.sideEffect === 'sealOpponentSupportEffect') {
+            currentState.combatStats.value.opponentSupportEffectSealed = true;
+            currentState.combatStats.value.supportNotice = '封咒之纹章：对手本次战斗支援能力无效。';
+            return;
+        }
+
+        if (result.sideEffect === 'drawIfHand4OrLess') {
+            if (currentState.hand.value.length > 4) return;
+            if (currentState.deck.value.length > 0) {
+                const drawnCard = currentState.deck.value.pop();
+                currentState.hand.value.push(drawnCard);
+                emitPlayerDraw(socket, { card: drawnCard });
+                currentState.combatStats.value.supportNotice = '筹措之纹章：已抽1张卡。';
+            }
+            return;
+        }
+
         if (result.sideEffect === 'draw1Discard1') {
             if (currentState.deck.value.length > 0) {
                 const drawnCard = currentState.deck.value.pop();
@@ -125,6 +148,25 @@ export function createCombatCommands({ state, socket }) {
                 source: 'support-effect'
             };
             currentState.combatStats.value.supportNotice = '龙人之纹章：请选择1张手牌置入羁绊区。';
+            return;
+        }
+
+        if (result.sideEffect === 'putHandCardToBondIfBehindOnBonds') {
+            currentState.supportInteraction.value = {
+                type: 'manakete-hand-to-bond',
+                source: 'support-effect'
+            };
+            currentState.combatStats.value.supportNotice = '龙血系纹章：请选择1张手牌置入羁绊区。';
+            return;
+        }
+
+        if (result.sideEffect === 'peekOwnJewel') {
+            if (!currentState.jewels.value.length) return;
+            currentState.supportInteraction.value = {
+                type: 'peek-own-jewel',
+                source: 'support-effect'
+            };
+            currentState.combatStats.value.supportNotice = '请选择1张自己的宝玉查看正面。';
             return;
         }
 
@@ -236,6 +278,14 @@ export function createCombatCommands({ state, socket }) {
             emitSyncCardMove(socket, { card: bondCard, from: 'hand', to: 'bonds' });
             currentState.supportInteraction.value = null;
             currentState.combatStats.value.supportNotice = null;
+            return true;
+        }
+
+        if (interaction.type === 'peek-own-jewel') {
+            const jewel = currentState.jewels.value.find(c => c.instanceId === targetCardId);
+            if (!jewel) return false;
+            currentState.supportInteraction.value = null;
+            currentState.combatStats.value.supportNotice = `已查看宝玉：${jewel.cardName || jewel.name || '未知卡牌'}`;
             return true;
         }
 
@@ -484,6 +534,11 @@ export function createCombatCommands({ state, socket }) {
 
             if (isTargetMC) {
                 if (isMyAttacker) {
+                    if (currentState.combatStats.value.encourageDrawOnBreakMainCharacter && currentState.deck.value.length > 0) {
+                        const drawnCard = currentState.deck.value.pop();
+                        currentState.hand.value.push(drawnCard);
+                        emitPlayerDraw(socket, { card: drawnCard });
+                    }
                     const jewelBreakCount = currentState.combatStats.value.jewelBreakCount || 1;
                     if (currentState.oppJewels.value.length > 0) {
                         const breakCount = Math.min(jewelBreakCount, currentState.oppJewels.value.length);
@@ -658,6 +713,8 @@ export function createCombatCommands({ state, socket }) {
             oppTotalPower: defenderCard.attack || 0,
             attackerCriticalLocked: false,
             defenderEvasionLocked: false,
+            encourageDrawOnBreakMainCharacter: false,
+            opponentSupportEffectSealed: false,
             jewelBreakCount: 1,
             attackerSupportApplied: 0,
             defenderSupportApplied: 0,
@@ -692,7 +749,13 @@ export function createCombatCommands({ state, socket }) {
                     applyLocalSupportSideEffect(currentState, supportEffectResult);
                 }
             }
-            emitSyncAttack(socket, { attacker: attackerCard, defender: defenderCard, supportCard: mySupport, supportFailed });
+            emitSyncAttack(socket, {
+                attacker: attackerCard,
+                defender: defenderCard,
+                supportCard: mySupport,
+                supportFailed,
+                supportSealCurse: !!currentState.combatStats.value.opponentSupportEffectSealed
+            });
         }, 800);
     };
 

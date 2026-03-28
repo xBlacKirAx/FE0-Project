@@ -141,7 +141,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "光之剑"
+      }
     },
     "image": "/images/cards/B01-003.png"
   },
@@ -2723,7 +2725,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B01-053.png"
   },
@@ -2875,7 +2879,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B01-056.png"
   },

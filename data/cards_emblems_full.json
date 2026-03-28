@@ -54,6 +54,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -114,6 +115,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -1992,6 +1994,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -2048,6 +2051,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -2106,6 +2110,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -3690,6 +3695,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -3749,6 +3755,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -3808,7 +3815,9 @@
       "effectName": "歌舞之纹章",
       "effectId": "EMBLEM_DANCE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜"
+      }
     },
     "image": "/images/cards/B02-005.png"
   },
@@ -3866,7 +3875,9 @@
       "effectName": "歌舞之纹章",
       "effectId": "EMBLEM_DANCE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜"
+      }
     },
     "image": "/images/cards/B02-005.png"
   },
@@ -5619,6 +5630,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -5678,6 +5690,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -5737,7 +5750,9 @@
       "effectName": "歌舞之纹章",
       "effectId": "EMBLEM_DANCE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "暗夜"
+      }
     },
     "image": "/images/cards/B02-055.png"
   },
@@ -5795,7 +5810,9 @@
       "effectName": "歌舞之纹章",
       "effectId": "EMBLEM_DANCE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "暗夜"
+      }
     },
     "image": "/images/cards/B02-055.png"
   },
@@ -7504,6 +7521,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "纹章",
         "jewelBreakCount": 2
       }
     },
@@ -7562,6 +7580,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "纹章",
         "jewelBreakCount": 2
       }
     },
@@ -9363,6 +9382,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -9990,6 +10010,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -13771,6 +13792,9 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForces": [
+          "神器"
+        ],
         "jewelBreakCount": 2
       }
     },
@@ -13831,6 +13855,9 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForces": [
+          "神器"
+        ],
         "jewelBreakCount": 2
       }
     },
@@ -20047,7 +20074,9 @@
       "effectName": "勇气之纹章",
       "effectId": "EMBLEM_COURAGE",
       "effectTiming": "〖攻防型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/B07-003.png"
   },
@@ -23340,6 +23369,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣战旗",
         "jewelBreakCount": 2
       }
     },
@@ -24344,6 +24374,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -24404,6 +24435,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -28200,7 +28232,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜"
+      }
     },
     "image": "/images/cards/B10-052.png"
   },
@@ -28256,7 +28290,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "暗夜"
+      }
     },
     "image": "/images/cards/B10-054.png"
   },
@@ -28777,6 +28813,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -28833,6 +28870,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -28891,6 +28929,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖攻防型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -29186,6 +29225,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 20,
         "jewelBreakCount": 2
       }
@@ -30181,7 +30221,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "光之剑"
+      }
     },
     "image": "/images/cards/B11-054.png"
   },
@@ -30515,6 +30557,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -30572,6 +30616,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -30628,6 +30674,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -30806,6 +30854,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -30863,7 +30913,10 @@
       "effectName": "龙人之纹章",
       "effectId": "EMBLEM_MANAKETE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true
+      }
     },
     "image": "/images/cards/B11-094.png"
   },
@@ -30978,6 +31031,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -31034,6 +31089,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "纹章",
         "jewelBreakCount": 2
       }
     },
@@ -33143,6 +33199,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 10
       }
     },
@@ -33203,6 +33260,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 10
       }
     },
@@ -34831,6 +34889,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -35490,7 +35549,9 @@
       "effectName": "光明之纹章",
       "effectId": "EMBLEM_LIGHT",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requireHasForce": true
+      }
     },
     "image": "/images/cards/B13-085.png"
   },
@@ -35546,6 +35607,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -35602,6 +35664,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -35897,6 +35960,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -35957,6 +36021,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -36016,7 +36081,9 @@
       "effectName": "计略之纹章",
       "effectId": "EMBLEM_STRATEGY",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B14-007.png"
   },
@@ -36075,7 +36142,9 @@
       "effectName": "计略之纹章",
       "effectId": "EMBLEM_STRATEGY",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B14-009.png"
   },
@@ -36190,7 +36259,9 @@
       "effectName": "命运之纹章",
       "effectId": "EMBLEM_FATE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B14-015.png"
   },
@@ -36897,6 +36968,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -37430,6 +37502,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "纹章",
         "powerDelta": 10
       }
     },
@@ -37961,6 +38034,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "powerDelta": 10
       }
     },
@@ -38017,6 +38091,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "powerDelta": 10
       }
     },
@@ -38072,7 +38147,9 @@
       "effectName": "计略之纹章",
       "effectId": "EMBLEM_STRATEGY",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "光之剑"
+      }
     },
     "image": "/images/cards/B15-006.png"
   },
@@ -38950,6 +39027,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -39481,7 +39559,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/B15-077.png"
   },
@@ -39717,7 +39797,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/B15-085.png"
   },
@@ -40068,6 +40150,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "jewelBreakCount": 2
       }
     },
@@ -41995,6 +42078,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -42055,6 +42140,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -42544,6 +42631,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "powerDelta": 10
       }
     },
@@ -42659,6 +42747,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "powerDelta": 10
       }
     },
@@ -42720,6 +42809,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -42781,6 +42872,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -43195,6 +43288,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "powerDelta": 10
       }
     },
@@ -43663,6 +43757,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "powerDelta": 10
       }
     },
@@ -44139,6 +44234,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -44310,7 +44407,9 @@
       "effectName": "计略之纹章",
       "effectId": "EMBLEM_STRATEGY",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "纹章"
+      }
     },
     "image": "/images/cards/B17-066.png"
   },
@@ -44604,6 +44703,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -44779,6 +44880,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 10
       }
     },
@@ -44893,6 +44995,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 10
       }
     },
@@ -45124,6 +45227,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣战旗",
         "powerDelta": 10
       }
     },
@@ -45659,6 +45763,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },
@@ -45720,6 +45825,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -45781,6 +45887,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -46303,6 +46410,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -46364,6 +46472,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -46832,6 +46941,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -46895,6 +47005,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -47473,7 +47584,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B18-052.png"
   },
@@ -47532,7 +47645,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B18-054.png"
   },
@@ -48004,6 +48119,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 10
       }
     },
@@ -49392,7 +49508,9 @@
       "effectName": "命运之纹章",
       "effectId": "EMBLEM_FATE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/B19-053.png"
   },
@@ -50087,7 +50205,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜"
+      }
     },
     "image": "/images/cards/B20-003.png"
   },
@@ -50145,7 +50265,9 @@
       "effectName": "光明之纹章",
       "effectId": "EMBLEM_LIGHT",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜"
+      }
     },
     "image": "/images/cards/B20-005.png"
   },
@@ -50200,6 +50322,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜",
         "powerDelta": 10
       }
     },
@@ -50256,6 +50379,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜",
         "powerDelta": 10
       }
     },
@@ -51111,7 +51235,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "纹章"
+      }
     },
     "image": "/images/cards/B20-057.png"
   },
@@ -52779,7 +52905,9 @@
       "effectName": "勇气之纹章",
       "effectId": "EMBLEM_COURAGE",
       "effectTiming": "〖攻防型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/B21-052.png"
   },
@@ -52833,7 +52961,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/B21-053.png"
   },
@@ -53769,6 +53899,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -53944,7 +54075,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "光之剑"
+      }
     },
     "image": "/images/cards/B22-014.png"
   },
@@ -53999,6 +54132,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "powerDelta": 10
       }
     },
@@ -54054,7 +54188,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "光之剑"
+      }
     },
     "image": "/images/cards/B22-023.png"
   },
@@ -54109,7 +54245,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/B22-028.png"
   },
@@ -54225,7 +54363,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/B22-034.png"
   },
@@ -54334,7 +54474,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/B22-039.png"
   },
@@ -54392,7 +54534,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/B22-043.png"
   },
@@ -54446,7 +54590,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/B22-045.png"
   },
@@ -54554,7 +54700,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "纹章"
+      }
     },
     "image": "/images/cards/B22-050.png"
   },
@@ -54782,7 +54930,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B22-061.png"
   },
@@ -54839,7 +54989,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/B22-063.png"
   },
@@ -55014,7 +55166,9 @@
       "effectName": "英雄之纹章",
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜"
+      }
     },
     "image": "/images/cards/B22-071.png"
   },
@@ -55315,6 +55469,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -55667,6 +55823,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑>或<圣痕",
         "powerDelta": 10
       }
     },
@@ -55726,6 +55883,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -55785,6 +55943,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -55845,6 +56004,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -55903,6 +56063,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -56072,6 +56233,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "纹章",
         "jewelBreakCount": 2
       }
     },
@@ -56128,6 +56290,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -56360,6 +56523,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -56419,7 +56583,9 @@
       "effectName": "歌舞之纹章",
       "effectId": "EMBLEM_DANCE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "暗夜"
+      }
     },
     "image": "/images/cards/P02-008.png"
   },
@@ -56598,6 +56764,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "纹章",
         "jewelBreakCount": 2
       }
     },
@@ -57009,7 +57176,9 @@
       "effectName": "歌舞之纹章",
       "effectId": "EMBLEM_DANCE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜"
+      }
     },
     "image": "/images/cards/P03-015.png"
   },
@@ -57067,7 +57236,9 @@
       "effectName": "歌舞之纹章",
       "effectId": "EMBLEM_DANCE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "暗夜"
+      }
     },
     "image": "/images/cards/P03-016.png"
   },
@@ -57126,6 +57297,9 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForces": [
+          "神器"
+        ],
         "jewelBreakCount": 2
       }
     },
@@ -57765,6 +57939,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -57821,6 +57996,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -57874,7 +58050,9 @@
       "effectName": "勇气之纹章",
       "effectId": "EMBLEM_COURAGE",
       "effectTiming": "〖攻防型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/P06-001.png"
   },
@@ -58209,6 +58387,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣战旗",
         "jewelBreakCount": 2
       }
     },
@@ -58915,6 +59094,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -59261,6 +59441,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -59375,6 +59556,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -59431,6 +59613,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -59491,6 +59674,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -59787,6 +59971,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 20,
         "jewelBreakCount": 2
       }
@@ -59966,6 +60151,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -60085,6 +60271,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "powerDelta": 20,
         "jewelBreakCount": 2
       }
@@ -60143,6 +60330,8 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "powerDelta": 10
       }
     },
@@ -60367,6 +60556,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -60423,6 +60613,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -60597,6 +60788,7 @@
       "effectId": "EMBLEM_COOP",
       "effectTiming": "〖防御型〗",
       "effectParams": {
+        "requireHasForce": true,
         "powerDelta": 10
       }
     },
@@ -60944,6 +61136,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -61000,6 +61193,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "白夜",
         "jewelBreakCount": 2
       }
     },
@@ -61061,6 +61255,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -61240,6 +61435,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "powerDelta": 10
       }
     },
@@ -61295,7 +61491,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/P14-002.png"
   },
@@ -61354,7 +61552,9 @@
       "effectName": "命运之纹章",
       "effectId": "EMBLEM_FATE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜"
+      }
     },
     "image": "/images/cards/P14-004.png"
   },
@@ -61412,7 +61612,9 @@
       "effectName": "计略之纹章",
       "effectId": "EMBLEM_STRATEGY",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣痕"
+      }
     },
     "image": "/images/cards/P14-005.png"
   },
@@ -61534,6 +61736,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "纹章",
         "powerDelta": 10
       }
     },
@@ -61644,6 +61847,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "jewelBreakCount": 2
       }
     },
@@ -61759,6 +61963,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -62061,6 +62266,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -62117,6 +62323,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "暗夜",
         "jewelBreakCount": 2
       }
     },
@@ -62303,6 +62510,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -62364,6 +62573,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -62420,6 +62631,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "神器",
         "jewelBreakCount": 2
       }
     },
@@ -62655,6 +62867,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -62714,7 +62928,9 @@
       "effectName": "勇气之纹章",
       "effectId": "EMBLEM_COURAGE",
       "effectTiming": "〖攻防型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "神器"
+      }
     },
     "image": "/images/cards/P16-011.png"
   },
@@ -62823,6 +63039,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },
@@ -62884,6 +63101,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -62945,6 +63163,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -63008,6 +63227,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -63240,7 +63460,9 @@
       "effectName": "计略之纹章",
       "effectId": "EMBLEM_STRATEGY",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "纹章"
+      }
     },
     "image": "/images/cards/P17-010.png"
   },
@@ -63355,6 +63577,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },
@@ -63416,6 +63639,7 @@
       "effectId": "EMBLEM_LINK",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "powerDelta": 10
       }
     },
@@ -63472,6 +63696,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },
@@ -63585,7 +63810,9 @@
       "effectName": "命运之纹章",
       "effectId": "EMBLEM_FATE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/P18-002.png"
   },
@@ -63640,6 +63867,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },
@@ -63814,7 +64042,9 @@
       "effectName": "光明之纹章",
       "effectId": "EMBLEM_LIGHT",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requireHasForce": true
+      }
     },
     "image": "/images/cards/P18-008.png"
   },
@@ -63927,6 +64157,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },
@@ -63986,7 +64217,9 @@
       "effectName": "希望之纹章",
       "effectId": "EMBLEM_HOPE",
       "effectTiming": "〖防御型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜"
+      }
     },
     "image": "/images/cards/P19-001.png"
   },
@@ -64278,6 +64511,8 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requireHasForce": true,
+        "requireNoForce": true,
         "jewelBreakCount": 2
       }
     },
@@ -64797,6 +65032,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },
@@ -64907,6 +65143,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "光之剑",
         "jewelBreakCount": 2
       }
     },
@@ -65310,6 +65547,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "圣痕",
         "jewelBreakCount": 2
       }
     },
@@ -65369,7 +65607,9 @@
       "effectName": "光明之纹章",
       "effectId": "EMBLEM_LIGHT",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "白夜>或<暗夜"
+      }
     },
     "image": "/images/cards/P22-004.png"
   },
@@ -65479,7 +65719,9 @@
       "effectName": "命运之纹章",
       "effectId": "EMBLEM_FATE",
       "effectTiming": "〖攻击型〗",
-      "effectParams": {}
+      "effectParams": {
+        "requiredAttackerForce": "圣战旗"
+      }
     },
     "image": "/images/cards/P22-006.png"
   },
@@ -65831,6 +66073,7 @@
       "effectId": "EMBLEM_HERO",
       "effectTiming": "〖攻击型〗",
       "effectParams": {
+        "requiredAttackerForce": "女神纹",
         "jewelBreakCount": 2
       }
     },

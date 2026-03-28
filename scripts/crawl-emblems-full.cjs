@@ -79,9 +79,18 @@ function parseSupportEffect(text) {
     const effectId = effectName ? (SUPPORT_EFFECT_ID_MAP[effectName] || null) : null;
     const effectParams = {};
 
-    const requiredAttackerForceMatch = supportText.match(/自己的攻击单位是<(.*?)>势力的场合/);
-    if (requiredAttackerForceMatch) {
-        effectParams.requiredAttackerForce = requiredAttackerForceMatch[1].trim();
+    const requiredAttackerForceMatches = [...supportText.matchAll(/<(.*?)>势力/g)].map(match => match[1].trim()).filter(Boolean);
+    if (requiredAttackerForceMatches.length === 1) {
+        effectParams.requiredAttackerForce = requiredAttackerForceMatches[0];
+    }
+    if (requiredAttackerForceMatches.length > 1) {
+        effectParams.requiredAttackerForces = Array.from(new Set(requiredAttackerForceMatches));
+    }
+    if (supportText.includes('具备势力')) {
+        effectParams.requireHasForce = true;
+    }
+    if (supportText.includes('不具备势力')) {
+        effectParams.requireNoForce = true;
     }
 
     const powerDeltaMatch = supportText.match(/战斗力\+([0-9]+)/);

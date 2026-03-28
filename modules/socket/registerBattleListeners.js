@@ -79,7 +79,7 @@ export function registerBattleListeners({
     handleIncomingSupportInteractionRequest,
     handleIncomingSupportInteractionResolve
 }) {
-    socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard, supportFailed }) => {
+    socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard, supportFailed, supportSealCurse }) => {
         if (state.hasBattledThisTurn) {
             state.hasBattledThisTurn.value = true;
         }
@@ -106,6 +106,8 @@ export function registerBattleListeners({
             oppTotalPower: defender.attack || 0,
             attackerCriticalLocked: false,
             defenderEvasionLocked: false,
+            encourageDrawOnBreakMainCharacter: false,
+            opponentSupportEffectSealed: !!supportSealCurse,
             jewelBreakCount: 1,
             attackerSupportApplied: supportFailed ? 0 : (supportCard?.support || 0),
             defenderSupportApplied: 0,
@@ -147,13 +149,17 @@ export function registerBattleListeners({
                 }
 
                 if (!defenseSupportFailed) {
-                    const supportEffectResult = resolveSupportEffectResult({
-                        supportCard: defenseSupport,
-                        role: 'defender',
-                        state
-                    });
-                    applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
-                    applyLocalSupportSideEffect(state, socket, supportEffectResult);
+                    if (state.combatStats.value.opponentSupportEffectSealed) {
+                        state.combatStats.value.supportNotice = '封咒之纹章生效：本次防御方支援能力无效。';
+                    } else {
+                        const supportEffectResult = resolveSupportEffectResult({
+                            supportCard: defenseSupport,
+                            role: 'defender',
+                            state
+                        });
+                        applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
+                        applyLocalSupportSideEffect(state, socket, supportEffectResult);
+                    }
                 }
             }
             socket.emit(EVT.SYNC_DEFENSE_SUPPORT, { supportCard: defenseSupport });
@@ -199,12 +205,16 @@ export function registerBattleListeners({
             state.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
         }
         if (!supportFailed) {
-            const supportEffectResult = resolveSupportEffectResult({
-                supportCard,
-                role: 'defender',
-                state
-            });
-            applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
+            if (state.combatStats.value.opponentSupportEffectSealed) {
+                state.combatStats.value.supportNotice = '封咒之纹章生效：本次防御方支援能力无效。';
+            } else {
+                const supportEffectResult = resolveSupportEffectResult({
+                    supportCard,
+                    role: 'defender',
+                    state
+                });
+                applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
+            }
         }
         setTimeout(() => {
             if (beginCombatResolution) beginCombatResolution(state);

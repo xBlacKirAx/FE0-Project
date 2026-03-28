@@ -132,6 +132,9 @@ createApp({
             if (state.activePanel.value === 'supportDanceUntapCandidates') {
                 return '歌舞之纹章：选择1名出击费用2以下的我方单位';
             }
+            if (state.activePanel.value === 'supportPeekOwnJewel') {
+                return '光明/希望之纹章：选择1张宝玉查看正面';
+            }
             if (state.activePanel.value === 'supportStrategyTargetEnemy') {
                 return '计略之纹章：选择1名敌方单位移动';
             }
@@ -164,6 +167,9 @@ createApp({
                     if (String(card.instanceId) === String(excludedId)) return false;
                     return (parseInt(card.cost, 10) || 0) <= 2;
                 });
+            }
+            if (state.activePanel.value === 'supportPeekOwnJewel') {
+                return state.jewels.value;
             }
             if (state.activePanel.value === 'supportStrategyTargetEnemy') {
                 const excludedId = state.supportInteraction.value?.excludedId;
@@ -265,6 +271,7 @@ createApp({
                 state.activePanel.value === 'supportDarkSelfDiscardHand' ||
                 state.activePanel.value === 'supportSkyMoveCandidates' ||
                 state.activePanel.value === 'supportDanceUntapCandidates' ||
+                state.activePanel.value === 'supportPeekOwnJewel' ||
                 state.activePanel.value === 'supportStrategyTargetEnemy'
             ) {
                 const ok = cardOps.resolveSupportInteraction(state, card.instanceId);
@@ -321,6 +328,10 @@ createApp({
                 state.activePanel.value = 'supportDanceUntapCandidates';
                 return;
             }
+            if (type === 'peek-own-jewel') {
+                state.activePanel.value = 'supportPeekOwnJewel';
+                return;
+            }
             if (type === 'strategy-select-enemy') {
                 state.activePanel.value = 'supportStrategyTargetEnemy';
                 return;
@@ -333,6 +344,7 @@ createApp({
                 state.activePanel.value === 'supportDarkSelfDiscardHand' ||
                 state.activePanel.value === 'supportSkyMoveCandidates' ||
                 state.activePanel.value === 'supportDanceUntapCandidates' ||
+                state.activePanel.value === 'supportPeekOwnJewel' ||
                 state.activePanel.value === 'supportStrategyTargetEnemy'
             ) {
                 closeActivePanel();

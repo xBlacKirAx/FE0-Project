@@ -211,6 +211,20 @@ function main() {
     {
         const socket = makeSocket();
         const state = makeState({
+            jewels: ref([{ instanceId: 'j1', cardName: '宝玉A', isFaceDown: true }]),
+            supportInteraction: ref({ type: 'peek-own-jewel' }),
+            combatStats: ref({ supportNotice: '查看宝玉' })
+        });
+        const commands = createCombatCommands({ state, socket });
+        const ok = commands.resolveSupportInteraction(state, 'j1');
+        assert(ok === true, '光明/希望之纹章应允许选择宝玉查看');
+        assert(state.supportInteraction.value === null, '查看宝玉完成后应清空交互状态');
+        assert(String(state.combatStats.value.supportNotice || '').includes('宝玉A'), '查看宝玉后应记录提示信息');
+    }
+
+    {
+        const socket = makeSocket();
+        const state = makeState({
             opponentFront: ref([{ instanceId: 'enemy-1', cardName: '敌前排' }]),
             opponentRear: ref([]),
             defender: ref({ instanceId: 'def-1' }),
