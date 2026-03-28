@@ -761,8 +761,8 @@ html, body {
 /* 转职叠放数量徽章 */
 .stacked-badge {
     position: absolute;
-    bottom: 2px;
-    left: 2px;
+    top: 24px;
+    right: 1px;
     z-index: 121;
     min-width: 18px;
     height: 18px;

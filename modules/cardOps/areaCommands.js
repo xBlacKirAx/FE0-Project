@@ -235,7 +235,7 @@ export function createAreaCommands({ state, socket, refs }) {
 
         // 转职抽1卡（与转职作为同一次可撤销动作）
         let drawnCard = null;
-        if (deck.value.length > 0 && hand.value.length < 10) {
+        if (deck.value.length > 0) {
             drawnCard = deck.value.pop();
             hand.value.push(drawnCard);
             scrollHandToLatest();
@@ -275,7 +275,7 @@ export function createAreaCommands({ state, socket, refs }) {
             // 修复3：正常抽牌仅限BEGINNING阶段；转职后抽牌绕过此限制
             if (!bypassPhaseCheck && state.currentPhase.value !== 'BEGINNING') return;
         }
-        if (hand.value.length >= 10 || deck.value.length === 0) return;
+        if (deck.value.length === 0) return;
 
         undoStack.value.push({ type: 'draw', previousPhase: state.currentPhase.value });
         if (undoStack.value.length > 10) undoStack.value.shift();
