@@ -21,7 +21,15 @@ export function createSocketHandler(state, cardOps) {
     const areaStore = createOpponentAreaStore(state);
 
     const setupSocketListeners = () => {
-        registerStateListeners({ state, socket, EVT, getMySyncData, resetGame, areaStore });
+        registerStateListeners({
+            state,
+            socket,
+            EVT,
+            getMySyncData,
+            resetGame,
+            areaStore,
+            handleIncomingSupportInteractionRequest
+        });
         registerBattleListeners({
             state,
             socket,

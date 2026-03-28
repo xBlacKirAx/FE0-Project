@@ -237,9 +237,11 @@ function main() {
         assert(socket.__supportRequests[0]?.type === 'strategy-move-enemy', '计略之纹章应向对手发送移动请求');
         assert(socket.__supportRequests[0]?.toArea === 'rear', '计略之纹章应根据目标所在区域计算目标位置');
         assert(state.supportInteraction.value?.type === 'strategy-await-opponent', '计略之纹章发起请求后应等待对手完成');
+        assert(!!state.supportInteraction.value?.requestPayload, '计略之纹章等待态应记录 requestPayload 以支持重连恢复');
         commands.handleIncomingSupportInteractionResolve(state, { requestId: 'strategy-1', type: 'strategy-move-enemy', success: true });
         assert(state.supportInteraction.value === null, '计略之纹章完成后应清空等待状态');
     }
+
 
     {
         const socket = makeSocket();

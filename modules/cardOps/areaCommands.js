@@ -431,18 +431,27 @@ export function createAreaCommands({ state, socket, refs }) {
         }
     };
 
-    const getMySyncData = () => ({
-        front: state.fieldFront.value,
-        rear: state.fieldRear.value,
-        bonds: state.bonds.value,
-        jewels: state.jewels.value,
-        graveyard: state.graveyard.value,
-        hand: state.hand.value,
-        deck: state.deck.value,
-        boundless: state.boundless.value,
-        handCount: state.hand.value.length,
-        bondsCount: state.bonds.value.length
-    });
+    const getMySyncData = () => {
+        const interaction = state.supportInteraction?.value || null;
+        const isAwaitOpponent = typeof interaction?.type === 'string' && interaction.type.includes('await-opponent');
+        const pendingSupportRequest = isAwaitOpponent && interaction?.requestPayload && interaction?.requestId
+            ? { ...interaction.requestPayload }
+            : null;
+
+        return {
+            front: state.fieldFront.value,
+            rear: state.fieldRear.value,
+            bonds: state.bonds.value,
+            jewels: state.jewels.value,
+            graveyard: state.graveyard.value,
+            hand: state.hand.value,
+            deck: state.deck.value,
+            boundless: state.boundless.value,
+            handCount: state.hand.value.length,
+            bondsCount: state.bonds.value.length,
+            pendingSupportRequest
+        };
+    };
 
     // 开发者模式：将指定卡牌放到牌组最上方
     const placeCardToTopOfDeck = (card) => {

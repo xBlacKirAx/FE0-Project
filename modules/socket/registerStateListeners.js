@@ -1,6 +1,16 @@
 // modules/socket/registerStateListeners.js
 
-export function registerStateListeners({ state, socket, EVT, getMySyncData, resetGame, areaStore }) {
+export function registerStateListeners({
+    state,
+    socket,
+    EVT,
+    getMySyncData,
+    resetGame,
+    areaStore,
+    handleIncomingSupportInteractionRequest
+}) {
+    let recoveredSupportRequestId = null;
+
     socket.on(EVT.OPPONENT_DRAW_CARD, (data) => {
         state.oppStats.value.hand++;
         if (data?.card) state.oppHand.value = [...state.oppHand.value, data.card];
@@ -34,6 +44,18 @@ export function registerStateListeners({ state, socket, EVT, getMySyncData, rese
             bonds: data.bondsCount || 0,
             active: 0
         };
+
+        // 断线重连恢复：如果对手正在等待我方处理支援请求，则在全量同步后补收一次。
+        const pendingRequest = data?.pendingSupportRequest || null;
+        if (
+            pendingRequest
+            && pendingRequest.requestId
+            && pendingRequest.requestId !== recoveredSupportRequestId
+            && typeof handleIncomingSupportInteractionRequest === 'function'
+        ) {
+            recoveredSupportRequestId = pendingRequest.requestId;
+            handleIncomingSupportInteractionRequest(state, pendingRequest);
+        }
     });
 
     socket.on(EVT.SYNC_RESET, () => {

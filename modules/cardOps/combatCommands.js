@@ -214,14 +214,16 @@ export function createCombatCommands({ state, socket }) {
             if (!shouldApply) return;
 
             const requestId = makeSupportRequestId('thief');
-            emitSyncSupportInteractionRequest(socket, {
+            const requestPayload = {
                 requestId,
                 type: 'thief-mill-top-deck'
-            });
+            };
+            emitSyncSupportInteractionRequest(socket, requestPayload);
             currentState.supportInteraction.value = {
                 type: 'thief-await-opponent',
                 source: 'support-effect',
-                requestId
+                requestId,
+                requestPayload
             };
             currentState.combatStats.value.supportNotice = '盗贼之纹章：等待对手公开并处理牌组顶。';
             return;
@@ -229,14 +231,16 @@ export function createCombatCommands({ state, socket }) {
 
         if (result.sideEffect === 'opponentDiscard1IfHand5Plus') {
             const requestId = makeSupportRequestId('dark');
-            emitSyncSupportInteractionRequest(socket, {
+            const requestPayload = {
                 requestId,
                 type: 'dark-discard'
-            });
+            };
+            emitSyncSupportInteractionRequest(socket, requestPayload);
             currentState.supportInteraction.value = {
                 type: 'dark-await-opponent',
                 source: 'support-effect',
-                requestId
+                requestId,
+                requestPayload
             };
             currentState.combatStats.value.supportNotice = '黑暗之纹章：等待对手选择并弃置1张手牌。';
             return;
@@ -429,16 +433,18 @@ export function createCombatCommands({ state, socket }) {
             if (!fromFront && !fromRear) return false;
 
             const toArea = fromFront ? 'rear' : 'front';
-            emitSyncSupportInteractionRequest(socket, {
+            const requestPayload = {
                 requestId: interaction.requestId,
                 type: 'strategy-move-enemy',
                 targetCardId,
                 toArea
-            });
+            };
+            emitSyncSupportInteractionRequest(socket, requestPayload);
             currentState.supportInteraction.value = {
                 type: 'strategy-await-opponent',
                 source: 'support-effect',
-                requestId: interaction.requestId
+                requestId: interaction.requestId,
+                requestPayload
             };
             currentState.combatStats.value.supportNotice = '计略之纹章：等待对手执行单位移动。';
             return true;
