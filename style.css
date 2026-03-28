@@ -758,6 +758,29 @@ html, body {
     user-select: none;
 }
 
+/* 转职叠放数量徽章 */
+.stacked-badge {
+    position: absolute;
+    bottom: 2px;
+    left: 2px;
+    z-index: 121;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background: linear-gradient(135deg, #7c3aed, #db2777);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    font-family: 'Noto Sans SC', sans-serif;
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+    pointer-events: none;
+}
+
 /* 2. 👑 主人公卡片整体高亮 (可选，推荐) */
 /* 当一张卡是主人公时，可以给它一个金色的、呼吸感的外发光 */
 .is-mc-card {

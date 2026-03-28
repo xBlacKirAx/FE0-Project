@@ -83,12 +83,10 @@ export function createDragDropHandler(state, cardOps, rules) {
         if ((toAreaName === 'front' || toAreaName === 'rear') && state.hand.value.some(c => c.instanceId === draggedCard.value.instanceId)) {
             const classChangeCheck = rules.canPerformClassChange(draggedCard.value);
             if (classChangeCheck && classChangeCheck.valid) {
-                const shouldClassChange = confirm(`🔄 转职：确认用"${draggedCard.value.cardName}"覆盖"${classChangeCheck.targetCard.cardName}"并抽1卡？`);
-                if (shouldClassChange) {
-                    cardOps.performClassChange(draggedCard.value, classChangeCheck.targetCard);
-                    draggedCard.value = null;
-                    return;
-                }
+                // 修复2：无需确认弹窗，直接执行转职
+                cardOps.performClassChange(draggedCard.value, classChangeCheck.targetCard);
+                draggedCard.value = null;
+                return;
             }
         }
 

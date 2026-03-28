@@ -699,11 +699,25 @@ export function createCombatCommands({ state, socket }) {
                         // 正常进入graveyard
                         ['fieldFront', 'fieldRear'].forEach(area => {
                             const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
-                            if (idx > -1) currentState.graveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                            if (idx > -1) {
+                                const broken = currentState[area].value.splice(idx, 1)[0];
+                                currentState.graveyard.value.push(broken);
+                                if (broken._stackedCards?.length > 0) {
+                                    broken._stackedCards.forEach(sc => currentState.graveyard.value.push(sc));
+                                    broken._stackedCards = [];
+                                }
+                            }
                         });
                         ['opponentFront', 'opponentRear'].forEach(area => {
                             const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
-                            if (idx > -1) currentState.oppGraveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                            if (idx > -1) {
+                                const broken = currentState[area].value.splice(idx, 1)[0];
+                                currentState.oppGraveyard.value.push(broken);
+                                if (broken._stackedCards?.length > 0) {
+                                    broken._stackedCards.forEach(sc => currentState.oppGraveyard.value.push(sc));
+                                    broken._stackedCards = [];
+                                }
+                            }
                         });
                     }
                 } else if (trainingEffect) {
@@ -720,6 +734,11 @@ export function createCombatCommands({ state, socket }) {
                             if (idx > -1) defeatedCard = currentState[area].value.splice(idx, 1)[0];
                         });
                         if (defeatedCard) {
+                            // 叠放的下级卡进入退避区，顶部卡进入手牌
+                            if (defeatedCard._stackedCards?.length > 0) {
+                                defeatedCard._stackedCards.forEach(sc => currentState.graveyard.value.push(sc));
+                                defeatedCard._stackedCards = [];
+                            }
                             if (isMyAttacker) {
                                 currentState.oppHand.value = currentState.oppHand.value || [];
                                 currentState.oppHand.value.push(defeatedCard);
@@ -735,11 +754,26 @@ export function createCombatCommands({ state, socket }) {
                 if (!defenderHandledByPostEffect) {
                     ['fieldFront', 'fieldRear'].forEach(area => {
                         const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
-                        if (idx > -1) currentState.graveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                        if (idx > -1) {
+                            const broken = currentState[area].value.splice(idx, 1)[0];
+                            currentState.graveyard.value.push(broken);
+                            // 修复1：转职叠放的卡也随之进入退避区
+                            if (broken._stackedCards?.length > 0) {
+                                broken._stackedCards.forEach(sc => currentState.graveyard.value.push(sc));
+                                broken._stackedCards = [];
+                            }
+                        }
                     });
                     ['opponentFront', 'opponentRear'].forEach(area => {
                         const idx = currentState[area].value.findIndex(c => c.instanceId === targetId);
-                        if (idx > -1) currentState.oppGraveyard.value.push(currentState[area].value.splice(idx, 1)[0]);
+                        if (idx > -1) {
+                            const broken = currentState[area].value.splice(idx, 1)[0];
+                            currentState.oppGraveyard.value.push(broken);
+                            if (broken._stackedCards?.length > 0) {
+                                broken._stackedCards.forEach(sc => currentState.oppGraveyard.value.push(sc));
+                                broken._stackedCards = [];
+                            }
+                        }
                     });
                 }
             }

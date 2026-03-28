@@ -104,6 +104,17 @@ export function createAreaCommands({ state, socket, refs }) {
             const targetCard = fromArea.splice(idx, 1)[0];
             getAreaArray(toAreaName).push(targetCard);
             emitSyncCardMove(socket, { card: targetCard, to: toAreaName, from: fromAreaName });
+
+            // 转职叠放：当战场卡被移出战场时，叠放的下级卡一起进入退避区
+            const isFromField = fromAreaName === 'front' || fromAreaName === 'rear';
+            if (isFromField && targetCard._stackedCards?.length > 0) {
+                targetCard._stackedCards.forEach(sc => {
+                    graveyard.value.push(sc);
+                    emitSyncCardMove(socket, { card: sc, from: 'stacked', to: 'graveyard' });
+                });
+                targetCard._stackedCards = [];
+            }
+
             selectedCard.value = null;
         }
 
@@ -119,63 +130,72 @@ export function createAreaCommands({ state, socket, refs }) {
     const playToBond = (card) => moveTo(card, 'bonds');
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
 
-    // 转职：用手牌卡覆盖战场上相同角色的卡，并抽1卡
+    // 转职：用手牌卡覆盖战场上相同角色的卡，旧卡叠放于新卡下，并抽1卡
     const performClassChange = (handCard, targetCardOnField) => {
         if (!handCard || !targetCardOnField) return;
 
-        // 费用系统：转职费用默认为0（可自定义）
-        const classChangeCost = 0;
-        
-        // 记录到undo栈
-        undoStack.value.push({
-            type: 'class-change',
-            handCard,
-            fieldCard: targetCardOnField,
-            previousPhase: state.currentPhase.value,
-            previousHasPlacedBond: hasPlacedBond.value,
-            costUsed: classChangeCost
-        });
-        if (undoStack.value.length > 10) undoStack.value.shift();
-
-        // 1. 移除旧卡（从战场到墓地）
+        // 确定旧卡所在区域
         let fieldArea = null;
         if (state.fieldFront.value.some(c => c.instanceId === targetCardOnField.instanceId)) {
             fieldArea = 'front';
         } else if (state.fieldRear.value.some(c => c.instanceId === targetCardOnField.instanceId)) {
             fieldArea = 'rear';
         }
+        if (!fieldArea) return;
 
-        if (fieldArea) {
-            const fieldAreaArray = getAreaArray(fieldArea);
-            const fieldIdx = fieldAreaArray.findIndex(c => c.instanceId === targetCardOnField.instanceId);
-            if (fieldIdx > -1) {
-                const removedCard = fieldAreaArray.splice(fieldIdx, 1)[0];
-                graveyard.value.push(removedCard);
-                emitSyncCardMove(socket, { card: removedCard, from: fieldArea, to: 'graveyard' });
-            }
-        }
+        const fieldAreaArray = getAreaArray(fieldArea);
+        const fieldIdx = fieldAreaArray.findIndex(c => c.instanceId === targetCardOnField.instanceId);
+        if (fieldIdx === -1) return;
 
-        // 2. 移除新卡（从手牌到战场）
         const handIdx = hand.value.findIndex(c => c.instanceId === handCard.instanceId);
-        if (handIdx > -1) {
-            const newCard = hand.value.splice(handIdx, 1)[0];
-            // 继承旧卡的位置（前排或后排）
-            const targetArea = fieldArea || 'front';
-            getAreaArray(targetArea).push(newCard);
-            emitSyncCardMove(socket, { card: newCard, from: 'hand', to: targetArea });
-        }
+        if (handIdx === -1) return;
+
+        // 修复5：使用 promoteCost 作为实际费用
+        const ccCost = parseInt(handCard.promoteCost) || 0;
+
+        // 1. 从战场移除旧卡（不进墓地，叠放到新卡下）
+        const removedFieldCard = fieldAreaArray.splice(fieldIdx, 1)[0];
+        const inheritedStacks = removedFieldCard._stackedCards || [];
+
+        // 2. 从手牌取出新卡
+        const newCard = hand.value.splice(handIdx, 1)[0];
+
+        // 修复1：新卡继承旧卡的叠放（旧卡 + 旧卡的叠放）
+        newCard._stackedCards = [removedFieldCard, ...inheritedStacks];
+        removedFieldCard._stackedCards = []; // 旧卡本身不再保存叠放引用
 
         // 3. 支付费用
-        if (classChangeCost > 0 && state.usedBondsThisTurn !== undefined) {
-            state.usedBondsThisTurn.value += classChangeCost;
+        if (ccCost > 0 && state.usedBondsThisTurn !== undefined) {
+            state.usedBondsThisTurn.value += ccCost;
         }
 
-        // 4. 抽1卡
-        drawCard();
+        // 4. 记录到undo栈（修复2：可撤销）
+        undoStack.value.push({
+            type: 'class-change',
+            newCard,
+            removedFieldCard,
+            fieldArea,
+            previousPhase: state.currentPhase.value,
+            previousHasPlacedBond: hasPlacedBond.value,
+            costUsed: ccCost
+        });
+        if (undoStack.value.length > 10) undoStack.value.shift();
+
+        // 5. 将新卡放入战场
+        fieldAreaArray.push(newCard);
+        emitSyncCardMove(socket, { card: newCard, from: 'hand', to: fieldArea });
+
+        // 6. 转职后抽1卡（绕过阶段限制）
+        drawCard({ bypassPhaseCheck: true });
     };
 
-    const drawCard = () => {
-        if (!state.isDevMode.value && !state.isMyTurn.value) return;
+    const drawCard = (opts = {}) => {
+        const bypassPhaseCheck = opts?.bypassPhaseCheck === true;
+        if (!state.isDevMode.value) {
+            if (!state.isMyTurn.value) return;
+            // 修复3：正常抽牌仅限BEGINNING阶段；转职后抽牌绕过此限制
+            if (!bypassPhaseCheck && state.currentPhase.value !== 'BEGINNING') return;
+        }
         if (hand.value.length >= 10 || deck.value.length === 0) return;
 
         undoStack.value.push({ type: 'draw', previousPhase: state.currentPhase.value });
@@ -221,7 +241,8 @@ export function createAreaCommands({ state, socket, refs }) {
             hand.value.push(drawnCard);
             scrollHandToLatest();
             emitPlayerDraw(socket, { card: drawnCard });
-            if (state.currentPhase.value === 'BEGINNING' && !state.isDevMode.value) {
+            // 仅用户手动抽牌时推进阶段（转职抽牌不推进）
+            if (!bypassPhaseCheck && state.currentPhase.value === 'BEGINNING' && !state.isDevMode.value) {
                 state.currentPhase.value = 'BOND';
             }
         };
@@ -258,6 +279,29 @@ export function createAreaCommands({ state, socket, refs }) {
             const card = hand.value.pop();
             console.log(`[撤销] 撤回抽牌 → ${card?.cardName || '未知卡牌'}`);
             if (card) deck.value.push(card);
+            return;
+        }
+
+        if (last.type === 'class-change') {
+            // 退款费用
+            if (last.costUsed && state.usedBondsThisTurn !== undefined) {
+                state.usedBondsThisTurn.value -= last.costUsed;
+            }
+            // 在战场找到新卡，退回手牌
+            const fieldAreaArr = getAreaArray(last.fieldArea);
+            const newCardIdx = fieldAreaArr.findIndex(c => c.instanceId === last.newCard.instanceId);
+            if (newCardIdx > -1) {
+                const newCard = fieldAreaArr.splice(newCardIdx, 1)[0];
+                // 恢复旧卡的叠放（排除旧卡自身，即 _stackedCards[0]）
+                last.removedFieldCard._stackedCards = newCard._stackedCards.slice(1);
+                newCard._stackedCards = [];
+                hand.value.push(newCard);
+                emitSyncCardMove(socket, { card: newCard, from: last.fieldArea, to: 'hand' });
+            }
+            // 恢复旧卡到战场
+            fieldAreaArr.push(last.removedFieldCard);
+            emitSyncCardMove(socket, { card: last.removedFieldCard, from: 'stacked', to: last.fieldArea });
+            console.log(`[撤销] 撤回转职：${last.newCard?.cardName} ← ${last.removedFieldCard?.cardName}`);
             return;
         }
 

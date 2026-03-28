@@ -111,10 +111,12 @@ export const CardDetailModal = {
                 <div class="p-4 bg-gray-800/20 space-y-2">
                     <div v-if="isMyCard(selectedCard) && (isDevMode || isMyTurn)">
                         <div v-if="isCardInHand(selectedCard)" class="space-y-2">
-                            <!-- 转职按钮（如果可以转职） -->
-                            <div v-if="canPerformClassChange(selectedCard)" class="grid grid-cols-1 gap-2 mb-2 p-3 bg-gradient-to-r from-purple-900/60 to-pink-900/60 border border-purple-500/50 rounded">
-                                <div class="text-[10px] text-purple-300 font-bold">🔄 转职可用</div>
-                                <button @click="() => {
+                            <!-- 转职按钮（如果有转职目标） -->
+                            <div v-if="canPerformClassChange(selectedCard) !== null" class="grid grid-cols-1 gap-2 mb-2 p-3 bg-gradient-to-r from-purple-900/60 to-pink-900/60 border border-purple-500/50 rounded">
+                                <div class="text-[10px] text-purple-300 font-bold">
+                                    🔄 转职 · 费用 {{ selectedCard.promoteCost }} 羁绊
+                                </div>
+                                <button v-if="canPerformClassChange(selectedCard)?.valid" @click="() => {
                                     const classChangeRes = canPerformClassChange(selectedCard);
                                     if (classChangeRes && classChangeRes.valid) {
                                         performClassChange(selectedCard, classChangeRes.targetCard);
@@ -123,15 +125,34 @@ export const CardDetailModal = {
                                 }" class="py-2 bg-gradient-to-r from-purple-700 to-pink-700 text-white text-[10px] font-bold rounded hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]">
                                     转职为 {{ canPerformClassChange(selectedCard)?.targetCard?.cardName || '目标' }}
                                 </button>
+                                <div v-else class="py-2 text-center text-[10px] text-red-400 bg-red-900/30 rounded">
+                                    {{ canPerformClassChange(selectedCard)?.reason === 'insufficient-bonds' ? '羁绊不足，无法转职' : '缺少对应势力羁绊' }}
+                                </div>
                             </div>
                             <!-- 普通出击按钮（如果不能转职） -->
-                            <div v-else class="grid grid-cols-3 gap-2">
+                            <div v-if="canPerformClassChange(selectedCard) === null" class="grid grid-cols-3 gap-2">
                                 <button @click="playToField(selectedCard, 'front')" class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
                                 <button @click="playToField(selectedCard, 'rear')" class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
                                 <button @click="playToBond(selectedCard)" class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
                             </div>
                         </div>
                         <button v-else @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
+                    </div>
+                    <!-- 叠放卡牌显示（转职叠放的下级卡） -->
+                    <div v-if="selectedCard._stackedCards && selectedCard._stackedCards.length > 0"
+                         class="mx-4 mb-2 p-3 bg-gradient-to-r from-indigo-900/40 to-purple-900/40 border border-indigo-500/40 rounded">
+                        <div class="text-[10px] text-indigo-300 font-bold mb-2">
+                            📚 叠放记录（{{ selectedCard._stackedCards.length }} 张）
+                        </div>
+                        <div v-for="(sc, idx) in selectedCard._stackedCards" :key="sc.instanceId || idx"
+                             class="flex items-center gap-2 py-1 border-b border-white/5 last:border-0">
+                            <span class="text-[9px] text-gray-400">{{ idx + 1 }}.</span>
+                            <img v-if="sc.imgSrc || sc.image" :src="sc.imgSrc || sc.image" class="w-6 h-8 object-cover rounded" />
+                            <div class="flex-1 min-w-0">
+                                <div class="text-[10px] text-white truncate">{{ sc.cardName || sc.name }}</div>
+                                <div class="text-[9px] text-gray-400">{{ sc.jobClass || sc.rank || '' }}</div>
+                            </div>
+                        </div>
                     </div>
                     <div v-if="isMyCard(selectedCard) && (isDevMode || isMyTurn)" class="grid grid-cols-2 gap-2 mt-2 border-t border-white/5 pt-2">
                         <button v-if="isDevMode && selectedCard.isTapped"

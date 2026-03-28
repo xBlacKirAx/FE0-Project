@@ -72,8 +72,15 @@ export function createRulesEngine(state) {
 
     // 转职检测：检查手牌中的卡是否可以转职到战场上相同角色的卡
     const canPerformClassChange = (handCard) => {
-        if (!handCard || !state.isMyTurn.value) return null;
-        
+        if (!handCard) return null;
+        if (!state.isDevMode.value && !state.isMyTurn.value) return null;
+
+        // 修复4：promoteCost 为 N/A 的卡（下级职业/固定职业）不能转职
+        const promoteCost = handCard.promoteCost;
+        if (!promoteCost || promoteCost === 'N/A') return null;
+        const ccCost = parseInt(promoteCost);
+        if (isNaN(ccCost) || ccCost < 0) return null;
+
         const charaName = handCard.charaName;
         if (!charaName) return null;
 
@@ -85,10 +92,32 @@ export function createRulesEngine(state) {
 
         if (!matchingCardOnField) return null;
 
+        // 修复5：检查羁绊费用（非dev模式）
+        if (!state.isDevMode.value) {
+            const availableBonds = state.bonds.value.length - (state.usedBondsThisTurn?.value || 0);
+            if (availableBonds < ccCost) {
+                return { valid: false, reason: 'insufficient-bonds', targetCard: matchingCardOnField, charaName, ccCost };
+            }
+
+            // 检查势力颜色羁绊
+            const cardFaction = handCard.force || handCard.faction || handCard.symbol || '无';
+            if (cardFaction !== '无' && ccCost > 0) {
+                const hasMatchingBond = state.bonds.value.some(bond => {
+                    if (bond.isFaceDown) return false;
+                    const bondFaction = bond.force || bond.faction || bond.symbol || '无';
+                    return bondFaction === cardFaction;
+                });
+                if (!hasMatchingBond) {
+                    return { valid: false, reason: 'no-faction-bond', targetCard: matchingCardOnField, charaName, ccCost };
+                }
+            }
+        }
+
         return {
             valid: true,
             targetCard: matchingCardOnField,
-            charaName: charaName
+            charaName,
+            ccCost
         };
     };
 

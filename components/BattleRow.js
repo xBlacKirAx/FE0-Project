@@ -105,6 +105,8 @@ export const BattleRow = {
                      @drop.stop="isEnemy ? onAttackDrop(card) : null"
                      @click="onCardClick(card)">
                     <div v-if="card.isMainCharacter" class="mc-crown-marker">主</div>
+                    <div v-if="card._stackedCards && card._stackedCards.length > 0"
+                         class="stacked-badge">{{ card._stackedCards.length }}</div>
                     <img :src="card.image">
                 </div>
             </div>
