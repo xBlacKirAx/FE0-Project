@@ -60,6 +60,21 @@ export const DeckManagerModal = {
         }
     },
     methods: {
+        async readJsonResponse(res, endpointLabel) {
+            const contentType = String(res.headers.get('content-type') || '').toLowerCase();
+            const text = await res.text();
+
+            if (!contentType.includes('application/json')) {
+                const shortBody = text.slice(0, 120).replace(/\s+/g, ' ');
+                throw new Error(`${endpointLabel} 返回了非 JSON 内容（通常是旧版服务或 404 页面）：${shortBody}`);
+            }
+
+            try {
+                return JSON.parse(text);
+            } catch (error) {
+                throw new Error(`${endpointLabel} JSON 解析失败：${error.message}`);
+            }
+        },
         async bootstrap() {
             this.loading = true;
             try {
@@ -68,7 +83,10 @@ export const DeckManagerModal = {
                     fetch('/api/cards'),
                     fetch('/api/decks')
                 ]);
-                const [cards, decks] = await Promise.all([cardsRes.json(), decksRes.json()]);
+                const [cards, decks] = await Promise.all([
+                    this.readJsonResponse(cardsRes, '/api/cards'),
+                    this.readJsonResponse(decksRes, '/api/decks')
+                ]);
                 this.cardPool = Array.isArray(cards) ? cards : [];
                 this.decks = Array.isArray(decks) ? decks : [];
                 if (!this.selectedDeckId && this.decks.length > 0) {
@@ -86,7 +104,7 @@ export const DeckManagerModal = {
         },
         async refreshDecks(keepSelection = true) {
             const res = await fetch('/api/decks');
-            const decks = await res.json();
+            const decks = await this.readJsonResponse(res, '/api/decks');
             this.decks = Array.isArray(decks) ? decks : [];
             if (!keepSelection) {
                 this.selectedDeckId = this.decks[0]?.id || null;
@@ -109,7 +127,7 @@ export const DeckManagerModal = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const body = await res.json();
+                const body = await this.readJsonResponse(res, '/api/decks');
                 if (!res.ok) {
                     const msg = body?.validation?.errors?.join('\n') || body?.message || '创建失败';
                     alert(msg);
@@ -127,7 +145,7 @@ export const DeckManagerModal = {
             if (!id) return;
             try {
                 const res = await fetch(`/api/decks/${id}/validate`, { method: 'POST' });
-                const validation = await res.json();
+                const validation = await this.readJsonResponse(res, `/api/decks/${id}/validate`);
                 const idx = this.decks.findIndex(d => d.id === id);
                 if (idx > -1) {
                     this.decks[idx] = {
@@ -147,7 +165,7 @@ export const DeckManagerModal = {
             try {
                 const res = await fetch(`/api/decks/${id}`, { method: 'DELETE' });
                 if (!res.ok) {
-                    const body = await res.json();
+                    const body = await this.readJsonResponse(res, `/api/decks/${id}`);
                     alert(body?.message || '删除失败');
                     return;
                 }
@@ -202,7 +220,7 @@ export const DeckManagerModal = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const body = await res.json();
+                const body = await this.readJsonResponse(res, `/api/decks/${this.selectedDeck.id}`);
                 if (!res.ok) {
                     const msg = body?.validation?.errors?.join('\n') || body?.message || '保存失败';
                     alert(msg);
@@ -233,7 +251,7 @@ export const DeckManagerModal = {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const body = await res.json();
+                const body = await this.readJsonResponse(res, '/api/decks/import/json');
                 if (!res.ok) {
                     const msg = body?.validation?.errors?.join('\n') || body?.message || '导入失败';
                     alert(msg);
