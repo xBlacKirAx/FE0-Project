@@ -52,7 +52,31 @@ function resolvePort() {
     return 3000;
 }
 
+function printPortInUseHelp(port, host) {
+    console.error('');
+    console.error('启动失败：端口被占用。');
+    console.error(`监听地址 ${host}:${port} 已被其他进程使用（常见于旧版 server.js 仍在运行）。`);
+    console.error('');
+    console.error('建议操作（Windows PowerShell）：');
+    console.error(`1) 查询占用进程: netstat -ano | findstr :${port}`);
+    console.error('2) 根据 PID 结束进程: taskkill /PID <PID> /F');
+    console.error(`3) 重新启动: node server.js --port=${port}`);
+    console.error('');
+}
+
 function startServer({ port = resolvePort(), host = '0.0.0.0' } = {}) {
+    server.removeAllListeners('error');
+    server.once('error', (error) => {
+        if (error?.code === 'EADDRINUSE') {
+            printPortInUseHelp(port, host);
+            process.exitCode = 1;
+            return;
+        }
+
+        console.error('服务器启动失败：', error);
+        process.exitCode = 1;
+    });
+
     server.listen(port, host, () => {
         console.log(`服务器已启动：http://localhost:${port}`);
     });
