@@ -7,3 +7,4 @@ node_modules/
 dist/
 build/
 conversation-export-*.md
+data/ai-duel-logs/

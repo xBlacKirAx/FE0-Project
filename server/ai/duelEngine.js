@@ -337,6 +337,63 @@ function buildZonePatch(prevZone, nextZone) {
     };
 }
 
+// 构建最小化的增量补丁 - 只保留必要的变化数据
+function buildMinimalZonePatch(prevZone, nextZone, zoneKey) {
+    const prevList = Array.isArray(prevZone) ? prevZone : [];
+    const nextList = Array.isArray(nextZone) ? nextZone : [];
+
+    const prevMap = new Map(prevList.map((card, idx) => [getCardReplayKey(card, `prev-${idx}`), card]));
+    const nextMap = new Map(nextList.map((card, idx) => [getCardReplayKey(card, `next-${idx}`), card]));
+
+    const add = [];
+    const remove = [];
+    const update = [];
+
+    for (const [key, card] of nextMap.entries()) {
+        const prevCard = prevMap.get(key);
+        if (!prevCard) {
+            add.push({ id: card.id, instanceId: card.instanceId });
+            continue;
+        }
+        // 只保存状态变化
+        const changes = {};
+        if (prevCard.isTapped !== card.isTapped) changes.isTapped = card.isTapped;
+        if (prevCard.isMainCharacter !== card.isMainCharacter) changes.isMainCharacter = card.isMainCharacter;
+        if (Object.keys(changes).length > 0) {
+            update.push({ instanceId: card.instanceId, ...changes });
+        }
+    }
+
+    for (const key of prevMap.keys()) {
+        if (!nextMap.has(key)) {
+            remove.push(key);
+        }
+    }
+
+    // drawPile 不需要记录完整的顺序（对战斗无影响），只记录变化数量
+    const isDrawPile = zoneKey === 'drawPile';
+    let orderChanged = false;
+    let orderData = null;
+
+    if (!isDrawPile) {
+        const prevOrder = prevList.map((card, idx) => getCardReplayKey(card, `prev-${idx}`));
+        const nextOrder = nextList.map((card, idx) => getCardReplayKey(card, `next-${idx}`));
+        orderChanged = !isDeepEqualByJson(prevOrder, nextOrder);
+        if (orderChanged) orderData = nextOrder;
+    }
+
+    if (!add.length && !remove.length && !update.length && !orderChanged) {
+        return null;
+    }
+
+    return {
+        ...(add.length ? { add } : {}),
+        ...(remove.length ? { remove } : {}),
+        ...(update.length ? { update } : {}),
+        ...(orderData ? { order: orderData } : {})
+    };
+}
+
 function buildReplayPatch(prevSnapshot, nextSnapshot) {
     if (!nextSnapshot) return null;
 
@@ -350,7 +407,7 @@ function buildReplayPatch(prevSnapshot, nextSnapshot) {
         for (const zoneKey of REPLAY_PATCH_ZONE_KEYS) {
             const prevZone = prevState[zoneKey] || [];
             const nextZone = nextState[zoneKey] || [];
-            const zonePatch = buildZonePatch(prevZone, nextZone);
+            const zonePatch = buildMinimalZonePatch(prevZone, nextZone, zoneKey);
             if (zonePatch) sectionPatch[zoneKey] = zonePatch;
         }
 
@@ -1470,15 +1527,19 @@ function runAIDuel(options) {
         else if (winner === deckB.name) stats.wins[deckB.name] += 1;
         else stats.wins.draw += 1;
 
-        stats.details.push({
+        const gameDetail = {
             game: i + 1,
             winner,
             reason: result.reason,
             turn: result.turn,
-            logs,
             timeline: result.timeline || [],
             initialSnapshot: result.initialSnapshot || null
-        });
+        };
+
+        // 只在 verbose 模式下包含 logs
+        if (verbose) gameDetail.logs = logs;
+
+        stats.details.push(gameDetail);
     }
 
     return stats;
