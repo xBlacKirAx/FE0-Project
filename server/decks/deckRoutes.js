@@ -1,6 +1,6 @@
 const express = require('express');
 const repository = require('./deckRepository');
-const { normalizeDeckInput, validateDeck } = require('./deckRules');
+const { normalizeDeckInput, validateDeck, expandDeckCards } = require('./deckRules');
 
 function createDeckRouter({ cardPool }) {
     const router = express.Router();
@@ -11,8 +11,9 @@ function createDeckRouter({ cardPool }) {
     });
 
     router.post('/', (req, res) => {
+        const strict = req.query.strict === 'true';
         const normalized = normalizeDeckInput(req.body || {});
-        const result = validateDeck(normalized, cardPool);
+        const result = validateDeck(normalized, cardPool, undefined, { allowDraft: !strict });
         if (!result.valid) {
             return res.status(400).json({
                 message: '卡组不合法，创建失败。',
@@ -31,8 +32,9 @@ function createDeckRouter({ cardPool }) {
     });
 
     router.put('/:id', (req, res) => {
+        const strict = req.query.strict === 'true';
         const normalized = normalizeDeckInput(req.body || {});
-        const result = validateDeck(normalized, cardPool);
+        const result = validateDeck(normalized, cardPool, undefined, { allowDraft: !strict });
         if (!result.valid) {
             return res.status(400).json({
                 message: '卡组不合法，更新失败。',
@@ -52,15 +54,17 @@ function createDeckRouter({ cardPool }) {
     });
 
     router.post('/:id/validate', (req, res) => {
+        const strict = req.query.strict !== 'false';
         const deck = repository.getById(req.params.id);
         if (!deck) return res.status(404).json({ message: '卡组不存在。' });
-        const result = validateDeck(deck, cardPool);
+        const result = validateDeck(deck, cardPool, undefined, { allowDraft: !strict });
         return res.json(result);
     });
 
     router.post('/import/json', (req, res) => {
+        const strict = req.query.strict === 'true';
         const normalized = normalizeDeckInput(req.body || {});
-        const result = validateDeck(normalized, cardPool);
+        const result = validateDeck(normalized, cardPool, undefined, { allowDraft: !strict });
         if (!result.valid) {
             return res.status(400).json({
                 message: '导入失败：卡组不合法。',
@@ -77,6 +81,26 @@ function createDeckRouter({ cardPool }) {
         if (!deck) return res.status(404).json({ message: '卡组不存在。' });
         res.setHeader('Content-Type', 'application/json; charset=utf-8');
         return res.send(JSON.stringify(deck, null, 2));
+    });
+
+    router.get('/:id/expanded-cards', (req, res) => {
+        const deck = repository.getById(req.params.id);
+        if (!deck) return res.status(404).json({ message: '卡组不存在。' });
+
+        const validation = validateDeck(deck, cardPool);
+        if (!validation.valid) {
+            return res.status(400).json({
+                message: '卡组不合法，无法用于对战。',
+                validation
+            });
+        }
+
+        const cards = expandDeckCards(deck, cardPool);
+        return res.json({
+            deckId: deck.id,
+            deckName: deck.name,
+            cards
+        });
     });
 
     return router;

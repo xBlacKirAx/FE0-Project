@@ -13,6 +13,7 @@ export const DeckManagerModal = {
             decks: [],
             cardPool: [],
             selectedDeckId: null,
+            activeDeckId: '',
             searchText: '',
             newDeckName: '新卡组',
             importText: ''
@@ -62,6 +63,7 @@ export const DeckManagerModal = {
         async bootstrap() {
             this.loading = true;
             try {
+                this.activeDeckId = localStorage.getItem('fe0.selectedDeckId') || '';
                 const [cardsRes, decksRes] = await Promise.all([
                     fetch('/api/cards'),
                     fetch('/api/decks')
@@ -71,6 +73,10 @@ export const DeckManagerModal = {
                 this.decks = Array.isArray(decks) ? decks : [];
                 if (!this.selectedDeckId && this.decks.length > 0) {
                     this.selectedDeckId = this.decks[0].id;
+                }
+                if (this.activeDeckId && !this.decks.some(d => d.id === this.activeDeckId)) {
+                    this.activeDeckId = '';
+                    localStorage.removeItem('fe0.selectedDeckId');
                 }
             } catch (error) {
                 alert(`加载卡组管理数据失败: ${error.message}`);
@@ -146,9 +152,24 @@ export const DeckManagerModal = {
                     return;
                 }
                 await this.refreshDecks(false);
+                if (this.activeDeckId === id) {
+                    this.activeDeckId = '';
+                    localStorage.removeItem('fe0.selectedDeckId');
+                }
             } catch (error) {
                 alert(`删除失败: ${error.message}`);
             }
+        },
+        setActiveDeck(id) {
+            if (!id) return;
+            this.activeDeckId = id;
+            localStorage.setItem('fe0.selectedDeckId', id);
+            alert('已设置为当前对战卡组。下次重置将使用该卡组。');
+        },
+        clearActiveDeck() {
+            this.activeDeckId = '';
+            localStorage.removeItem('fe0.selectedDeckId');
+            alert('已清除当前对战卡组，将回退默认卡池。');
         },
         async addCardToDeck(card) {
             if (!this.selectedDeck) return;
@@ -253,11 +274,14 @@ export const DeckManagerModal = {
                                 class="w-full text-left p-2 border rounded">
                             <div class="text-xs font-bold truncate">{{ deck.name }}</div>
                             <div class="text-[10px] text-gray-400">{{ deck.id }}</div>
+                            <div class="text-[10px] text-emerald-300" v-if="deck.id === activeDeckId">当前对战卡组</div>
                             <div class="text-[10px] text-amber-300" v-if="deck.validation">{{ deck.validation.valid ? '合法' : '不合法' }}</div>
                         </button>
                     </div>
                     <div class="flex gap-2">
                         <button @click="validateDeck(selectedDeckId)" class="px-2 py-1 text-xs bg-emerald-700 rounded">校验</button>
+                        <button @click="setActiveDeck(selectedDeckId)" class="px-2 py-1 text-xs bg-violet-700 rounded">设为对战</button>
+                        <button @click="clearActiveDeck()" class="px-2 py-1 text-xs bg-slate-700 rounded">清除</button>
                         <button @click="exportDeckJson(selectedDeckId)" class="px-2 py-1 text-xs bg-blue-700 rounded">导出</button>
                         <button @click="deleteDeck(selectedDeckId)" class="px-2 py-1 text-xs bg-red-700 rounded">删除</button>
                     </div>

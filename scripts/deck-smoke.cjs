@@ -36,6 +36,17 @@ function main() {
     assert(illegalResult.valid === false, '非法卡组应校验失败');
     assert(illegalResult.errors.some(e => e.includes('同名卡超限')), '应命中同名卡超限错误');
 
+    const draft = {
+        name: '草稿卡组',
+        cards: [{ cardId: cards[0].id, count: 1 }]
+    };
+    const draftResult = deckRules.validateDeck(draft, cards, undefined, { allowDraft: true });
+    assert(draftResult.valid === true, '草稿模式应允许未满50张的卡组保存');
+
+    const expanded = deckRules.expandDeckCards(legal, cards);
+    assert(expanded.length === 50, '展开后的卡组应为 50 张');
+    assert(expanded[0]?.id, '展开后的卡牌应包含原始卡牌字段');
+
     const before = repo.readAll();
     const created = repo.create(result.normalizedDeck);
     assert(!!created.id, '创建卡组后应有 id');

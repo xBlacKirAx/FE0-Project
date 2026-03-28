@@ -83,6 +83,33 @@ export function createAreaCommands({ state, socket, refs }) {
         }
     };
 
+    const getSelectedDeckId = () => {
+        try {
+            return globalThis?.localStorage?.getItem('fe0.selectedDeckId') || '';
+        } catch {
+            return '';
+        }
+    };
+
+    const loadCardsForReset = async () => {
+        const selectedDeckId = getSelectedDeckId();
+        if (selectedDeckId) {
+            try {
+                const deckRes = await fetch(`/api/decks/${selectedDeckId}/expanded-cards`);
+                if (deckRes.ok) {
+                    const deckPayload = await deckRes.json();
+                    const deckCards = Array.isArray(deckPayload?.cards) ? deckPayload.cards : [];
+                    if (deckCards.length) return deckCards;
+                }
+            } catch (err) {
+                console.warn('加载已选卡组失败，回退到默认卡池。', err);
+            }
+        }
+
+        const res = await fetch('/api/cards');
+        return res.json();
+    };
+
     const recycleGraveyardIntoDeckIfNeeded = () => {
         if (deck.value.length !== 0 || graveyard.value.length === 0) return [];
 
@@ -555,8 +582,7 @@ export function createAreaCommands({ state, socket, refs }) {
         }
 
         try {
-            const res = await fetch('/api/cards');
-            const data = await res.json();
+            const data = await loadCardsForReset();
             deck.value = data.map(c => ({
                 ...c,
                 instanceId: Math.random() + Date.now(),

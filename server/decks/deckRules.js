@@ -48,7 +48,8 @@ function summarizeDeck(deck, cardPoolById) {
     return summary;
 }
 
-function validateDeck(rawDeck, cardPool, rules = DEFAULT_RULES) {
+function validateDeck(rawDeck, cardPool, rules = DEFAULT_RULES, options = {}) {
+    const { allowDraft = false } = options;
     const deck = normalizeDeckInput(rawDeck);
     const cardPoolById = new Map((cardPool || []).map(card => [String(card.id), card]));
     const errors = [];
@@ -74,8 +75,12 @@ function validateDeck(rawDeck, cardPool, rules = DEFAULT_RULES) {
     }
 
     const summary = summarizeDeck(deck, cardPoolById);
-    if (summary.totalCards !== rules.exactDeckSize) {
+    if (!allowDraft && summary.totalCards !== rules.exactDeckSize) {
         errors.push(`卡组总数必须为 ${rules.exactDeckSize} 张，当前 ${summary.totalCards} 张。`);
+    }
+
+    if (allowDraft && summary.totalCards > rules.exactDeckSize) {
+        errors.push(`草稿卡组不能超过 ${rules.exactDeckSize} 张，当前 ${summary.totalCards} 张。`);
     }
 
     if (Object.keys(summary.byForce).length > 3) {
@@ -91,8 +96,25 @@ function validateDeck(rawDeck, cardPool, rules = DEFAULT_RULES) {
     };
 }
 
+function expandDeckCards(rawDeck, cardPool) {
+    const deck = normalizeDeckInput(rawDeck);
+    const cardPoolById = new Map((cardPool || []).map(card => [String(card.id), card]));
+    const cards = [];
+
+    for (const item of deck.cards) {
+        const base = cardPoolById.get(item.cardId);
+        if (!base) continue;
+        for (let i = 0; i < item.count; i++) {
+            cards.push({ ...base });
+        }
+    }
+
+    return cards;
+}
+
 module.exports = {
     DEFAULT_RULES,
     normalizeDeckInput,
-    validateDeck
+    validateDeck,
+    expandDeckCards
 };
