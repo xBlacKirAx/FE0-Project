@@ -79,6 +79,19 @@ export function createDragDropHandler(state, cardOps, rules) {
         clearAttackTargetHighlight();
         if (!draggedCard.value) return;
 
+        // 检测转职（只在出击到前场或后场时）
+        if ((toAreaName === 'front' || toAreaName === 'rear') && state.hand.value.some(c => c.instanceId === draggedCard.value.instanceId)) {
+            const classChangeCheck = rules.canPerformClassChange(draggedCard.value);
+            if (classChangeCheck && classChangeCheck.valid) {
+                const shouldClassChange = confirm(`🔄 转职：确认用"${draggedCard.value.cardName}"覆盖"${classChangeCheck.targetCard.cardName}"并抽1卡？`);
+                if (shouldClassChange) {
+                    cardOps.performClassChange(draggedCard.value, classChangeCheck.targetCard);
+                    draggedCard.value = null;
+                    return;
+                }
+            }
+        }
+
         const actionType = getActionByArea(toAreaName);
         if (actionType && !canPerformAction(actionType)) {
             console.warn(`[规则拦截] 无法执行 ${actionType}，阶段不符！`);

@@ -70,10 +70,33 @@ export function createRulesEngine(state) {
         return { 'bonds': 'placeBond', 'front': 'deploy', 'rear': 'deploy' }[areaName];
     };
 
+    // 转职检测：检查手牌中的卡是否可以转职到战场上相同角色的卡
+    const canPerformClassChange = (handCard) => {
+        if (!handCard || !state.isMyTurn.value) return null;
+        
+        const charaName = handCard.charaName;
+        if (!charaName) return null;
+
+        // 检查战场上是否有相同charaName的卡
+        const matchingCardOnField = [
+            ...state.fieldFront.value,
+            ...state.fieldRear.value
+        ].find(c => c.charaName === charaName);
+
+        if (!matchingCardOnField) return null;
+
+        return {
+            valid: true,
+            targetCard: matchingCardOnField,
+            charaName: charaName
+        };
+    };
+
     return {
         canPerformAction,
         canDeployCard,
         getActionByArea,
-        getCardFactionInfo // 👈 记得暴露新辅助
+        canPerformClassChange,
+        getCardFactionInfo
     };
 }

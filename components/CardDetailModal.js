@@ -52,6 +52,18 @@ export const CardDetailModal = {
             type: Function,
             required: true
         },
+        canPerformClassChange: {
+            type: Function,
+            required: true
+        },
+        performClassChange: {
+            type: Function,
+            required: true
+        },
+        placeCardToTopOfDeck: {
+            type: Function,
+            required: true
+        },
         onClose: {
             type: Function,
             required: true
@@ -98,10 +110,26 @@ export const CardDetailModal = {
                 </div>
                 <div class="p-4 bg-gray-800/20 space-y-2">
                     <div v-if="isMyCard(selectedCard) && (isDevMode || isMyTurn)">
-                        <div v-if="isCardInHand(selectedCard)" class="grid grid-cols-3 gap-2">
-                            <button @click="playToField(selectedCard, 'front')" class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
-                            <button @click="playToField(selectedCard, 'rear')" class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
-                            <button @click="playToBond(selectedCard)" class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
+                        <div v-if="isCardInHand(selectedCard)" class="space-y-2">
+                            <!-- 转职按钮（如果可以转职） -->
+                            <div v-if="canPerformClassChange(selectedCard)" class="grid grid-cols-1 gap-2 mb-2 p-3 bg-gradient-to-r from-purple-900/60 to-pink-900/60 border border-purple-500/50 rounded">
+                                <div class="text-[10px] text-purple-300 font-bold">🔄 转职可用</div>
+                                <button @click="() => {
+                                    const classChangeRes = canPerformClassChange(selectedCard);
+                                    if (classChangeRes && classChangeRes.valid) {
+                                        performClassChange(selectedCard, classChangeRes.targetCard);
+                                        onClose();
+                                    }
+                                }" class="py-2 bg-gradient-to-r from-purple-700 to-pink-700 text-white text-[10px] font-bold rounded hover:shadow-[0_0_15px_rgba(168,85,247,0.5)]">
+                                    转职为 {{ canPerformClassChange(selectedCard)?.targetCard?.cardName || '目标' }}
+                                </button>
+                            </div>
+                            <!-- 普通出击按钮（如果不能转职） -->
+                            <div v-else class="grid grid-cols-3 gap-2">
+                                <button @click="playToField(selectedCard, 'front')" class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
+                                <button @click="playToField(selectedCard, 'rear')" class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
+                                <button @click="playToBond(selectedCard)" class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
+                            </div>
                         </div>
                         <button v-else @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
                     </div>
@@ -110,6 +138,11 @@ export const CardDetailModal = {
                                 @click="untapCard(selectedCard)"
                                 class="col-span-2 py-2 mb-1 bg-green-600 hover:bg-green-500 rounded text-[10px] font-bold shadow-[0_0_10px_rgba(22,163,74,0.5)] transition-all">
                             【DEV】恢复直立
+                        </button>
+                        <button v-if="isDevMode"
+                                @click="() => { placeCardToTopOfDeck(selectedCard); onClose(); }"
+                                class="col-span-2 py-2 bg-blue-600 hover:bg-blue-500 rounded text-[10px] font-bold shadow-[0_0_10px_rgba(37,99,235,0.5)] transition-all">
+                            【DEV】放到牌组顶
                         </button>
                         <button v-if="getAreaName(getArea(selectedCard)) === 'bonds'"
                                 @click="toggleBondFace(selectedCard)"

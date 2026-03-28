@@ -371,7 +371,9 @@ createApp({
             ...dragDrop, // 自动暴露拖拽与攻击指令
 			playToField: safePlayToField,
             nextPhase: turnMgr.nextPhase,
-            canPerformAction: rules.canPerformAction,getCardFactionInfo: rules.getCardFactionInfo,
+            canPerformAction: rules.canPerformAction,
+            canPerformClassChange: rules.canPerformClassChange,
+            getCardFactionInfo: rules.getCardFactionInfo,
             activePanelTitle,
             activePanelCards,
             resolvedPanelTitle,

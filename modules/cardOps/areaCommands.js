@@ -119,6 +119,61 @@ export function createAreaCommands({ state, socket, refs }) {
     const playToBond = (card) => moveTo(card, 'bonds');
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
 
+    // 转职：用手牌卡覆盖战场上相同角色的卡，并抽1卡
+    const performClassChange = (handCard, targetCardOnField) => {
+        if (!handCard || !targetCardOnField) return;
+
+        // 费用系统：转职费用默认为0（可自定义）
+        const classChangeCost = 0;
+        
+        // 记录到undo栈
+        undoStack.value.push({
+            type: 'class-change',
+            handCard,
+            fieldCard: targetCardOnField,
+            previousPhase: state.currentPhase.value,
+            previousHasPlacedBond: hasPlacedBond.value,
+            costUsed: classChangeCost
+        });
+        if (undoStack.value.length > 10) undoStack.value.shift();
+
+        // 1. 移除旧卡（从战场到墓地）
+        let fieldArea = null;
+        if (state.fieldFront.value.some(c => c.instanceId === targetCardOnField.instanceId)) {
+            fieldArea = 'front';
+        } else if (state.fieldRear.value.some(c => c.instanceId === targetCardOnField.instanceId)) {
+            fieldArea = 'rear';
+        }
+
+        if (fieldArea) {
+            const fieldAreaArray = getAreaArray(fieldArea);
+            const fieldIdx = fieldAreaArray.findIndex(c => c.instanceId === targetCardOnField.instanceId);
+            if (fieldIdx > -1) {
+                const removedCard = fieldAreaArray.splice(fieldIdx, 1)[0];
+                graveyard.value.push(removedCard);
+                emitSyncCardMove(socket, { card: removedCard, from: fieldArea, to: 'graveyard' });
+            }
+        }
+
+        // 2. 移除新卡（从手牌到战场）
+        const handIdx = hand.value.findIndex(c => c.instanceId === handCard.instanceId);
+        if (handIdx > -1) {
+            const newCard = hand.value.splice(handIdx, 1)[0];
+            // 继承旧卡的位置（前排或后排）
+            const targetArea = fieldArea || 'front';
+            getAreaArray(targetArea).push(newCard);
+            emitSyncCardMove(socket, { card: newCard, from: 'hand', to: targetArea });
+        }
+
+        // 3. 支付费用
+        if (classChangeCost > 0 && state.usedBondsThisTurn !== undefined) {
+            state.usedBondsThisTurn.value += classChangeCost;
+        }
+
+        // 4. 抽1卡
+        drawCard();
+    };
+
     const drawCard = () => {
         if (!state.isDevMode.value && !state.isMyTurn.value) return;
         if (hand.value.length >= 10 || deck.value.length === 0) return;
@@ -233,6 +288,28 @@ export function createAreaCommands({ state, socket, refs }) {
         bondsCount: state.bonds.value.length
     });
 
+    // 开发者模式：将指定卡牌放到牌组最上方
+    const placeCardToTopOfDeck = (card) => {
+        if (!state.isDevMode.value) {
+            console.warn('【DEV】此功能仅限开发者模式');
+            return;
+        }
+        if (!card) return;
+
+        const fromArea = getArea(card);
+        if (!fromArea) return;
+
+        const fromAreaName = getAreaName(fromArea);
+        const idx = fromArea.findIndex(c => c.instanceId === card.instanceId);
+        if (idx > -1) {
+            const removed = fromArea.splice(idx, 1)[0];
+            // 放到牌组最上方（调整索引为length，这样pop时会获取到）
+            deck.value.push(removed);
+            console.log(`【DEV】 ${removed.cardName || '卡牌'} 已放到到牌组最上方 [${fromAreaName} → 牌组顶]`);
+            emitSyncCardMove(socket, { card: removed, from: fromAreaName, to: 'deck' });
+        }
+    };
+
     const resetGame = async (isRemote = false) => {
         hand.value = [];
         fieldFront.value = [];
@@ -297,8 +374,10 @@ export function createAreaCommands({ state, socket, refs }) {
         playToBond,
         returnToHandFromBoard,
         drawCard,
+        performClassChange,
         toggleBondFace,
         undoLastMove,
+        placeCardToTopOfDeck,
         getMySyncData,
         resetGame
     };
