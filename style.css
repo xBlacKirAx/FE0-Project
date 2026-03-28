@@ -6,6 +6,8 @@
 /* style.css */
 *, *::before, *::after {
     box-sizing: border-box;
+    -webkit-user-drag: none;
+    user-drag: none;
 }
 html, body {
     height: 100%;
@@ -14,6 +16,8 @@ html, body {
     overflow: hidden;
     position: fixed;
     width: 100%;
+    touch-action: manipulation;
+    overscroll-behavior-x: none;
 }
 
 #app {

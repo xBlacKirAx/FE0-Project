@@ -51,20 +51,89 @@ async function downloadImage(url, filename) {
  * 解析技能代价 (Cost)
  * 提取 [翻面X] 中的动作和数量
  */
-function parseSkillCost(html) {
-    const costMatch = html.match(/\[(.*?)\]/); 
+function toPlainText(raw) {
+    return String(raw || '')
+        .replace(/<br\s*\/?\s*>/gi, '\n')
+        .replace(/<[^>]*>/g, '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/[ \t]+/g, ' ')
+        .trim();
+}
+
+function parseSkillCost(raw) {
+    const text = toPlainText(raw);
+    const costMatch = text.match(/\[(.*?)\]/);
     if (!costMatch) return null;
-    
-    const content = costMatch[1];
-    if (content.includes("翻面")) {
-        const numMatch = content.match(/\d+/);
+
+    const content = costMatch[1].trim();
+    if (content.includes('翻面')) {
+        const flipAmountMatch = content.match(/翻面\s*(\d+)/);
         return {
             raw: content,
-            action: "翻面",
-            amount: numMatch ? parseInt(numMatch[0]) : 1
+            action: '翻面',
+            amount: flipAmountMatch ? parseInt(flipAmountMatch[1], 10) : 1
         };
     }
-    return { raw: content, action: "其他", amount: 0 };
+
+    if (content.includes('横置')) {
+        return { raw: content, action: '横置', amount: 1 };
+    }
+
+    return { raw: content, action: '其他', amount: 0 };
+}
+
+function parseAbilityEntries(text) {
+    const normalized = String(text || '').replace(/\r/g, '').trim();
+    if (!normalized) return [];
+
+    const chunks = normalized
+        .split(/\n+/)
+        .map(part => part.trim())
+        .filter(Boolean);
+
+    const entries = [];
+    const entryRegex = /『([^』]+)』\s*(【[^】]+】)?\s*([\s\S]*?)(?=(?:『[^』]+』\s*【[^】]+】)|$)/g;
+
+    for (const chunk of chunks) {
+        let matched = false;
+        let m = null;
+        while ((m = entryRegex.exec(chunk)) !== null) {
+            matched = true;
+            const title = String(m[1] || '').trim();
+            const type = String(m[2] || '').trim() || null;
+            const body = String(m[3] || '').trim();
+            const timing = body.match(/〖.*?〗/g) || [];
+            const cost = parseSkillCost(body);
+
+            const effectText = body
+                .replace(/^(?:\s*〖[^〗]*〗\s*)+/, '')
+                .replace(/^\s*\[[^\]]*\]\s*/, '')
+                .replace(/^[，,]\s*/, '')
+                .trim();
+
+            entries.push({
+                title,
+                type,
+                timing,
+                cost,
+                effectText,
+                rawText: String(m[0] || '').trim()
+            });
+        }
+
+        if (!matched) {
+            entries.push({
+                title: null,
+                type: null,
+                timing: chunk.match(/〖.*?〗/g) || [],
+                cost: parseSkillCost(chunk),
+                effectText: chunk,
+                rawText: chunk
+            });
+        }
+    }
+
+    return entries;
 }
 
 const SUPPORT_EFFECT_ID_MAP = Object.freeze({
@@ -245,7 +314,8 @@ async function startScraping() {
                 ability: {
                     text: abilityText,
                     keywords: extractKeywords(abilityText),
-                    skillCost: parseSkillCost(abilityHtml)
+                    skillCost: parseSkillCost(abilityHtml),
+                    entries: parseAbilityEntries(abilityText)
                 },
                 supportAbility: {
                     text: supportText,

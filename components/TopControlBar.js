@@ -2,6 +2,10 @@ export const TopControlBar = {
     props: {
         isDevMode: Boolean,
         isMyTurn: Boolean,
+        showDevModeToggle: {
+            type: Boolean,
+            default: true
+        },
         onToggleDevMode: {
             type: Function,
             required: true
@@ -18,9 +22,77 @@ export const TopControlBar = {
             type: Function,
             required: true
         },
+        onRunAiDuel: {
+            type: Function,
+            required: true
+        },
+        onOpenAiReplay: {
+            type: Function,
+            required: true
+        },
+        onToggleAiReplayPanelHidden: {
+            type: Function,
+            required: true
+        },
+        onAiReplayPrev: {
+            type: Function,
+            required: true
+        },
+        onAiReplayNext: {
+            type: Function,
+            required: true
+        },
+        onExitAiReplayMode: {
+            type: Function,
+            required: true
+        },
         showDeckManagerButton: {
             type: Boolean,
             default: true
+        },
+        showAiDuelButton: {
+            type: Boolean,
+            default: false
+        },
+        aiDuelPending: {
+            type: Boolean,
+            default: false
+        },
+        showAiReplayButton: {
+            type: Boolean,
+            default: false
+        },
+        showAiReplayPanelToggle: {
+            type: Boolean,
+            default: false
+        },
+        showAiReplayExitButton: {
+            type: Boolean,
+            default: false
+        },
+        aiReplayPanelHidden: {
+            type: Boolean,
+            default: false
+        },
+        showAiReplayStepButtons: {
+            type: Boolean,
+            default: false
+        },
+        canAiReplayPrev: {
+            type: Boolean,
+            default: false
+        },
+        canAiReplayNext: {
+            type: Boolean,
+            default: false
+        },
+        showAiReplayCurrentLine: {
+            type: Boolean,
+            default: false
+        },
+        aiReplayCurrentLine: {
+            type: String,
+            default: ''
         },
         showCostCounter: {
             type: Boolean,
@@ -67,6 +139,10 @@ export const TopControlBar = {
         roomStatusText: {
             type: String,
             default: '未加入房间'
+        },
+        showRoomStatusText: {
+            type: Boolean,
+            default: true
         },
         showCreateRoomButton: {
             type: Boolean,
@@ -120,17 +196,23 @@ export const TopControlBar = {
                 return;
             }
             this.onUndo();
+        },
+        getReplayLineSizeClass() {
+            const len = String(this.aiReplayCurrentLine || '').length;
+            if (len > 120) return 'text-[7px]';
+            if (len > 80) return 'text-[8px]';
+            return 'text-[9px]';
         }
     },
     template: `
         <div class="phase-control-bar pointer-events-auto w-full px-2 sm:px-4 py-1.5 flex justify-between sm:justify-center sm:gap-12 items-center bg-black/80 backdrop-blur-md border-b border-white/10 z-[80]">
             <div class="flex items-center gap-2 sm:gap-4 shrink-0">
-                <div @click="onToggleDevMode()" class="flex items-center gap-1.5 cursor-pointer">
+                <div v-if="showDevModeToggle" @click="onToggleDevMode()" class="flex items-center gap-1.5 cursor-pointer">
                     <div :class="isDevMode ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]' : 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]'" class="w-2 h-2 rounded-full"></div>
                     <span class="text-[9px] sm:text-[10px] font-mono font-bold">{{ isDevMode ? 'DEV' : 'PLAY' }}</span>
                 </div>
 
-                <div class="w-[1px] h-3 bg-white/20"></div>
+                <div v-if="showDevModeToggle" class="w-[1px] h-3 bg-white/20"></div>
 
                 <button v-if="showResetButton" @click="onResetGame()" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-1.5 py-1 rounded border border-red-500/50 uppercase">
                     重置
@@ -138,6 +220,36 @@ export const TopControlBar = {
 
                 <button v-if="showDeckManagerButton" @click="onOpenDeckManager()" class="bg-cyan-900/80 hover:bg-cyan-700 text-white text-[9px] px-1.5 py-1 rounded border border-cyan-500/50 uppercase">
                     卡组
+                </button>
+
+                <button
+                    v-if="showAiDuelButton"
+                    @click="onRunAiDuel()"
+                    :disabled="aiDuelPending"
+                    :class="aiDuelPending ? 'bg-fuchsia-900/30 border-fuchsia-900/60 text-fuchsia-300/50 cursor-not-allowed' : 'bg-fuchsia-900/80 hover:bg-fuchsia-700 border-fuchsia-500/50 text-white'"
+                    class="text-[9px] px-1.5 py-1 rounded border uppercase">
+                    {{ aiDuelPending ? '对战中...' : 'AI对战' }}
+                </button>
+
+                <button
+                    v-if="showAiReplayButton"
+                    @click="onOpenAiReplay()"
+                    class="bg-emerald-900/80 hover:bg-emerald-700 border-emerald-500/50 text-white text-[9px] px-1.5 py-1 rounded border uppercase">
+                    AI回放
+                </button>
+
+                <button
+                    v-if="showAiReplayPanelToggle"
+                    @click="onToggleAiReplayPanelHidden()"
+                    class="bg-teal-900/80 hover:bg-teal-700 border-teal-500/50 text-white text-[9px] px-1.5 py-1 rounded border uppercase">
+                    {{ aiReplayPanelHidden ? '显示回放' : '隐藏回放' }}
+                </button>
+
+                <button
+                    v-if="showAiReplayExitButton"
+                    @click="onExitAiReplayMode()"
+                    class="bg-rose-900/80 hover:bg-rose-700 border-rose-500/50 text-white text-[9px] px-1.5 py-1 rounded border uppercase">
+                    退出回放
                 </button>
 
                 <button v-if="showCreateRoomButton" @click="onCreateRoom()" class="bg-indigo-900/80 hover:bg-indigo-700 text-white text-[9px] px-1.5 py-1 rounded border border-indigo-500/50 uppercase">
@@ -186,10 +298,17 @@ export const TopControlBar = {
                         class="text-[9px] px-2 py-1 rounded shadow-md flex items-center gap-1 transition-transform">
                     <span>↩</span><span class="hidden sm:inline">撤销</span>
                 </button>
+
+                <div
+                    v-if="showAiReplayCurrentLine"
+                    :class="['max-w-[52vw] sm:max-w-[36vw] text-sky-100/90 px-2 py-1 rounded border border-sky-500/30 bg-slate-900/60 whitespace-normal break-all leading-3', getReplayLineSizeClass()]"
+                    :title="aiReplayCurrentLine">
+                    {{ aiReplayCurrentLine || '当前步无日志' }}
+                </div>
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
-                <span class="hidden sm:inline text-[9px] text-cyan-300 max-w-[180px] truncate" :title="roomStatusText">{{ roomStatusText }}</span>
+                <span v-if="showRoomStatusText" class="hidden sm:inline text-[9px] text-cyan-300 max-w-[180px] truncate" :title="roomStatusText">{{ roomStatusText }}</span>
                 <span v-if="showPhaseName" class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">{{ phaseName || 'BEGINNING' }}</span>
 
                 <button v-if="showNextPhaseButton"

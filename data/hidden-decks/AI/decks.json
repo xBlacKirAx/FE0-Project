@@ -1,0 +1,154 @@
+[
+  {
+    "id": "deck_051df5de2a1c",
+    "name": "AI 圣痕中速压制",
+    "format": "standard",
+    "notes": "严格50张。单圣痕中速压制：库洛姆/露琪娜主轴，路弗雷资源与位置控制，莉兹回收，奥莉薇再动，缇雅莫提供高支援与滚雪球。",
+    "protagonistCardId": "B01-053",
+    "protagonistCharaName": "库洛姆",
+    "cards": [
+      {
+        "cardId": "B01-053",
+        "count": 4
+      },
+      {
+        "cardId": "B01-051",
+        "count": 4
+      },
+      {
+        "cardId": "B01-056",
+        "count": 4
+      },
+      {
+        "cardId": "B01-054",
+        "count": 4
+      },
+      {
+        "cardId": "B01-058",
+        "count": 4
+      },
+      {
+        "cardId": "B01-057",
+        "count": 2
+      },
+      {
+        "cardId": "B01-060",
+        "count": 4
+      },
+      {
+        "cardId": "B01-059",
+        "count": 2
+      },
+      {
+        "cardId": "B01-061",
+        "count": 4
+      },
+      {
+        "cardId": "B01-075",
+        "count": 4
+      },
+      {
+        "cardId": "B01-076",
+        "count": 2
+      },
+      {
+        "cardId": "B01-083",
+        "count": 3
+      },
+      {
+        "cardId": "B01-080",
+        "count": 3
+      },
+      {
+        "cardId": "B01-082",
+        "count": 3
+      },
+      {
+        "cardId": "B01-092",
+        "count": 1
+      },
+      {
+        "cardId": "B01-093",
+        "count": 2
+      }
+    ],
+    "createdAt": "2026-03-28T16:12:35.028Z",
+    "updatedAt": "2026-03-28T16:13:05.549Z"
+  },
+  {
+    "id": "deck_d95e95bb1c6f",
+    "name": "AI 光剑飞兵速攻",
+    "format": "standard",
+    "notes": "严格50张。单光之剑飞兵速攻：马尔斯与希达提供主轴增益和位置控制，三姐妹用高支援与展开能力持续施压，辅以密涅瓦/玛利克/爱丽丝补足空战、抽滤与续航。",
+    "protagonistCardId": "B01-003",
+    "protagonistCharaName": "马尔斯",
+    "cards": [
+      {
+        "cardId": "B01-003",
+        "count": 4
+      },
+      {
+        "cardId": "B01-001",
+        "count": 4
+      },
+      {
+        "cardId": "B01-006",
+        "count": 4
+      },
+      {
+        "cardId": "B01-004",
+        "count": 4
+      },
+      {
+        "cardId": "B01-039",
+        "count": 4
+      },
+      {
+        "cardId": "B01-041",
+        "count": 4
+      },
+      {
+        "cardId": "B01-043",
+        "count": 4
+      },
+      {
+        "cardId": "B01-038",
+        "count": 3
+      },
+      {
+        "cardId": "B01-040",
+        "count": 3
+      },
+      {
+        "cardId": "B01-042",
+        "count": 3
+      },
+      {
+        "cardId": "B01-031",
+        "count": 2
+      },
+      {
+        "cardId": "B01-030",
+        "count": 2
+      },
+      {
+        "cardId": "B01-029",
+        "count": 3
+      },
+      {
+        "cardId": "B01-028",
+        "count": 2
+      },
+      {
+        "cardId": "B01-048",
+        "count": 2
+      },
+      {
+        "cardId": "B01-050",
+        "count": 2
+      }
+    ],
+    "createdAt": "2026-03-28T16:15:47.790Z",
+    "updatedAt": "2026-03-28T16:15:47.790Z"
+  }
+]

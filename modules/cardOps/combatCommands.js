@@ -13,6 +13,7 @@ import {
 
 export function createCombatCommands({ state, socket }) {
     const makeSupportRequestId = (tag = 'support') => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const safeGetAutoTriggers = typeof getAutoTriggers === 'function' ? getAutoTriggers : () => [];
 
     const getCardCharaName = (card) => {
         const direct = (card?.charaName || '').trim();
@@ -320,6 +321,141 @@ export function createCombatCommands({ state, socket }) {
             currentState.combatStats.value.supportNotice = '绝望之纹章：战斗结束后可从退避区选择1张«尸兵»出击。';
             return;
         }
+    };
+
+    const applyTempAbilityCombatModifiers = (currentState, attackerCard, defenderCard) => {
+        const attackerTemp = parseInt(attackerCard?._tempAbilityPowerThisTurn || 0, 10) || 0;
+        const defenderTemp = parseInt(defenderCard?._tempAbilityPowerThisTurn || 0, 10) || 0;
+        if (attackerTemp) currentState.combatStats.value.myTotalPower += attackerTemp;
+        if (defenderTemp) currentState.combatStats.value.oppTotalPower += defenderTemp;
+
+        if (attackerCard?._tempCannotBeEvadedThisTurn) {
+            currentState.combatStats.value.defenderEvasionLocked = true;
+            currentState.combatStats.value.supportNotice = '单位能力生效：本次攻击不能被神速回避。';
+        }
+        if (attackerCard?._tempJewelBreak2ThisTurn) {
+            currentState.combatStats.value.jewelBreakCount = Math.max(
+                currentState.combatStats.value.jewelBreakCount || 1,
+                2
+            );
+        }
+    };
+
+    const tryPayAutoTriggerCost = (currentState, unit, costRaw) => {
+        if (!costRaw) return true;
+        const raw = String(costRaw).replace(/[\[\]]/g, '').trim();
+        if (!raw) return true;
+
+        const flipMatch = raw.match(/翻面(\d+)/);
+        if (flipMatch) {
+            const need = parseInt(flipMatch[1], 10) || 0;
+            const faceUp = currentState.bonds.value.filter(card => !card.isFaceDown);
+            if (faceUp.length < need) return false;
+            for (let i = 0; i < need; i++) {
+                faceUp[i].isFaceDown = true;
+            }
+        }
+
+        if (raw.includes('将我方的「阿贝尔」转为已行动状态')) {
+            const target = [...currentState.fieldFront.value, ...currentState.fieldRear.value]
+                .find(card => card.instanceId !== unit.instanceId && (card.charaName || '') === '阿贝尔' && !card.isTapped);
+            if (!target) return false;
+            target.isTapped = true;
+        }
+
+        return true;
+    };
+
+    const applySimpleAutoTriggerEffect = (currentState, unit, trigger) => {
+        const text = trigger.effectText || '';
+
+        const battlePowerMatch = text.match(/直到战斗结束为止.*?战斗力\+(\d+)/);
+        if (battlePowerMatch) {
+            const delta = parseInt(battlePowerMatch[1], 10) || 0;
+            currentState.combatStats.value.myTotalPower += delta;
+        }
+
+        if (text.includes('攻击不能被神速回避')) {
+            currentState.combatStats.value.defenderEvasionLocked = true;
+        }
+
+        if (text.includes('攻击所将破坏的宝玉变为2颗')) {
+            currentState.combatStats.value.jewelBreakCount = Math.max(
+                currentState.combatStats.value.jewelBreakCount || 1,
+                2
+            );
+        }
+
+        if (text.includes('将这名单位转为未行动状态')) {
+            unit.isTapped = false;
+        }
+
+        if (text.includes('抽1张卡') && currentState.deck.value.length > 0) {
+            const drawn = currentState.deck.value.pop();
+            currentState.hand.value.push(drawn);
+            emitPlayerDraw(socket, { card: drawn });
+        }
+
+        if (text.includes('从自己的退避区选择1张') && text.includes('加入手牌')) {
+            const pickIdx = currentState.graveyard.value.findIndex(card => {
+                const cardCost = parseInt(card.cost, 10) || 0;
+                const costLimitMatch = text.match(/出击费用(\d+)以下/);
+                if (!costLimitMatch) return true;
+                return cardCost <= (parseInt(costLimitMatch[1], 10) || 0);
+            });
+            if (pickIdx > -1) {
+                const picked = currentState.graveyard.value.splice(pickIdx, 1)[0];
+                currentState.hand.value.push(picked);
+                emitSyncCardMove(socket, { card: picked, from: 'graveyard', to: 'hand' });
+            }
+        }
+
+        if (!unit._abilityUsedThisTurn) unit._abilityUsedThisTurn = {};
+        unit._abilityUsedThisTurn[trigger.title] = true;
+    };
+
+    const triggerAutoOnAttack = (currentState, attackerCard, defenderCard) => {
+        const triggers = safeGetAutoTriggers(attackerCard, {
+            timing: 'on-attack',
+            unit: attackerCard,
+            attacker: attackerCard,
+            defender: defenderCard,
+            myFront: currentState.fieldFront.value,
+            myRear: currentState.fieldRear.value,
+            fieldArea: currentState.fieldFront.value.some(c => c.instanceId === attackerCard.instanceId) ? 'front' : 'rear'
+        });
+
+        triggers.forEach(trigger => {
+            if (trigger.hasCost) {
+                const shouldPay = confirm(`是否支付费用发动【自】${trigger.title}？`);
+                if (!shouldPay) return;
+                const paid = tryPayAutoTriggerCost(currentState, attackerCard, trigger.costRaw);
+                if (!paid) return;
+            }
+            applySimpleAutoTriggerEffect(currentState, attackerCard, trigger);
+        });
+    };
+
+    const triggerAutoOnBreak = (currentState, attackerCard, defenderCard) => {
+        const triggers = safeGetAutoTriggers(attackerCard, {
+            timing: 'on-attack-break',
+            unit: attackerCard,
+            attacker: attackerCard,
+            defender: defenderCard,
+            myFront: currentState.fieldFront.value,
+            myRear: currentState.fieldRear.value,
+            fieldArea: currentState.fieldFront.value.some(c => c.instanceId === attackerCard.instanceId) ? 'front' : 'rear'
+        });
+
+        triggers.forEach(trigger => {
+            if (trigger.hasCost) {
+                const shouldPay = confirm(`是否支付费用发动【自】${trigger.title}？`);
+                if (!shouldPay) return;
+                const paid = tryPayAutoTriggerCost(currentState, attackerCard, trigger.costRaw);
+                if (!paid) return;
+            }
+            applySimpleAutoTriggerEffect(currentState, attackerCard, trigger);
+        });
     };
 
     const resolveSupportInteraction = (currentState, targetCardId) => {
@@ -706,6 +842,7 @@ export function createCombatCommands({ state, socket }) {
         let defenderHandledByPostEffect = false;
 
         if (attackerWins) {
+            triggerAutoOnBreak(currentState, currentState.attacker.value, currentState.defender.value);
             const targetId = currentState.defender.value.instanceId;
             const isTargetMC = currentState.defender.value.isMainCharacter;
 
@@ -1053,6 +1190,8 @@ export function createCombatCommands({ state, socket }) {
         currentState.isCombatActive.value = true;
 
         setTimeout(() => {
+            applyTempAbilityCombatModifiers(currentState, attackerCard, defenderCard);
+            triggerAutoOnAttack(currentState, attackerCard, defenderCard);
                 // ── 【常】被动战斗力加成（攻击方）
                 const attackerPassiveCtx = buildPassiveContext(currentState, attackerCard, attackerCard, defenderCard, null);
                 const attackerPassive = computePassivePowerBonus(attackerCard, attackerPassiveCtx);

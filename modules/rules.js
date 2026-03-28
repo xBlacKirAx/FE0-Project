@@ -2,6 +2,29 @@
 
 // modules/rules.js
 export function createRulesEngine(state) {
+    const rangeModel = globalThis.RANGE_MODEL;
+    const normalizeRange = rangeModel?.normalizeRange || ((raw) => {
+        const text = String(raw || '').trim();
+        if (text === '1' || text === '2' || text === '1-2' || text === '-') return text;
+        return '-';
+    });
+
+    const canHitByRange = rangeModel?.canHitByRange || ((rangeOrRaw, attackerArea, defenderArea) => {
+        const range = normalizeRange(rangeOrRaw);
+        const map = { 'my-rear': 0, 'my-front': 1, 'opp-front': 2, 'opp-rear': 3 };
+        const ai = map[attackerArea];
+        const di = map[defenderArea];
+        if (typeof ai !== 'number' || typeof di !== 'number') {
+            return { valid: false, range, distance: null, allowedDistances: [], reason: 'invalid-distance' };
+        }
+        const distance = Math.abs(di - ai);
+        const allowedDistances = range === '-' ? [0] : (range === '1' ? [1] : (range === '2' ? [2] : (range === '1-2' ? [1, 2] : [])));
+        if (!allowedDistances.length) {
+            return { valid: false, range, distance, allowedDistances, reason: 'unsupported-range' };
+        }
+        const valid = allowedDistances.includes(distance);
+        return { valid, range, distance, allowedDistances, reason: valid ? 'ok' : 'range-distance-mismatch' };
+    });
 
     const getCardAreaName = (card) => {
         if (!card?.instanceId) return null;
@@ -12,12 +35,6 @@ export function createRulesEngine(state) {
         if ((state.opponentFront.value || []).some(c => String(c.instanceId) === id)) return 'opp-front';
         if ((state.opponentRear.value || []).some(c => String(c.instanceId) === id)) return 'opp-rear';
         return null;
-    };
-
-    const normalizeRange = (raw) => {
-        const text = String(raw || '').trim();
-        if (text === '1' || text === '2' || text === '1-2' || text === '-') return text;
-        return '-';
     };
 
     const canAttackTargetByRange = (attackerCard, defenderCard) => {
@@ -35,40 +52,33 @@ export function createRulesEngine(state) {
             return { valid: false, reason: 'defender-not-opp-field', message: '目标必须是对方前场或后场单位。' };
         }
 
+        const hitResult = canHitByRange(range, attackerArea, defenderArea);
+        if (hitResult.distance === null) {
+            return { valid: false, reason: 'invalid-distance', message: '攻防距离计算失败。' };
+        }
+
+        if (hitResult.reason === 'unsupported-range') {
+            return { valid: false, reason: 'unsupported-range', message: '未知射程，不能攻击。' };
+        }
+
+        const ok = hitResult.valid;
+        if (ok) {
+            return { valid: true, reason: 'ok', message: '' };
+        }
+
         if (range === '-') {
-            return { valid: false, reason: 'range-zero', message: '该单位射程为“-”，不能进行攻击。' };
-        }
-
-        if (range === '1') {
-            const ok = attackerArea === 'my-front' && defenderArea === 'opp-front';
             return {
-                valid: ok,
-                reason: ok ? 'ok' : 'range-1-invalid',
-                message: ok ? '' : '射程1：仅当前场单位可攻击对方前场。'
+                valid: false,
+                reason: 'range-zero',
+                message: '射程“-”等同0，仅能命中距离0区域；敌方单位不在同一区域。'
             };
         }
 
-        if (range === '2') {
-            const ok = (attackerArea === 'my-rear' && defenderArea === 'opp-front')
-                || (attackerArea === 'my-front' && defenderArea === 'opp-rear');
-            return {
-                valid: ok,
-                reason: ok ? 'ok' : 'range-2-invalid',
-                message: ok ? '' : '射程2：后场仅可打对方前场；前场仅可打对方后场。'
-            };
-        }
-
-        if (range === '1-2') {
-            const ok = (attackerArea === 'my-front' && (defenderArea === 'opp-front' || defenderArea === 'opp-rear'))
-                || (attackerArea === 'my-rear' && defenderArea === 'opp-front');
-            return {
-                valid: ok,
-                reason: ok ? 'ok' : 'range-12-invalid',
-                message: ok ? '' : '射程1-2：前场可攻击对方前后场；后场仅可攻击对方前场。'
-            };
-        }
-
-        return { valid: false, reason: 'unsupported-range', message: '未知射程，不能攻击。' };
+        return {
+            valid: false,
+            reason: 'range-distance-mismatch',
+            message: `射程${range}不可命中当前目标（距离=${hitResult.distance}）。`
+        };
     };
     
     // 基础阶段动作判定

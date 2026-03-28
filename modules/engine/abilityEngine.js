@@ -129,6 +129,20 @@ export function evaluatePassive(segment, ctx) {
         return { powerDelta: 0, matched: true, note: `攻击<${requiredTrait}>+${delta}（条件未满足）` };
     }
 
+    // ── 模式1b：「攻击<兽马>或<重甲>属性单位的期间，战斗力+N」
+    const attackMultiTraitMatch = txt.match(/攻击<([^>]+)>或<([^>]+)>属性单位的期间.*?战斗力\+(\d+)/);
+    if (attackMultiTraitMatch) {
+        const reqA = attackMultiTraitMatch[1];
+        const reqB = attackMultiTraitMatch[2];
+        const delta = parseInt(attackMultiTraitMatch[3], 10) || 0;
+        const isAttacker = ctx.attacker && ctx.attacker.instanceId === unit.instanceId;
+        const defenderTraits = ctx.defender?.traits || [];
+        if (isAttacker && (defenderTraits.includes(reqA) || defenderTraits.includes(reqB))) {
+            return { powerDelta: delta, matched: true, note: `攻击<${reqA}>/<${reqB}>+${delta}（生效）` };
+        }
+        return { powerDelta: 0, matched: true, note: `攻击<${reqA}>/<${reqB}>+${delta}（未生效）` };
+    }
+
     // ── 模式2：「我方战场上有N名以上其他<X>势力单位，战斗力+N」
     const allyFactionMatch = txt.match(/我方战场上有(\d+)名以上其他<([^>]+)>势力的单位.*?战斗力\+(\d+)/);
     if (allyFactionMatch) {
@@ -195,6 +209,18 @@ export function evaluatePassive(segment, ctx) {
         return { powerDelta: 0, matched: true, note: `我方回合+${delta}（非我方回合）` };
     }
 
+    // ── 模式7b：「自己的回合中，我方战场上存在「X」时，战斗力+N」
+    const myTurnWithNameMatch = txt.match(/自己的回合.*?存在「([^」]+)」.*?战斗力\+(\d+)/);
+    if (myTurnWithNameMatch) {
+        const reqName = myTurnWithNameMatch[1];
+        const delta = parseInt(myTurnWithNameMatch[2], 10) || 0;
+        const hasNamed = myAll.some(c => (c.charaName || '') === reqName);
+        if (ctx.isMyTurn && hasNamed) {
+            return { powerDelta: delta, matched: true, note: `我方回合且存在${reqName}+${delta}` };
+        }
+        return { powerDelta: 0, matched: true, note: `我方回合且存在${reqName}+${delta}（未生效）` };
+    }
+
     // ── 模式8：「对手没有手牌时，战斗力+N」
     const oppNoHandMatch = txt.match(/对手没有手牌.*?战斗力\+(\d+)/);
     if (oppNoHandMatch) {
@@ -213,6 +239,17 @@ export function evaluatePassive(segment, ctx) {
             return { powerDelta: delta, matched: true, note: `手牌比对手多+${delta}（生效）` };
         }
         return { powerDelta: 0, matched: true, note: `手牌比对手多+${delta}（未生效）` };
+    }
+
+    // ── 模式9b：「对手手牌在N张以下时，战斗力+N」
+    const oppHandAtMostMatch = txt.match(/对手.*?手牌.*?(\d+)张以下.*?战斗力\+(\d+)/);
+    if (oppHandAtMostMatch) {
+        const maxHand = parseInt(oppHandAtMostMatch[1], 10);
+        const delta = parseInt(oppHandAtMostMatch[2], 10) || 0;
+        if ((ctx.oppHandCount || 0) <= maxHand) {
+            return { powerDelta: delta, matched: true, note: `对手手牌≤${maxHand}+${delta}` };
+        }
+        return { powerDelta: 0, matched: true, note: `对手手牌≤${maxHand}+${delta}（未生效）` };
     }
 
     // ── 模式10：「自己的宝玉数量比对手少时，战斗力+N」
@@ -236,6 +273,17 @@ export function evaluatePassive(segment, ctx) {
         return { powerDelta: 0, matched: true, note: `羁绊≥${reqBonds}+${delta}（未生效）` };
     }
 
+    // ── 模式11b：「自己的羁绊张数是奇数时，战斗力+N」
+    const oddBondMatch = txt.match(/羁绊卡.*?奇数.*?战斗力\+(\d+)/);
+    if (oddBondMatch) {
+        const delta = parseInt(oddBondMatch[1], 10) || 0;
+        const bondCount = ctx.myBondCount || 0;
+        if (bondCount % 2 === 1) {
+            return { powerDelta: delta, matched: true, note: `羁绊奇数+${delta}` };
+        }
+        return { powerDelta: 0, matched: true, note: `羁绊奇数+${delta}（未生效）` };
+    }
+
     // ── 模式12：「经过转职后，战斗力+N」（转职技标志）
     const classChangedMatch = txt.match(/经过转职.*?战斗力\+(\d+)/);
     if (classChangedMatch) {
@@ -257,6 +305,19 @@ export function evaluatePassive(segment, ctx) {
             return { powerDelta: delta, matched: true, note: `对阵<${reqWeapon}>武器+${delta}（生效）` };
         }
         return { powerDelta: 0, matched: true, note: `对阵<${reqWeapon}>武器+${delta}（未生效）` };
+    }
+
+    // ── 模式14：「这名单位被<魔法>以外的武器攻击期间，战斗力+N」
+    const defendByNonWeaponMatch = txt.match(/被<([^>]+)>以外的武器攻击.*?战斗力\+(\d+)/);
+    if (defendByNonWeaponMatch) {
+        const exceptWeapon = defendByNonWeaponMatch[1];
+        const delta = parseInt(defendByNonWeaponMatch[2], 10) || 0;
+        const isDefender = ctx.defender && ctx.defender.instanceId === unit.instanceId;
+        const attackerWeapon = ctx.attacker?.weapon || '';
+        if (isDefender && attackerWeapon !== exceptWeapon) {
+            return { powerDelta: delta, matched: true, note: `被<${exceptWeapon}>外武器攻击+${delta}` };
+        }
+        return { powerDelta: 0, matched: true, note: `被<${exceptWeapon}>外武器攻击+${delta}（未生效）` };
     }
 
     // 未匹配任何已知模式
@@ -595,6 +656,37 @@ export function computePassivePowerBonus(card, ctx) {
         if (result.powerDelta) totalDelta += result.powerDelta;
         breakdown.push({ title: seg.title, ...result });
     }
+
+    // 光环类被动：从其他我方单位的【常】能力为当前单位追加加成。
+    const allies = [...(ctx.myFront || []), ...(ctx.myRear || [])].filter(c => c.instanceId !== card.instanceId);
+    allies.forEach(ally => {
+        const allySegs = parseAbilitySegments(ally).filter(seg => seg.type === '常');
+        allySegs.forEach(seg => {
+            const txt = seg.effectText || '';
+
+            const traitAura = txt.match(/其他所有<([^>]+)>属性的我方单位的战斗力\+(\d+)/);
+            if (traitAura) {
+                const reqTrait = traitAura[1];
+                const delta = parseInt(traitAura[2], 10) || 0;
+                if ((card.traits || []).includes(reqTrait)) {
+                    totalDelta += delta;
+                    breakdown.push({ title: `${seg.title}（光环）`, powerDelta: delta, matched: true, note: `获得<${reqTrait}>光环+${delta}` });
+                }
+            }
+
+            const namedAura = txt.match(/我方的「([^」]+)」(?:和「([^」]+)」)?的战斗力\+(\d+)/);
+            if (namedAura) {
+                const nameA = namedAura[1];
+                const nameB = namedAura[2] || '';
+                const delta = parseInt(namedAura[3], 10) || 0;
+                const myName = card.charaName || '';
+                if (myName === nameA || (nameB && myName === nameB)) {
+                    totalDelta += delta;
+                    breakdown.push({ title: `${seg.title}（光环）`, powerDelta: delta, matched: true, note: `获得点名光环+${delta}` });
+                }
+            }
+        });
+    });
 
     return { totalDelta, breakdown };
 }

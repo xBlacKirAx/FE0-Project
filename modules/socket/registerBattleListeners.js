@@ -2,6 +2,7 @@
 
 import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
 import { emitPlayerDraw, emitSyncCardMove } from '../effects/cardSocketEffects.js';
+import { computePassivePowerBonus, buildPassiveContext } from '../engine/abilityEngine.js';
 
 const makeSupportRequestId = (tag = 'support') => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -283,6 +284,29 @@ export function registerBattleListeners({
             postBattleEffects: [],
             supportNotice: supportFailed ? '支援失效：支援单位与被支援单位角色名相同。' : null
         };
+
+        const attackerTemp = parseInt(attacker?._tempAbilityPowerThisTurn || 0, 10) || 0;
+        const defenderTemp = parseInt(defender?._tempAbilityPowerThisTurn || 0, 10) || 0;
+        if (attackerTemp) state.combatStats.value.myTotalPower += attackerTemp;
+        if (defenderTemp) state.combatStats.value.oppTotalPower += defenderTemp;
+        if (attacker?._tempCannotBeEvadedThisTurn) {
+            state.combatStats.value.defenderEvasionLocked = true;
+        }
+        if (attacker?._tempJewelBreak2ThisTurn) {
+            state.combatStats.value.jewelBreakCount = Math.max(state.combatStats.value.jewelBreakCount || 1, 2);
+        }
+
+        const attackerPassiveCtx = buildPassiveContext(state, attacker, attacker, defender, supportCard || null);
+        const attackerPassive = computePassivePowerBonus(attacker, attackerPassiveCtx);
+        if (attackerPassive.totalDelta) {
+            state.combatStats.value.myTotalPower += attackerPassive.totalDelta;
+        }
+
+        const defenderPassiveCtx = buildPassiveContext(state, defender, attacker, defender, supportCard || null);
+        const defenderPassive = computePassivePowerBonus(defender, defenderPassiveCtx);
+        if (defenderPassive.totalDelta) {
+            state.combatStats.value.oppTotalPower += defenderPassive.totalDelta;
+        }
         state.combatDecision.value = {
             stage: 'idle',
             promptOwner: null,

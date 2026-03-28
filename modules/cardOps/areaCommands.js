@@ -8,7 +8,7 @@ import {
     emitFullStateSync
 } from '../effects/cardSocketEffects.js';
 import { emitSyncPhase } from '../effects/socketEffects.js';
-import { checkAllSpecialDeployConditions } from '../engine/abilityEngine.js';
+import { checkAllSpecialDeployConditions, getActivatableAbilities } from '../engine/abilityEngine.js';
 
 export function createAreaCommands({ state, socket, refs }) {
     const {
@@ -332,6 +332,276 @@ export function createAreaCommands({ state, socket, refs }) {
 
         selectedCard.value = null;
         console.log(`[移动] ${moved?.cardName || '卡牌'} [${fromAreaName} → ${toAreaName}]，并转为横置`);
+        return true;
+    };
+
+    const getFieldAreaNameOfCard = (card) => {
+        if (!card) return null;
+        if (fieldFront.value.some(c => c.instanceId === card.instanceId)) return 'front';
+        if (fieldRear.value.some(c => c.instanceId === card.instanceId)) return 'rear';
+        return null;
+    };
+
+    const getActivatableUnitAbilities = (card) => {
+        if (!state.isDevMode.value && !state.isMyTurn.value) return [];
+        const fieldArea = getFieldAreaNameOfCard(card);
+        if (!fieldArea) return [];
+
+        const faceUpBonds = (bonds.value || []).filter(cardInBond => !cardInBond.isFaceDown).length;
+        return getActivatableAbilities(card, {
+            unit: card,
+            fieldArea,
+            myHand: hand.value,
+            myFront: fieldFront.value,
+            myRear: fieldRear.value,
+            bonds: bonds.value,
+            faceUpBonds,
+            isMyTurn: !!state.isMyTurn.value,
+            usedOnceThisTurn: card._abilityUsedThisTurn || {}
+        });
+    };
+
+    const consumeAbilityCost = (card, segment) => {
+        const raw = (segment?.costRaw || '').replace(/[\[\]]/g, '').trim();
+        if (!raw) return true;
+
+        const flipMatch = raw.match(/翻面(\d+)/);
+        if (flipMatch) {
+            const need = parseInt(flipMatch[1], 10) || 0;
+            const faceUp = bonds.value.filter(b => !b.isFaceDown);
+            if (faceUp.length < need) return false;
+            for (let i = 0; i < need; i++) {
+                faceUp[i].isFaceDown = true;
+                emitSyncBondFlip(socket, { instanceId: faceUp[i].instanceId, isFaceDown: true });
+            }
+        }
+
+        if (raw.includes('横置') && !raw.includes('其他我方单位')) {
+            if (card.isTapped) return false;
+            card.isTapped = true;
+        }
+
+        if (raw.includes('将1名其他我方单位转为已行动状态')) {
+            const other = [...fieldFront.value, ...fieldRear.value]
+                .find(c => c.instanceId !== card.instanceId && !c.isTapped);
+            if (!other) return false;
+            other.isTapped = true;
+        }
+
+        const discardNamedMatch = raw.match(/从自己的手牌将1张「([^」]+)」放置到退避区/);
+        if (discardNamedMatch) {
+            const reqName = discardNamedMatch[1];
+            const handIdx = hand.value.findIndex(c => (c.charaName || '') === reqName);
+            if (handIdx === -1) return false;
+            const paid = hand.value.splice(handIdx, 1)[0];
+            graveyard.value.push(paid);
+            emitSyncCardMove(socket, { card: paid, from: 'hand', to: 'graveyard' });
+        }
+
+        if (raw.includes('将这名单位击破')) {
+            const area = getFieldAreaNameOfCard(card);
+            if (!area) return false;
+            const src = getAreaArray(area);
+            const idx = src.findIndex(c => c.instanceId === card.instanceId);
+            if (idx === -1) return false;
+            const broken = src.splice(idx, 1)[0];
+            graveyard.value.push(broken);
+            emitSyncCardMove(socket, { card: broken, from: area, to: 'graveyard' });
+            if (broken._stackedCards?.length > 0) {
+                broken._stackedCards.forEach(sc => {
+                    graveyard.value.push(sc);
+                    emitSyncCardMove(socket, { card: sc, from: 'stacked', to: 'graveyard' });
+                });
+                broken._stackedCards = [];
+            }
+        }
+
+        return true;
+    };
+
+    const addCardTempPower = (card, delta) => {
+        if (!delta) return;
+        const current = parseInt(card._tempAbilityPowerThisTurn || 0, 10) || 0;
+        card._tempAbilityPowerThisTurn = current + delta;
+    };
+
+    const moveOneEnemyUnit = () => {
+        const target = state.opponentFront.value[0] || state.opponentRear.value[0] || null;
+        if (!target) return false;
+        const inFront = state.opponentFront.value.some(c => c.instanceId === target.instanceId);
+        const fromArea = inFront ? 'opponentFront' : 'opponentRear';
+        const toArea = inFront ? 'opponentRear' : 'opponentFront';
+        const from = state[fromArea].value;
+        const idx = from.findIndex(c => c.instanceId === target.instanceId);
+        if (idx === -1) return false;
+        const moved = from.splice(idx, 1)[0];
+        state[toArea].value.push(moved);
+        emitSyncCardMove(socket, { card: moved, from: inFront ? 'front' : 'rear', to: inFront ? 'rear' : 'front' });
+        return true;
+    };
+
+    const moveOneOtherAllyUnit = (card) => {
+        const target = [...fieldFront.value, ...fieldRear.value].find(c => c.instanceId !== card.instanceId);
+        if (!target) return false;
+        const fromArea = fieldFront.value.some(c => c.instanceId === target.instanceId) ? 'front' : 'rear';
+        const toArea = fromArea === 'front' ? 'rear' : 'front';
+        return moveFieldUnit(target, toArea);
+    };
+
+    const drawCards = (count) => {
+        for (let i = 0; i < count; i++) {
+            const { drawnCard } = drawOneWithAutoRecycle();
+            if (!drawnCard) break;
+            hand.value.push(drawnCard);
+            emitPlayerDraw(socket, { card: drawnCard });
+        }
+    };
+
+    const recoverFromGraveToHand = (predicate, limit = 1, uniqueByName = false) => {
+        const chosen = [];
+        const seen = new Set();
+        for (let i = graveyard.value.length - 1; i >= 0; i--) {
+            const card = graveyard.value[i];
+            if (!predicate(card)) continue;
+            const key = card.charaName || card.cardName || card.name || card.instanceId;
+            if (uniqueByName && seen.has(key)) continue;
+            chosen.push({ card, index: i });
+            seen.add(key);
+            if (chosen.length >= limit) break;
+        }
+        chosen.sort((a, b) => b.index - a.index).forEach(({ card, index }) => {
+            graveyard.value.splice(index, 1);
+            hand.value.push(card);
+            emitSyncCardMove(socket, { card, from: 'graveyard', to: 'hand' });
+        });
+        return chosen.length;
+    };
+
+    const applyUnitAbilityEffect = (card, segment) => {
+        const txt = segment.effectText || '';
+
+        const allAlliesBuffMatch = txt.match(/所有我方单位的战斗力\+(\d+)/);
+        if (allAlliesBuffMatch) {
+            const delta = parseInt(allAlliesBuffMatch[1], 10) || 0;
+            const allies = [...fieldFront.value, ...fieldRear.value];
+            allies.forEach(ally => addCardTempPower(ally, delta));
+        }
+
+        const selfPowerMatch = txt.match(/这名单位的战斗力\+(-?\d+)/);
+        if (selfPowerMatch) {
+            const delta = parseInt(selfPowerMatch[1], 10) || 0;
+            addCardTempPower(card, delta);
+        }
+
+        if (txt.includes('这名单位的战斗力变为2倍')) {
+            const base = parseInt(card.attack, 10) || 0;
+            addCardTempPower(card, base);
+        }
+
+        if (txt.includes('攻击不能被神速回避')) {
+            card._tempCannotBeEvadedThisTurn = true;
+        }
+
+        if (txt.includes('攻击所将破坏的宝玉变为2颗')) {
+            card._tempJewelBreak2ThisTurn = true;
+        }
+
+        if (txt.includes('将这名单位移动')) {
+            const fromArea = getFieldAreaNameOfCard(card);
+            if (fromArea) {
+                moveFieldUnit(card, fromArea === 'front' ? 'rear' : 'front');
+            }
+        }
+
+        if (txt.includes('选择1名其他我方单位，将其移动')) {
+            moveOneOtherAllyUnit(card);
+        }
+
+        if (txt.includes('选择1名敌方单位，将其移动') || txt.includes('选择任意名敌方单位，将其移动')) {
+            moveOneEnemyUnit();
+        }
+
+        if (txt.includes('将对手卡组最上方的1张卡放置到退避区')) {
+            if (state.oppDeck.value.length > 0) {
+                const top = state.oppDeck.value.pop();
+                state.oppGraveyard.value.push(top);
+            }
+        }
+
+        if (txt.includes('抽1张卡')) drawCards(1);
+        if (txt.includes('抽2张卡')) drawCards(2);
+        if (txt.includes('抽卡3张') || txt.includes('抽3张卡')) drawCards(3);
+
+        const graveExceptMatch = txt.match(/从自己的退避区中选择(?:至多(\d+)张)?1?张?「([^」]+)」以外.*?加入手牌/);
+        if (graveExceptMatch) {
+            const limit = parseInt(graveExceptMatch[1] || '1', 10) || 1;
+            const except = graveExceptMatch[2];
+            const uniqueByName = txt.includes('单位名不同');
+            recoverFromGraveToHand(candidate => (candidate.charaName || '') !== except, limit, uniqueByName);
+        }
+
+        if (txt.includes('选择自己的1张手牌，放置到羁绊区')) {
+            const moved = hand.value.pop();
+            if (moved) {
+                bonds.value.push(moved);
+                emitSyncCardMove(socket, { card: moved, from: 'hand', to: 'bonds' });
+            }
+        }
+
+        if (txt.includes('将卡组最上方的1张卡追加到宝玉区') && deck.value.length > 0) {
+            const top = deck.value.pop();
+            top.isFaceDown = true;
+            jewels.value.push(top);
+            emitSyncCardMove(socket, { card: top, from: 'deck', to: 'jewels' });
+        }
+
+        if (txt.includes('对手选择他自己的1张手牌，放置到退避区')) {
+            state.oppStats.value.hand = Math.max(0, (state.oppStats.value.hand || 0) - 1);
+        }
+        if (txt.includes('对手选择他自己的2张手牌，放置到退避区')) {
+            state.oppStats.value.hand = Math.max(0, (state.oppStats.value.hand || 0) - 2);
+        }
+        if (txt.includes('对手选择他自己的3张手牌，放置到退避区')) {
+            state.oppStats.value.hand = Math.max(0, (state.oppStats.value.hand || 0) - 3);
+        }
+
+        if (!card._abilityUsedThisTurn) card._abilityUsedThisTurn = {};
+        card._abilityUsedThisTurn[segment.title] = true;
+    };
+
+    const activateUnitAbility = (card, preferredTitle = null) => {
+        if (!card) return false;
+        const activatable = getActivatableUnitAbilities(card);
+        if (!activatable.length) return false;
+
+        const candidate = preferredTitle
+            ? activatable.find(a => a.title === preferredTitle)
+            : activatable.find(a => a.canActivate);
+        if (!candidate || !candidate.canActivate) {
+            return false;
+        }
+
+        const segments = (card?.ability?.entries || [])
+            .filter(e => e.type === '【起】')
+            .map(e => ({
+                title: e.title,
+                type: '起',
+                costRaw: e.cost?.raw ? `[${e.cost.raw}]` : '',
+                effectText: e.effectText || ''
+            }));
+        const segment = segments.find(e => e.title === candidate.title) || {
+            title: candidate.title,
+            type: '起',
+            costRaw: candidate.costRaw,
+            effectText: candidate.effectText
+        };
+
+        const okCost = consumeAbilityCost(card, segment);
+        if (!okCost) {
+            return false;
+        }
+
+        applyUnitAbilityEffect(card, segment);
         return true;
     };
 
@@ -752,6 +1022,8 @@ export function createAreaCommands({ state, socket, refs }) {
         toggleBondFace,
         undoLastMove,
         placeCardToTopOfDeck,
+        getActivatableUnitAbilities,
+        activateUnitAbility,
         getMySyncData,
         resetGame
     };

@@ -28,6 +28,7 @@ import { OppHandPanel } from './components/OppHandPanel.js';
 import { OppDeckPanel } from './components/OppDeckPanel.js';
 import { TopControlBar } from './components/TopControlBar.js';
 import { DeckManagerModal } from './components/DeckManagerModal.js';
+import { AiReplayPanel } from './components/AiReplayPanel.js';
 
 const { createApp, computed, onMounted, watch, ref } = Vue;
 
@@ -77,7 +78,8 @@ createApp({
         RegionPanel,
         CardDetailModal,
         OppHandPanel,
-        OppDeckPanel
+        OppDeckPanel,
+        AiReplayPanel,
     },
     setup() {
         const state = createGameState();
@@ -114,6 +116,35 @@ createApp({
         const selectedCombatCostCardId = ref(null);
         const selectedCombatCostCardName = ref('');
         const showDeckManager = ref(false);
+        const isAiDuelPending = ref(false);
+        const showAiReplayPanel = ref(false);
+        const isAiReplayPanelHidden = ref(false);
+        const isAiReplayLoading = ref(false);
+        const aiReplayLog = ref(null);
+        const aiReplayGameIndex = ref(0);
+        const aiReplayCursor = ref(0);
+        const replayCardCatalog = ref(new Map());
+        const currentAiReplayTimelineLength = computed(() => {
+            const games = Array.isArray(aiReplayLog.value?.games) ? aiReplayLog.value.games : [];
+            const game = games[aiReplayGameIndex.value] || null;
+            const timeline = Array.isArray(game?.timeline) ? game.timeline : [];
+            return timeline.length;
+        });
+        const canStepAiReplayPrev = computed(() => aiReplayCursor.value > 0 && currentAiReplayTimelineLength.value > 0);
+        const canStepAiReplayNext = computed(() => aiReplayCursor.value < currentAiReplayTimelineLength.value - 1);
+        const currentAiReplayEventLine = computed(() => {
+            const game = getCurrentReplayGame();
+            const timeline = Array.isArray(game?.timeline) ? game.timeline : [];
+            const event = timeline[aiReplayCursor.value] || null;
+            return String(event?.line || '').trim();
+        });
+        const showAiReplayStepButtons = computed(() =>
+            state.isDevMode.value
+            && showAiReplayPanel.value
+            && isAiReplayPanelHidden.value
+            && currentAiReplayTimelineLength.value > 0
+        );
+        const showAiReplayPanelVisible = computed(() => showAiReplayPanel.value && !isAiReplayPanelHidden.value);
         const isCompactMobile = ref(false);
         const cachedRoomPassword = ref('');
         const startRoomButtonConsumed = ref(false);
@@ -287,6 +318,35 @@ createApp({
             state.selectedCard.value = null;
         };
 
+        const selectedCardActivatableAbilities = computed(() => {
+            const card = state.selectedCard.value;
+            if (!card || !cardOps.getActivatableUnitAbilities) return [];
+            return cardOps.getActivatableUnitAbilities(card).filter(item => item.canActivate).slice(0, 4);
+        });
+
+        const selectedCardAbilityPrimaryLabel = computed(() =>
+            selectedCardActivatableAbilities.value[0] ? `发动能力：${selectedCardActivatableAbilities.value[0].title}` : ''
+        );
+        const selectedCardAbilitySecondaryLabel = computed(() =>
+            selectedCardActivatableAbilities.value[1] ? `发动能力：${selectedCardActivatableAbilities.value[1].title}` : ''
+        );
+        const selectedCardAbilityTertiaryLabel = computed(() =>
+            selectedCardActivatableAbilities.value[2] ? `发动能力：${selectedCardActivatableAbilities.value[2].title}` : ''
+        );
+        const selectedCardAbilityQuaternaryLabel = computed(() =>
+            selectedCardActivatableAbilities.value[3] ? `发动能力：${selectedCardActivatableAbilities.value[3].title}` : ''
+        );
+
+        const activateSelectedCardAbilityByIndex = (index) => {
+            const card = state.selectedCard.value;
+            const ability = selectedCardActivatableAbilities.value[index] || null;
+            if (!card || !ability || !cardOps.activateUnitAbility) return;
+            const ok = cardOps.activateUnitAbility(card, ability.title);
+            if (!ok) {
+                alert('能力发动失败：费用不足或条件不满足。');
+            }
+        };
+
         const openFullImage = () => {
             state.showFullImage.value = true;
         };
@@ -439,6 +499,343 @@ createApp({
 
         const openDeckManager = () => {
             showDeckManager.value = true;
+        };
+
+        const runAiDuelFromControlBar = async () => {
+            if (!state.isDevMode.value) {
+                alert('仅开发者模式可使用 AI 对战功能。');
+                return;
+            }
+            if (isAiDuelPending.value) return;
+
+            isAiDuelPending.value = true;
+            try {
+                const response = await fetch('/api/ai/duel', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: 'AI', games: 10, maxTurns: 35 })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    alert(payload?.message || 'AI 对战执行失败。');
+                    return;
+                }
+
+                const wins = payload?.wins || {};
+                const summary = [
+                    'AI 对战完成（DEV）',
+                    `${payload?.deckA || '卡组A'}: ${wins[payload?.deckA] || 0} 胜`,
+                    `${payload?.deckB || '卡组B'}: ${wins[payload?.deckB] || 0} 胜`,
+                    `平局: ${wins.draw || 0}`,
+                    `日志ID: ${payload?.logId || '无'}`
+                ].join('\n');
+                alert(summary);
+            } catch (err) {
+                console.error('[AI Duel] 运行失败', err);
+                alert('AI 对战运行失败，请查看控制台日志。');
+            } finally {
+                isAiDuelPending.value = false;
+            }
+        };
+
+        const ensureReplayCardCatalogLoaded = async () => {
+            if (replayCardCatalog.value.size > 0) return;
+
+            const payload = await fetch('/api/cards').then(res => res.json()).catch(() => []);
+            const list = Array.isArray(payload) ? payload : [];
+            const nextMap = new Map();
+            for (const card of list) {
+                const key = String(card?.id || '').trim();
+                if (!key) continue;
+                nextMap.set(key, card);
+            }
+            replayCardCatalog.value = nextMap;
+        };
+
+        const hydrateReplayCard = (cardRef) => {
+            if (!cardRef) return null;
+            const id = String(cardRef.id || '').trim();
+            const base = replayCardCatalog.value.get(id) || {};
+
+            return {
+                ...base,
+                id,
+                instanceId: cardRef.instanceId || `${id}-replay`,
+                isTapped: !!cardRef.isTapped,
+                isMainCharacter: !!cardRef.isMainCharacter,
+                _stackedCards: Array.isArray(cardRef._stackedCards)
+                    ? cardRef._stackedCards.map(hydrateReplayCard).filter(Boolean)
+                    : []
+            };
+        };
+
+        const cloneReplayCards = (cards) =>
+            Array.isArray(cards)
+                ? cards.map(hydrateReplayCard).filter(Boolean)
+                : [];
+
+        const getReplayCardKey = (card, fallback = '') => {
+            const instanceId = String(card?.instanceId || '').trim();
+            if (instanceId) return instanceId;
+            const id = String(card?.id || '').trim();
+            if (id) return id;
+            return fallback;
+        };
+
+        const applyReplayZonePatch = (targetRef, zonePatch) => {
+            if (!targetRef || !zonePatch || typeof zonePatch !== 'object') return;
+
+            // 兼容数组直写格式（若后端返回整区数组）
+            if (Array.isArray(zonePatch)) {
+                targetRef.value = cloneReplayCards(zonePatch);
+                return;
+            }
+
+            const currentList = Array.isArray(targetRef.value) ? [...targetRef.value] : [];
+            const currentMap = new Map(currentList.map((card, idx) => [getReplayCardKey(card, `current-${idx}`), card]));
+
+            const removeList = Array.isArray(zonePatch.remove) ? zonePatch.remove : [];
+            for (const key of removeList) {
+                currentMap.delete(String(key || '').trim());
+            }
+
+            const updateList = Array.isArray(zonePatch.update) ? zonePatch.update : [];
+            for (const cardRef of updateList) {
+                const key = getReplayCardKey(cardRef);
+                if (!key) continue;
+                const hydrated = hydrateReplayCard(cardRef);
+                if (hydrated) currentMap.set(key, hydrated);
+            }
+
+            const addList = Array.isArray(zonePatch.add) ? zonePatch.add : [];
+            for (const cardRef of addList) {
+                const key = getReplayCardKey(cardRef);
+                if (!key) continue;
+                const hydrated = hydrateReplayCard(cardRef);
+                if (hydrated) currentMap.set(key, hydrated);
+            }
+
+            const nextList = [];
+            const order = Array.isArray(zonePatch.order) ? zonePatch.order : [];
+            if (order.length > 0) {
+                for (const rawKey of order) {
+                    const key = String(rawKey || '').trim();
+                    if (!key) continue;
+                    const card = currentMap.get(key);
+                    if (!card) continue;
+                    nextList.push(card);
+                    currentMap.delete(key);
+                }
+            }
+
+            if (currentMap.size > 0) {
+                nextList.push(...currentMap.values());
+            }
+
+            targetRef.value = nextList;
+        };
+
+        const applyReplaySeatPatch = (seatPatch, areaSetters) => {
+            if (!seatPatch || typeof seatPatch !== 'object') return;
+            if (Object.prototype.hasOwnProperty.call(seatPatch, 'front')) applyReplayZonePatch(areaSetters.front, seatPatch.front);
+            if (Object.prototype.hasOwnProperty.call(seatPatch, 'rear')) applyReplayZonePatch(areaSetters.rear, seatPatch.rear);
+            if (Object.prototype.hasOwnProperty.call(seatPatch, 'hand')) applyReplayZonePatch(areaSetters.hand, seatPatch.hand);
+            if (Object.prototype.hasOwnProperty.call(seatPatch, 'bonds')) applyReplayZonePatch(areaSetters.bonds, seatPatch.bonds);
+            if (Object.prototype.hasOwnProperty.call(seatPatch, 'jewels')) applyReplayZonePatch(areaSetters.jewels, seatPatch.jewels);
+            if (Object.prototype.hasOwnProperty.call(seatPatch, 'graveyard')) applyReplayZonePatch(areaSetters.graveyard, seatPatch.graveyard);
+            if (Object.prototype.hasOwnProperty.call(seatPatch, 'drawPile')) applyReplayZonePatch(areaSetters.deck, seatPatch.drawPile);
+        };
+
+        const applyReplayPatch = (patch, seatAName) => {
+            if (!patch || typeof patch !== 'object') return;
+
+            applyReplaySeatPatch(patch.seatAState, {
+                front: state.fieldFront,
+                rear: state.fieldRear,
+                hand: state.hand,
+                bonds: state.bonds,
+                jewels: state.jewels,
+                graveyard: state.graveyard,
+                deck: state.deck
+            });
+
+            applyReplaySeatPatch(patch.seatBState, {
+                front: state.opponentFront,
+                rear: state.opponentRear,
+                hand: state.oppHand,
+                bonds: state.oppBonds,
+                jewels: state.oppJewels,
+                graveyard: state.oppGraveyard,
+                deck: state.oppDeck
+            });
+
+            state.oppStats.value = {
+                ...(state.oppStats.value || {}),
+                hand: state.oppHand.value.length,
+                bonds: state.oppBonds.value.length,
+                active: state.opponentFront.value.length
+            };
+
+            if (Object.prototype.hasOwnProperty.call(patch, 'activeSeat')) {
+                state.isMyTurn.value = String(patch.activeSeat || '') === String(seatAName || '');
+            }
+            if (patch.turnLabel || patch.turn) {
+                state.currentPhase.value = 'ATTACK';
+            }
+        };
+
+        const applyReplaySnapshot = (snapshot) => {
+            if (!snapshot) return;
+            const seatAName = snapshot.seatA;
+            const seatAState = snapshot.seatAState || {};
+            const seatBState = snapshot.seatBState || {};
+            if (!seatAName) return;
+
+            state.fieldFront.value = cloneReplayCards(seatAState.front);
+            state.fieldRear.value = cloneReplayCards(seatAState.rear);
+            state.hand.value = cloneReplayCards(seatAState.hand);
+            state.bonds.value = cloneReplayCards(seatAState.bonds);
+            state.jewels.value = cloneReplayCards(seatAState.jewels);
+            state.graveyard.value = cloneReplayCards(seatAState.graveyard);
+            state.deck.value = cloneReplayCards(seatAState.drawPile);
+
+            state.opponentFront.value = cloneReplayCards(seatBState.front);
+            state.opponentRear.value = cloneReplayCards(seatBState.rear);
+            state.oppHand.value = cloneReplayCards(seatBState.hand);
+            state.oppBonds.value = cloneReplayCards(seatBState.bonds);
+            state.oppJewels.value = cloneReplayCards(seatBState.jewels);
+            state.oppGraveyard.value = cloneReplayCards(seatBState.graveyard);
+            state.oppDeck.value = cloneReplayCards(seatBState.drawPile);
+
+            state.oppStats.value = {
+                ...(state.oppStats.value || {}),
+                hand: Array.isArray(seatBState.hand) ? seatBState.hand.length : 0,
+                bonds: Array.isArray(seatBState.bonds) ? seatBState.bonds.length : 0,
+                active: Array.isArray(seatBState.front) ? seatBState.front.length : 0
+            };
+
+            state.isCombatActive.value = false;
+            state.attacker.value = null;
+            state.defender.value = null;
+            state.mySupportCard.value = null;
+            state.oppSupportCard.value = null;
+            state.supportInteraction.value = null;
+            state.selectedCard.value = null;
+
+            state.currentPhase.value = 'ATTACK';
+            state.isMyTurn.value = String(snapshot.activeSeat || '') === String(snapshot.seatA || '');
+        };
+
+        const getCurrentReplayGame = () => {
+            const games = Array.isArray(aiReplayLog.value?.games) ? aiReplayLog.value.games : [];
+            return games[aiReplayGameIndex.value] || null;
+        };
+
+        const getReplayBaseSnapshot = (game) => {
+            if (!game) return null;
+            return game.initialSnapshot || null;
+        };
+
+        const applyCurrentReplayCursor = () => {
+            const game = getCurrentReplayGame();
+            if (!game) return;
+            const timeline = Array.isArray(game.timeline) ? game.timeline : [];
+            if (!timeline.length) return;
+            const safeCursor = Math.max(0, Math.min(aiReplayCursor.value, timeline.length - 1));
+            aiReplayCursor.value = safeCursor;
+
+            const baseSnapshot = getReplayBaseSnapshot(game);
+            if (!baseSnapshot) return;
+            applyReplaySnapshot(baseSnapshot);
+
+            for (let idx = 0; idx <= safeCursor; idx++) {
+                const eventPatch = timeline[idx]?.extra?.replayPatch || null;
+                if (eventPatch) {
+                    applyReplayPatch(eventPatch, baseSnapshot.seatA);
+                }
+            }
+        };
+
+        const loadLatestAiReplayLog = async () => {
+            if (!state.isDevMode.value) {
+                alert('仅开发者模式可使用 AI 回放功能。');
+                return;
+            }
+
+            isAiReplayLoading.value = true;
+            try {
+                const listResponse = await fetch('/api/ai/duel/logs?limit=1');
+                const listPayload = await listResponse.json().catch(() => ({}));
+                if (!listResponse.ok) {
+                    alert(listPayload?.message || '读取回放日志列表失败。');
+                    return;
+                }
+                const latest = Array.isArray(listPayload?.items) ? listPayload.items[0] : null;
+                if (!latest?.id) {
+                    aiReplayLog.value = null;
+                    alert('暂无 AI 对战日志，请先运行一次 AI 对战。');
+                    return;
+                }
+
+                const detailResponse = await fetch(`/api/ai/duel/logs/${encodeURIComponent(latest.id)}`);
+                const detailPayload = await detailResponse.json().catch(() => ({}));
+                if (!detailResponse.ok) {
+                    alert(detailPayload?.message || '读取回放日志失败。');
+                    return;
+                }
+
+                await ensureReplayCardCatalogLoaded();
+                aiReplayLog.value = detailPayload;
+                aiReplayGameIndex.value = 0;
+                aiReplayCursor.value = 0;
+                applyCurrentReplayCursor();
+            } catch (err) {
+                console.error('[AI Replay] 加载失败', err);
+                alert('加载 AI 回放失败，请查看控制台。');
+            } finally {
+                isAiReplayLoading.value = false;
+            }
+        };
+
+        const openAiReplayFromControlBar = async () => {
+            if (!state.isDevMode.value) {
+                alert('仅开发者模式可使用 AI 回放功能。');
+                return;
+            }
+            showAiReplayPanel.value = true;
+            isAiReplayPanelHidden.value = false;
+            await loadLatestAiReplayLog();
+        };
+
+        const toggleAiReplayPanelHiddenFromControlBar = () => {
+            if (!showAiReplayPanel.value) return;
+            isAiReplayPanelHidden.value = !isAiReplayPanelHidden.value;
+        };
+
+        const closeAiReplayPanel = () => {
+            showAiReplayPanel.value = false;
+            isAiReplayPanelHidden.value = false;
+        };
+
+        const selectAiReplayGame = (index) => {
+            aiReplayGameIndex.value = Math.max(0, Number.parseInt(index, 10) || 0);
+            aiReplayCursor.value = 0;
+            applyCurrentReplayCursor();
+        };
+
+        const stepAiReplayPrev = () => {
+            aiReplayCursor.value -= 1;
+            applyCurrentReplayCursor();
+        };
+
+        const stepAiReplayNext = () => {
+            aiReplayCursor.value += 1;
+            applyCurrentReplayCursor();
+        };
+
+        const jumpAiReplayTo = (cursor) => {
+            aiReplayCursor.value = Number.parseInt(cursor, 10) || 0;
+            applyCurrentReplayCursor();
         };
 
         const closeDeckManager = () => {
@@ -738,6 +1135,27 @@ createApp({
             openDeckManager,
             closeDeckManager,
             showDeckManager,
+            isAiDuelPending,
+            runAiDuelFromControlBar,
+            showAiReplayPanel,
+            showAiReplayPanelVisible,
+            isAiReplayPanelHidden,
+            showAiReplayStepButtons,
+            canStepAiReplayPrev,
+            canStepAiReplayNext,
+            currentAiReplayEventLine,
+            isAiReplayLoading,
+            aiReplayLog,
+            aiReplayGameIndex,
+            aiReplayCursor,
+            openAiReplayFromControlBar,
+            toggleAiReplayPanelHiddenFromControlBar,
+            closeAiReplayPanel,
+            loadLatestAiReplayLog,
+            selectAiReplayGame,
+            stepAiReplayPrev,
+            stepAiReplayNext,
+            jumpAiReplayTo,
             createRoom,
             joinRoom,
             quickMatch,
@@ -755,6 +1173,14 @@ createApp({
             selectedCombatCostCard,
             selectedCombatCostCardName,
             combatCostCandidates,
+            selectedCardAbilityPrimaryLabel,
+            selectedCardAbilitySecondaryLabel,
+            selectedCardAbilityTertiaryLabel,
+            selectedCardAbilityQuaternaryLabel,
+            onSelectedCardAbilityPrimary: () => activateSelectedCardAbilityByIndex(0),
+            onSelectedCardAbilitySecondary: () => activateSelectedCardAbilityByIndex(1),
+            onSelectedCardAbilityTertiary: () => activateSelectedCardAbilityByIndex(2),
+            onSelectedCardAbilityQuaternary: () => activateSelectedCardAbilityByIndex(3),
             isMyCard, isCardInHand, formattedAbility, formattedSupport, handleMinifiedClick, updateHeight
         };
     }

@@ -10,6 +10,7 @@ const { registerSyncHandlers } = require('./server/socket/registerSyncHandlers')
 const { registerTurnModeHandlers } = require('./server/socket/registerTurnModeHandlers');
 const { createConnectionRegistry } = require('./server/socket/connectionRegistry');
 const { createDeckRouter } = require('./server/decks/deckRoutes');
+const { createAiRouter } = require('./server/ai/aiRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +23,7 @@ const cardsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'cards_b01.jso
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 app.get('/api/cards', (req, res) => { res.json(cardsData); });
 app.use('/api/decks', createDeckRouter({ cardPool: cardsData }));
+app.use('/api/ai', createAiRouter({ cardPool: cardsData }));
 
 const connectionRegistry = createConnectionRegistry(io, EVT);
 const { log } = connectionRegistry;

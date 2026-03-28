@@ -131,11 +131,47 @@ export const CardDetailModal = {
         },
         getRangeHint(card) {
             const range = this.getRangeDisplay(card);
-            if (range === '-') return '无射程/射程0：不能攻击对方单位';
-            if (range === '1') return '前场可攻击对方前场';
-            if (range === '2') return '后场打对方前场；前场打对方后场';
-            if (range === '1-2') return '前场打对方前后场；后场打对方前场';
+            const modelHint = globalThis.RANGE_MODEL?.describeRange?.(range);
+            if (modelHint) return modelHint;
+
+            if (range === '-') return '射程0：仅可命中同区域（实战中无可攻击敌方目标）';
+            if (range === '1') return '可命中距离1区域';
+            if (range === '2') return '可命中距离2区域';
+            if (range === '1-2') return '可命中距离1或2区域';
             return '射程规则未定义';
+        },
+        getAbilityText(card) {
+            if (!card) return '';
+            if (typeof card.ability === 'string') return card.ability;
+            const direct = String(card.ability?.text || '').trim();
+            if (direct) return direct;
+
+            const entries = Array.isArray(card.ability?.entries) ? card.ability.entries : [];
+            if (!entries.length) return '';
+
+            return entries
+                .map((entry) => {
+                    const title = String(entry?.title || '').trim();
+                    const type = String(entry?.type || '').trim();
+                    const effect = String(entry?.effectText || entry?.rawText || '').trim();
+                    const head = `${title ? `『${title}』` : ''}${type}`.trim();
+                    return `${head}${head && effect ? ' ' : ''}${effect}`.trim();
+                })
+                .filter(Boolean)
+                .join('\n');
+        },
+        getSupportText(card) {
+            if (!card) return '';
+            if (typeof card.supportAbility === 'string') return card.supportAbility;
+            const direct = String(card.supportAbility?.text || '').trim();
+            if (direct) return direct;
+
+            const effectName = String(card.supportAbility?.effectName || '').trim();
+            const effectText = String(card.supportAbility?.effectText || '').trim();
+            if (effectName || effectText) {
+                return `${effectName ? `『${effectName}』` : ''}${effectText ? (effectName ? ' ' : '') + effectText : ''}`.trim();
+            }
+            return '';
         },
         handlePrimaryAction() {
             if (!this.onPrimaryAction || !this.selectedCard) return;
@@ -203,7 +239,7 @@ export const CardDetailModal = {
                         <div class="text-[9px] text-blue-400 font-bold mb-1 uppercase">Unit Ability / 单元能力</div>
                         <div class="max-h-24 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-300 pr-1"
                              style="white-space: pre-wrap;"
-                             v-html="formattedAbility(selectedCard.ability?.text)">
+                             v-html="formattedAbility(getAbilityText(selectedCard))">
                         </div>
                     </div>
 
@@ -211,7 +247,7 @@ export const CardDetailModal = {
                         <div class="text-[9px] text-yellow-500 font-bold mb-1 uppercase">Support Ability / 支援能力</div>
                         <div class="max-h-20 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-400 pr-1 italic"
                              style="white-space: pre-wrap;"
-                             v-html="formattedSupport(selectedCard.supportAbility?.text)">
+                             v-html="formattedSupport(getSupportText(selectedCard))">
                         </div>
                     </div>
                 </div>

@@ -7,6 +7,13 @@
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
+    <script>
+      document.addEventListener('dragstart', e => e.preventDefault(), { capture: true });
+      // 阻止从屏幕左边缘向右划触发浏览器后退手势
+      document.addEventListener('pointerdown', e => {
+        if (e.clientX < 20) e.preventDefault();
+      }, { capture: true, passive: false });
+    </script>
     
     <!-- app.js handles all module imports -->
 
@@ -18,33 +25,52 @@
 	<top-control-bar
         :is-dev-mode="isDevMode"
         :is-my-turn="isMyTurn"
+     :show-dev-mode-toggle="!showAiReplayPanel"
         :on-toggle-dev-mode="toggleDevMode"
         :on-reset-game="resetByControlBar"
-        :show-reset-button="topBarUi.showResetButton"
+        :show-reset-button="topBarUi.showResetButton && !showAiReplayPanel"
         :on-open-deck-manager="openDeckManager"
-        :show-deck-manager-button="topBarUi.showDeckManagerButton"
-        :show-cost-counter="topBarUi.showCostCounter"
+        :show-deck-manager-button="topBarUi.showDeckManagerButton && !showAiReplayPanel"
+        :on-run-ai-duel="runAiDuelFromControlBar"
+        :on-open-ai-replay="openAiReplayFromControlBar"
+        :on-toggle-ai-replay-panel-hidden="toggleAiReplayPanelHiddenFromControlBar"
+        :on-ai-replay-prev="stepAiReplayPrev"
+        :on-ai-replay-next="stepAiReplayNext"
+        :on-exit-ai-replay-mode="closeAiReplayPanel"
+        :show-ai-duel-button="isDevMode && !showAiReplayPanel"
+        :show-ai-replay-button="isDevMode && !showAiReplayPanel"
+        :show-ai-replay-panel-toggle="isDevMode && showAiReplayPanel"
+        :show-ai-replay-exit-button="isDevMode && showAiReplayPanel"
+        :ai-replay-panel-hidden="isAiReplayPanelHidden"
+        :show-ai-replay-step-buttons="showAiReplayStepButtons"
+        :can-ai-replay-prev="canStepAiReplayPrev"
+        :can-ai-replay-next="canStepAiReplayNext"
+        :show-ai-replay-current-line="showAiReplayStepButtons"
+        :ai-replay-current-line="currentAiReplayEventLine"
+        :ai-duel-pending="isAiDuelPending"
+        :show-cost-counter="topBarUi.showCostCounter && !showAiReplayPanel"
         :remaining-cost="remainingCost"
         :total-bonds="totalBonds"
-        :show-turn-owner="topBarUi.showTurnOwner"
-        :has-undo="topBarUi.showResetButton && undoStack.length > 0"
+        :show-turn-owner="topBarUi.showTurnOwner && !showAiReplayPanel"
+        :has-undo="!showAiReplayPanel && topBarUi.showResetButton && undoStack.length > 0"
         :undo-disabled="hasBattledThisTurn"
         :on-undo="undoLastMove"
         :phase-name="currentPhaseName"
-        :show-phase-name="topBarUi.showPhaseName"
-        :show-next-phase-button="topBarUi.showNextPhaseButton"
+        :show-phase-name="topBarUi.showPhaseName && !showAiReplayPanel"
+        :show-next-phase-button="topBarUi.showNextPhaseButton && !showAiReplayPanel"
         :next-phase-label="nextPhaseLabel"
         :on-next-phase="nextPhase"
         :room-status-text="roomStatusText"
-        :show-create-room-button="topBarUi.showCreateRoomButton"
+        :show-room-status-text="!showAiReplayPanel"
+        :show-create-room-button="topBarUi.showCreateRoomButton && !showAiReplayPanel"
         :on-create-room="createRoom"
-        :show-join-room-button="topBarUi.showJoinRoomButton"
+        :show-join-room-button="topBarUi.showJoinRoomButton && !showAiReplayPanel"
         :on-join-room="joinRoom"
-        :show-quick-match-button="topBarUi.showQuickMatchButton"
+        :show-quick-match-button="topBarUi.showQuickMatchButton && !showAiReplayPanel"
         :on-quick-match="quickMatch"
-        :show-leave-room-button="topBarUi.showLeaveRoomButton"
+        :show-leave-room-button="topBarUi.showLeaveRoomButton && !showAiReplayPanel"
         :on-leave-room="leaveRoom"
-        :show-start-room-button="topBarUi.showStartRoomButton"
+        :show-start-room-button="topBarUi.showStartRoomButton && !showAiReplayPanel"
         :room-can-start="canStartRoomGame"
         :on-start-room-game="startRoomGame">
     </top-control-bar>
@@ -136,6 +162,25 @@
         :deck-count="deck?.length || 0"
         :on-draw-card="drawCard">
     </deck-widget>
+
+    <div
+        v-if="showAiReplayStepButtons"
+        class="fixed right-2 sm:right-6 bottom-[72px] sm:bottom-[92px] z-[92] flex items-center gap-1.5">
+        <button
+            @click="stepAiReplayPrev()"
+            :disabled="!canStepAiReplayPrev"
+            :class="canStepAiReplayPrev ? 'bg-sky-900/85 hover:bg-sky-700 border-sky-500/50 text-white' : 'bg-sky-900/30 border-sky-900/60 text-sky-300/50 cursor-not-allowed'"
+            class="text-[10px] px-2 py-1 rounded border">
+            上一步
+        </button>
+        <button
+            @click="stepAiReplayNext()"
+            :disabled="!canStepAiReplayNext"
+            :class="canStepAiReplayNext ? 'bg-sky-900/85 hover:bg-sky-700 border-sky-500/50 text-white' : 'bg-sky-900/30 border-sky-900/60 text-sky-300/50 cursor-not-allowed'"
+            class="text-[10px] px-2 py-1 rounded border">
+            下一步
+        </button>
+    </div>
     <div class="hand-container-fixed">
 		<bond-strip
             :bonds="bonds"
@@ -213,6 +258,14 @@
 
     <card-detail-modal
         :selected-card="selectedCard"
+        :primary-action-label="selectedCardAbilityPrimaryLabel"
+        :on-primary-action="onSelectedCardAbilityPrimary"
+        :secondary-action-label="selectedCardAbilitySecondaryLabel"
+        :on-secondary-action="onSelectedCardAbilitySecondary"
+        :tertiary-action-label="selectedCardAbilityTertiaryLabel"
+        :on-tertiary-action="onSelectedCardAbilityTertiary"
+        :quaternary-action-label="selectedCardAbilityQuaternaryLabel"
+        :on-quaternary-action="onSelectedCardAbilityQuaternary"
         :is-my-card="isMyCard"
         :is-card-in-hand="isCardInHand"
         :is-dev-mode="isDevMode"
@@ -257,6 +310,21 @@
         :on-close="closeDeckManager">
     </deck-manager-modal>
 
+    <ai-replay-panel
+        :visible="showAiReplayPanelVisible"
+        :compact="isCompactMobile"
+        :loading="isAiReplayLoading"
+        :replay-log="aiReplayLog"
+        :selected-game-index="aiReplayGameIndex"
+        :cursor="aiReplayCursor"
+        :on-close="closeAiReplayPanel"
+        :on-load-latest="loadLatestAiReplayLog"
+        :on-select-game="selectAiReplayGame"
+        :on-step-prev="stepAiReplayPrev"
+        :on-step-next="stepAiReplayNext"
+        :on-jump-to="jumpAiReplayTo">
+    </ai-replay-panel>
+
     <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
         <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">
     </div>
@@ -264,6 +332,7 @@
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="shared/socketEvents.js"></script>
+<script src="shared/rangeModel.js"></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
