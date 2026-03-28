@@ -6,6 +6,7 @@ export function createInteractionState() {
     const isDraggingOver = ref(null);
     const hoveredAttackTargetId = ref(null);
     const hoveredAttackTargetRect = ref(null);
+    const attackRangeTargetIds = ref([]);
     const draggedCard = ref(null);
     const undoStack = ref([]);
 
@@ -13,6 +14,7 @@ export function createInteractionState() {
         isDraggingOver,
         hoveredAttackTargetId,
         hoveredAttackTargetRect,
+        attackRangeTargetIds,
         draggedCard,
         undoStack
     };

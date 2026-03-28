@@ -20,6 +20,10 @@ export const BattleRow = {
             type: [String, Number, null],
             default: null
         },
+        attackRangeTargetIds: {
+            type: Array,
+            default: () => []
+        },
         isEnemy: Boolean,
         isGuideActive: Boolean,
         isDraggingOver: Boolean,
@@ -91,6 +95,7 @@ export const BattleRow = {
                      :class="{
                          'is-mc-card': card.isMainCharacter,
                          'card-tapped': card.isTapped,
+                         'attack-range-mark': isEnemy && attackRangeTargetIds.includes(String(card.instanceId)) && String(hoveredAttackTargetId) !== String(card.instanceId),
                          'attack-target-lift': isEnemy && String(hoveredAttackTargetId) === String(card.instanceId)
                      }"
                      draggable="true"

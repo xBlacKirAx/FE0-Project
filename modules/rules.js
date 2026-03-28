@@ -2,6 +2,74 @@
 
 // modules/rules.js
 export function createRulesEngine(state) {
+
+    const getCardAreaName = (card) => {
+        if (!card?.instanceId) return null;
+        const id = String(card.instanceId);
+
+        if ((state.fieldFront.value || []).some(c => String(c.instanceId) === id)) return 'my-front';
+        if ((state.fieldRear.value || []).some(c => String(c.instanceId) === id)) return 'my-rear';
+        if ((state.opponentFront.value || []).some(c => String(c.instanceId) === id)) return 'opp-front';
+        if ((state.opponentRear.value || []).some(c => String(c.instanceId) === id)) return 'opp-rear';
+        return null;
+    };
+
+    const normalizeRange = (raw) => {
+        const text = String(raw || '').trim();
+        if (text === '1' || text === '2' || text === '1-2' || text === '-') return text;
+        return '-';
+    };
+
+    const canAttackTargetByRange = (attackerCard, defenderCard) => {
+        const attackerArea = getCardAreaName(attackerCard);
+        const defenderArea = getCardAreaName(defenderCard);
+        const range = normalizeRange(attackerCard?.range);
+
+        if (!attackerArea || !defenderArea) {
+            return { valid: false, reason: 'invalid-area', message: '攻防单位区域信息异常。' };
+        }
+        if (!(attackerArea === 'my-front' || attackerArea === 'my-rear')) {
+            return { valid: false, reason: 'attacker-not-my-field', message: '攻击单位必须在己方战场。' };
+        }
+        if (!(defenderArea === 'opp-front' || defenderArea === 'opp-rear')) {
+            return { valid: false, reason: 'defender-not-opp-field', message: '目标必须是对方前场或后场单位。' };
+        }
+
+        if (range === '-') {
+            return { valid: false, reason: 'range-zero', message: '该单位射程为“-”，不能进行攻击。' };
+        }
+
+        if (range === '1') {
+            const ok = attackerArea === 'my-front' && defenderArea === 'opp-front';
+            return {
+                valid: ok,
+                reason: ok ? 'ok' : 'range-1-invalid',
+                message: ok ? '' : '射程1：仅当前场单位可攻击对方前场。'
+            };
+        }
+
+        if (range === '2') {
+            const ok = (attackerArea === 'my-rear' && defenderArea === 'opp-front')
+                || (attackerArea === 'my-front' && defenderArea === 'opp-rear');
+            return {
+                valid: ok,
+                reason: ok ? 'ok' : 'range-2-invalid',
+                message: ok ? '' : '射程2：后场仅可打对方前场；前场仅可打对方后场。'
+            };
+        }
+
+        if (range === '1-2') {
+            const ok = (attackerArea === 'my-front' && (defenderArea === 'opp-front' || defenderArea === 'opp-rear'))
+                || (attackerArea === 'my-rear' && defenderArea === 'opp-front');
+            return {
+                valid: ok,
+                reason: ok ? 'ok' : 'range-12-invalid',
+                message: ok ? '' : '射程1-2：前场可攻击对方前后场；后场仅可攻击对方前场。'
+            };
+        }
+
+        return { valid: false, reason: 'unsupported-range', message: '未知射程，不能攻击。' };
+    };
     
     // 基础阶段动作判定
     const canPerformAction = (actionType) => {
@@ -13,7 +81,8 @@ export function createRulesEngine(state) {
             'draw': ['BEGINNING'],
             'placeBond': ['BOND'],
             'deploy': ['DEPLOY'],
-            'attack': ['ATTACK']
+            'attack': ['ATTACK'],
+            'reposition': ['ATTACK']
         };
 
         return validPhases[actionType]?.includes(state.currentPhase.value);
@@ -124,6 +193,7 @@ export function createRulesEngine(state) {
     return {
         canPerformAction,
         canDeployCard,
+        canAttackTargetByRange,
         getActionByArea,
         canPerformClassChange,
         getCardFactionInfo

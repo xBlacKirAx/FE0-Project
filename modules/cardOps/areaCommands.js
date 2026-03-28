@@ -299,6 +299,56 @@ export function createAreaCommands({ state, socket, refs }) {
     const playToBond = (card) => moveTo(card, 'bonds');
     const returnToHandFromBoard = (card) => moveTo(card, 'hand');
 
+    const moveFieldUnit = (card, toAreaName) => {
+        if (!card) return false;
+        if (toAreaName !== 'front' && toAreaName !== 'rear') return false;
+        if (!state.isDevMode.value && card.isTapped) return false;
+
+        const fromArea = getArea(card);
+        const fromAreaName = getAreaName(fromArea);
+        if (fromAreaName !== 'front' && fromAreaName !== 'rear') return false;
+        if (fromAreaName === toAreaName) return false;
+
+        const fromArr = getAreaArray(fromAreaName);
+        const idx = fromArr.findIndex(c => c.instanceId === card.instanceId);
+        if (idx === -1) return false;
+
+        const moved = fromArr.splice(idx, 1)[0];
+        const wasTapped = !!moved.isTapped;
+        moved.isTapped = true;
+        getAreaArray(toAreaName).push(moved);
+        emitSyncCardMove(socket, { card: moved, from: fromAreaName, to: toAreaName });
+
+        undoStack.value.push({
+            type: 'field-move',
+            cardId: moved.instanceId,
+            from: fromAreaName,
+            to: toAreaName,
+            wasTapped,
+            previousPhase: state.currentPhase.value,
+            previousHasPlacedBond: hasPlacedBond.value
+        });
+        if (undoStack.value.length > 10) undoStack.value.shift();
+
+        selectedCard.value = null;
+        console.log(`[移动] ${moved?.cardName || '卡牌'} [${fromAreaName} → ${toAreaName}]，并转为横置`);
+        return true;
+    };
+
+    const marchRearToFrontIfNeeded = (reason = 'auto-march') => {
+        if (fieldFront.value.length > 0) return false;
+        if (fieldRear.value.length === 0) return false;
+
+        const movedCards = fieldRear.value.splice(0, fieldRear.value.length);
+        movedCards.forEach(card => {
+            fieldFront.value.push(card);
+            emitSyncCardMove(socket, { card, from: 'rear', to: 'front' });
+        });
+
+        console.log(`[进军] ${reason}：后场 ${movedCards.length} 张已推进前场`);
+        return true;
+    };
+
     // 转职：用手牌卡覆盖战场上相同角色的卡，旧卡叠放于新卡下，并抽1卡
     const performClassChange = (handCard, targetCardOnField) => {
         if (!handCard || !targetCardOnField) return;
@@ -540,6 +590,19 @@ export function createAreaCommands({ state, socket, refs }) {
             return;
         }
 
+        if (last.type === 'field-move') {
+            const toAreaArr = getAreaArray(last.to);
+            const cardIdx = toAreaArr.findIndex(c => c.instanceId === last.cardId);
+            if (cardIdx > -1) {
+                const moved = toAreaArr.splice(cardIdx, 1)[0];
+                moved.isTapped = !!last.wasTapped;
+                getAreaArray(last.from).push(moved);
+                emitSyncCardMove(socket, { card: moved, from: last.to, to: last.from });
+                console.log(`[撤销] 撤回移动：${moved?.cardName || '卡牌'} [${last.to} → ${last.from}]`);
+            }
+            return;
+        }
+
         if (last.costUsed && state.usedBondsThisTurn !== undefined) {
             state.usedBondsThisTurn.value -= last.costUsed;
         }
@@ -674,6 +737,8 @@ export function createAreaCommands({ state, socket, refs }) {
         returnToHandFromBoard,
         drawCard,
         performClassChange,
+        moveFieldUnit,
+        marchRearToFrontIfNeeded,
         toggleBondFace,
         undoLastMove,
         placeCardToTopOfDeck,

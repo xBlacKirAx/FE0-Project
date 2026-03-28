@@ -2,12 +2,13 @@
 // 拖拽和触摸交互
 
 export function createDragDropHandler(state, cardOps, rules) {
-    const { draggedCard, isDraggingOver, hoveredAttackTargetId, hoveredAttackTargetRect } = state;
-    const { moveTo, initiateAttack } = cardOps;
-    const { canPerformAction, getActionByArea, canDeployCard} = rules;
+    const { draggedCard, isDraggingOver, hoveredAttackTargetId, hoveredAttackTargetRect, attackRangeTargetIds } = state;
+    const { moveTo, moveFieldUnit, initiateAttack } = cardOps;
+    const { canPerformAction, getActionByArea, canDeployCard, canAttackTargetByRange } = rules;
     const clearAttackTargetHighlight = () => {
         hoveredAttackTargetId.value = null;
         hoveredAttackTargetRect.value = null;
+        attackRangeTargetIds.value = [];
     };
 
     const setAttackTargetHighlight = (enemyCardId, element) => {
@@ -25,6 +26,29 @@ export function createDragDropHandler(state, cardOps, rules) {
         };
     };
 
+    const getFieldAreaName = (card) => {
+        if (!card) return null;
+        if (state.fieldFront.value.some(c => c.instanceId === card.instanceId)) return 'front';
+        if (state.fieldRear.value.some(c => c.instanceId === card.instanceId)) return 'rear';
+        return null;
+    };
+
+    const computeAttackRangeTargets = (attackerCard) => {
+        if (!attackerCard) return [];
+        const attackerArea = getFieldAreaName(attackerCard);
+        if (!attackerArea) return [];
+        const enemies = [...state.opponentFront.value, ...state.opponentRear.value];
+        if (!enemies.length) return [];
+
+        if (state.isDevMode.value || typeof canAttackTargetByRange !== 'function') {
+            return enemies.map(c => String(c.instanceId));
+        }
+
+        return enemies
+            .filter(enemy => canAttackTargetByRange(attackerCard, enemy).valid)
+            .map(enemy => String(enemy.instanceId));
+    };
+
     // 触摸意图判定：横向滑动优先视为滚动，而不是拖拽。
     let touchStartX = 0;
     let touchStartY = 0;
@@ -36,6 +60,11 @@ export function createDragDropHandler(state, cardOps, rules) {
         if (!state.isDevMode.value && !state.isMyTurn.value) return;
         draggedCard.value = card;
         clearAttackTargetHighlight();
+
+        if (getFieldAreaName(card)) {
+            attackRangeTargetIds.value = computeAttackRangeTargets(card);
+        }
+
         if (window.navigator.vibrate) window.navigator.vibrate(10);
     };
 
@@ -56,7 +85,7 @@ export function createDragDropHandler(state, cardOps, rules) {
 
         // 【规则拦截】非攻击阶段
         if (state.currentPhase.value !== 'ATTACK' && !state.isDevMode.value) {
-            console.warn("[规则拦截] 只能在【攻击阶段】发起攻击！");
+            console.warn("[规则拦截] 只能在【行动阶段】发起攻击！");
             draggedCard.value = null;
             return;
         }
@@ -66,6 +95,15 @@ export function createDragDropHandler(state, cardOps, rules) {
             console.warn("[规则拦截] 已横置的卡牌无法再次攻击！");
             draggedCard.value = null;
             return;
+        }
+
+        if (!state.isDevMode.value && typeof canAttackTargetByRange === 'function') {
+            const rangeCheck = canAttackTargetByRange(draggedCard.value, enemyCard);
+            if (!rangeCheck.valid) {
+                console.warn(`[规则拦截] ${rangeCheck.message || '射程不允许该攻击目标'}`);
+                draggedCard.value = null;
+                return;
+            }
         }
 
         if (initiateAttack) {
@@ -78,6 +116,28 @@ export function createDragDropHandler(state, cardOps, rules) {
         isDraggingOver.value = null;
         clearAttackTargetHighlight();
         if (!draggedCard.value) return;
+
+        const fromFieldArea = getFieldAreaName(draggedCard.value);
+        const isRepositionTarget = (toAreaName === 'front' || toAreaName === 'rear') && !!fromFieldArea;
+        if (isRepositionTarget && fromFieldArea !== toAreaName) {
+            if (!state.isDevMode.value && draggedCard.value?.isTapped) {
+                console.warn('[规则拦截] 已横置的卡片不能进行会导致横置的移动动作！');
+                draggedCard.value = null;
+                return;
+            }
+            if (!state.isDevMode.value && !canPerformAction('reposition')) {
+                console.warn('[规则拦截] 只能在【行动阶段】进行战场单位移动！');
+                draggedCard.value = null;
+                return;
+            }
+            if (moveFieldUnit) {
+                moveFieldUnit(draggedCard.value, toAreaName);
+            } else {
+                moveTo(draggedCard.value, toAreaName);
+            }
+            draggedCard.value = null;
+            return;
+        }
 
         // 检测转职（只在出击到前场或后场时）
         if ((toAreaName === 'front' || toAreaName === 'rear') && state.hand.value.some(c => c.instanceId === draggedCard.value.instanceId)) {
@@ -186,6 +246,17 @@ export function createDragDropHandler(state, cardOps, rules) {
                  isDraggingOver.value = null; 
                  clearAttackTargetHighlight();
              } else {
+                 const enemyId = enemyCardEl.getAttribute('data-enemy-id');
+                 const targetCard = [...state.opponentFront.value, ...state.opponentRear.value]
+                     .find(c => String(c.instanceId) === String(enemyId));
+                 if (!state.isDevMode.value && typeof canAttackTargetByRange === 'function' && targetCard) {
+                     const rangeCheck = canAttackTargetByRange(draggedCard.value, targetCard);
+                     if (!rangeCheck.valid) {
+                         isDraggingOver.value = null;
+                         clearAttackTargetHighlight();
+                         return;
+                     }
+                 }
                  isDraggingOver.value = 'attack-target';
                  setAttackTargetHighlight(enemyCardEl.getAttribute('data-enemy-id'), enemyCardEl);
              }
@@ -244,6 +315,18 @@ export function createDragDropHandler(state, cardOps, rules) {
             const enemyId = enemyCardEl.getAttribute('data-enemy-id');
             const allEnemyCards = [...state.opponentFront.value, ...state.opponentRear.value];
             const targetCard = allEnemyCards.find(c => String(c.instanceId) === enemyId);
+
+            if (!state.isDevMode.value && typeof canAttackTargetByRange === 'function' && targetCard) {
+                const rangeCheck = canAttackTargetByRange(draggedCard.value, targetCard);
+                if (!rangeCheck.valid) {
+                    console.warn(`[规则拦截] ${rangeCheck.message || '射程不允许该攻击目标'}`);
+                    draggedCard.value = null;
+                    isDraggingOver.value = null;
+                    clearAttackTargetHighlight();
+                    touchSourceArea = null;
+                    return;
+                }
+            }
             
             if (targetCard && initiateAttack) initiateAttack(state, draggedCard.value, targetCard);
             
@@ -257,6 +340,35 @@ export function createDragDropHandler(state, cardOps, rules) {
         const areaElement = element?.closest('[data-area]');
         if (areaElement) {
             const areaName = areaElement.getAttribute('data-area');
+
+            const fromFieldArea = getFieldAreaName(draggedCard.value);
+            const isRepositionTarget = (areaName === 'front' || areaName === 'rear') && !!fromFieldArea;
+            if (isRepositionTarget && fromFieldArea !== areaName) {
+                if (!state.isDevMode.value && draggedCard.value?.isTapped) {
+                    console.warn('[规则拦截] 已横置的卡片不能进行会导致横置的移动动作！');
+                    draggedCard.value = null;
+                    isDraggingOver.value = null;
+                    return;
+                }
+                if (!state.isDevMode.value && !canPerformAction('reposition')) {
+                    console.warn('[规则拦截] 只能在【行动阶段】进行战场单位移动！');
+                    draggedCard.value = null;
+                    isDraggingOver.value = null;
+                    return;
+                }
+                if (moveFieldUnit) {
+                    moveFieldUnit(draggedCard.value, areaName);
+                } else {
+                    moveTo(draggedCard.value, areaName);
+                }
+                draggedCard.value = null;
+                touchDragActive = false;
+                touchSourceArea = null;
+                isDraggingOver.value = null;
+                clearAttackTargetHighlight();
+                return;
+            }
+
             const actionType = getActionByArea(areaName);
             
             if (actionType && !canPerformAction(actionType)) {

@@ -93,6 +93,10 @@ export const CardDetailModal = {
             type: Function,
             required: true
         },
+        moveFieldUnit: {
+            type: Function,
+            required: true
+        },
         canPerformClassChange: {
             type: Function,
             required: true
@@ -120,6 +124,18 @@ export const CardDetailModal = {
         },
         getDisplayName(card) {
             return card?.cardName || card?.name || '';
+        },
+        getRangeDisplay(card) {
+            const value = String(card?.range || '').trim();
+            return value || '-';
+        },
+        getRangeHint(card) {
+            const range = this.getRangeDisplay(card);
+            if (range === '-') return '无射程/射程0：不能攻击对方单位';
+            if (range === '1') return '前场可攻击对方前场';
+            if (range === '2') return '后场打对方前场；前场打对方后场';
+            if (range === '1-2') return '前场打对方前后场；后场打对方前场';
+            return '射程规则未定义';
         },
         handlePrimaryAction() {
             if (!this.onPrimaryAction || !this.selectedCard) return;
@@ -173,9 +189,12 @@ export const CardDetailModal = {
                         <h3 class="font-bold text-white text-sm leading-tight">{{ getDisplayName(selectedCard) }}</h3>
                         <div class="grid grid-cols-2 gap-x-2 mt-2 text-[10px] text-gray-400">
                             <div>费用: <span class="text-white">{{ selectedCard.cost }}</span></div>
-                            <div>射程: <span class="text-white">{{ selectedCard.range }}</span></div>
+                            <div>射程: <span class="text-white">{{ getRangeDisplay(selectedCard) }}</span></div>
                             <div>战力: <span class="text-red-500 font-bold">{{ selectedCard.attack }}</span></div>
                             <div>支援: <span class="text-yellow-500">{{ selectedCard.support }}</span></div>
+                        </div>
+                        <div class="mt-2 text-[9px] text-cyan-300/90 leading-tight border border-cyan-500/30 bg-cyan-950/20 rounded px-2 py-1">
+                            射程规则：{{ getRangeHint(selectedCard) }}
                         </div>
                     </div>
                 </div>
@@ -241,6 +260,19 @@ export const CardDetailModal = {
                                     class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
                             </div>
                         </div>
+                        <button
+                            v-else-if="['front', 'rear'].includes(getAreaName(getArea(selectedCard))) && (isDevMode || currentPhase === 'ATTACK')"
+                            @click="() => {
+                                const from = getAreaName(getArea(selectedCard));
+                                const to = from === 'front' ? 'rear' : 'front';
+                                moveFieldUnit(selectedCard, to);
+                                onClose();
+                            }"
+                            :disabled="!isDevMode && selectedCard.isTapped"
+                            :class="(!isDevMode && selectedCard.isTapped) ? 'opacity-40 cursor-not-allowed' : ''"
+                            class="w-full py-2 bg-cyan-700 hover:bg-cyan-600 text-white text-[10px] rounded font-bold">
+                            {{ (!isDevMode && selectedCard.isTapped) ? '已横置：不能再移动' : ('移动到' + (getAreaName(getArea(selectedCard)) === 'front' ? '后场' : '前场') + '（并横置）') }}
+                        </button>
                         <button v-else-if="isDevMode" @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
                     </div>
                     <!-- 叠放卡牌显示（转职叠放的下级卡） -->

@@ -33,6 +33,10 @@ function createMockState(overrides = {}) {
         currentPhase: ref('DEPLOY'),
         bonds: ref([]),
         usedBondsThisTurn: ref(0),
+        fieldFront: ref([]),
+        fieldRear: ref([]),
+        opponentFront: ref([]),
+        opponentRear: ref([]),
         ...overrides
     };
 }
@@ -83,6 +87,37 @@ function main() {
 
     const factionInfo = validDeployRules.getCardFactionInfo({ force: '光之剑' });
     assert(factionInfo.name === '红色', '势力信息映射异常');
+
+    {
+        const state = createMockState({
+            currentPhase: ref('ATTACK'),
+            fieldFront: ref([{ instanceId: 'a-front', range: '1' }, { instanceId: 'a-front2', range: '2' }, { instanceId: 'a-front3', range: '1-2' }]),
+            fieldRear: ref([{ instanceId: 'a-rear', range: '2' }, { instanceId: 'a-rear2', range: '1-2' }, { instanceId: 'a-rear3', range: '-' }]),
+            opponentFront: ref([{ instanceId: 'd-front' }]),
+            opponentRear: ref([{ instanceId: 'd-rear' }])
+        });
+        const rangeRules = createRulesEngine(state);
+
+        const r0 = rangeRules.canAttackTargetByRange({ instanceId: 'a-rear3', range: '-' }, { instanceId: 'd-front' });
+        assert(r0.valid === false, '射程 - 应禁止攻击');
+
+        const r1ok = rangeRules.canAttackTargetByRange({ instanceId: 'a-front', range: '1' }, { instanceId: 'd-front' });
+        assert(r1ok.valid === true, '射程1：前场应可攻击对方前场');
+        const r1bad = rangeRules.canAttackTargetByRange({ instanceId: 'a-front', range: '1' }, { instanceId: 'd-rear' });
+        assert(r1bad.valid === false, '射程1：前场不应攻击对方后场');
+
+        const r2rear = rangeRules.canAttackTargetByRange({ instanceId: 'a-rear', range: '2' }, { instanceId: 'd-front' });
+        assert(r2rear.valid === true, '射程2：后场应可攻击对方前场');
+        const r2front = rangeRules.canAttackTargetByRange({ instanceId: 'a-front2', range: '2' }, { instanceId: 'd-rear' });
+        assert(r2front.valid === true, '射程2：前场应可攻击对方后场');
+        const r2bad = rangeRules.canAttackTargetByRange({ instanceId: 'a-front2', range: '2' }, { instanceId: 'd-front' });
+        assert(r2bad.valid === false, '射程2：前场不应攻击对方前场');
+
+        const r12frontA = rangeRules.canAttackTargetByRange({ instanceId: 'a-front3', range: '1-2' }, { instanceId: 'd-front' });
+        const r12frontB = rangeRules.canAttackTargetByRange({ instanceId: 'a-front3', range: '1-2' }, { instanceId: 'd-rear' });
+        const r12rear = rangeRules.canAttackTargetByRange({ instanceId: 'a-rear2', range: '1-2' }, { instanceId: 'd-front' });
+        assert(r12frontA.valid === true && r12frontB.valid === true && r12rear.valid === true, '射程1-2应满足定义中的全部有效攻击方向');
+    }
 
     console.log('规则引擎检查通过');
 }

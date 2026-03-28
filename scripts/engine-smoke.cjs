@@ -338,7 +338,7 @@ function main() {
 
     assert(Array.isArray(phase.PHASE_ORDER), '阶段引擎: PHASE_ORDER 异常');
     assert(phase.PHASE_ORDER.join(',') === 'BEGINNING,BOND,DEPLOY,ATTACK,END', '阶段顺序异常');
-    assert(phase.PHASE_NAME_MAP.ATTACK === '攻击阶段', '阶段名称映射异常');
+    assert(phase.PHASE_NAME_MAP.ATTACK === '行动阶段', '阶段名称映射异常');
     assert(phase.getNextPhase('BEGINNING') === 'BOND', '阶段推进 BEGINNING -> BOND 失败');
     assert(phase.getNextPhase('ATTACK') === 'END', '阶段推进 ATTACK -> END 失败');
     assert(phase.getNextPhase('END') === null, '阶段推进 END 应返回 null');

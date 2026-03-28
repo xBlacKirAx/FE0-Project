@@ -6,7 +6,7 @@ export const PHASE_NAME_MAP = {
     BEGINNING: '开始阶段',
     BOND: '羁绊阶段',
     DEPLOY: '出击阶段',
-    ATTACK: '攻击阶段',
+    ATTACK: '行动阶段',
     END: '结束阶段'
 };
 

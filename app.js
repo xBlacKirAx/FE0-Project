@@ -448,8 +448,29 @@ createApp({
             if (newPhase === 'BEGINNING') {
                 state.usedBondsThisTurn.value = 0;
             }
+
+            // 进军时点1：己方回合结束阶段
+            if (newPhase === 'END' && state.isMyTurn.value && !state.isCombatActive.value) {
+                cardOps.marchRearToFrontIfNeeded?.('己方结束阶段');
+            }
         });
         const { handleMinifiedClick, safePlayToField } = createUiActions({ state, cardOps, rules });
+
+        // 进军时点2：敌方回合所有阶段（通过敌方回合内的场面变化持续判定）
+        watch(
+            () => [
+                state.isMyTurn.value,
+                state.isCombatActive.value,
+                state.fieldFront.value.length,
+                state.fieldRear.value.length
+            ],
+            ([isMyTurn, isCombatActive, frontCount, rearCount]) => {
+                if (isMyTurn) return;
+                if (isCombatActive) return;
+                if (frontCount > 0 || rearCount === 0) return;
+                cardOps.marchRearToFrontIfNeeded?.('敌方回合自动判定');
+            }
+        );
 
         watch(() => state.combatDecision.value?.stage, () => {
             selectedCombatCostCardId.value = null;
