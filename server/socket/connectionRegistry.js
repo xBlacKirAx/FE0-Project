@@ -2,16 +2,10 @@ function createConnectionRegistry(io, EVT) {
     const playerMap = new Map();
     const socketRoomMap = new Map();
     const rooms = new Map(); // roomId -> { hostId, guestId, password }
-    const quickMatchQueue = [];
 
     const playerLabel = (socketId) => playerMap.get(socketId) || `(?${String(socketId || '').slice(-4)})`;
     const log = (socketId, msg) => {
         console.log(`[LOG ${new Date().toTimeString().slice(0, 8)}] [${playerLabel(socketId)}] ${msg}`);
-    };
-
-    const removeFromQueue = (socketId) => {
-        const idx = quickMatchQueue.findIndex(id => id === socketId);
-        if (idx > -1) quickMatchQueue.splice(idx, 1);
     };
 
     const generateRoomId = () => {
@@ -31,6 +25,7 @@ function createConnectionRegistry(io, EVT) {
                 guestId: null,
                 playerCount: 0,
                 ready: false,
+                gameInProgress: false,
                 queueing: false
             };
         }
@@ -46,6 +41,7 @@ function createConnectionRegistry(io, EVT) {
             guestId,
             playerCount,
             ready: playerCount === 2,
+            gameInProgress: !!room.gameInProgress,
             isPrivate: !!room.password,
             queueing: false
         };
@@ -62,8 +58,9 @@ function createConnectionRegistry(io, EVT) {
                 guestId: null,
                 playerCount: 0,
                 ready: false,
+                gameInProgress: false,
                 isPrivate: false,
-                queueing: quickMatchQueue.includes(socketId)
+                queueing: false
             });
             return;
         }
@@ -103,12 +100,11 @@ function createConnectionRegistry(io, EVT) {
     };
 
     const createRoom = (socket, payload = {}) => {
-        removeFromQueue(socket.id);
         leaveCurrentRoom(socket);
 
         const roomId = generateRoomId();
         const password = String(payload.password || '').trim();
-        rooms.set(roomId, { hostId: socket.id, guestId: null, password: password || null });
+        rooms.set(roomId, { hostId: socket.id, guestId: null, password: password || null, lastGameStartAt: 0, gameInProgress: false });
         socket.join(roomId);
         socketRoomMap.set(socket.id, roomId);
         emitRoomStateToRoom(roomId);
@@ -147,7 +143,6 @@ function createConnectionRegistry(io, EVT) {
             return false;
         }
 
-        removeFromQueue(socket.id);
         leaveCurrentRoom(socket);
 
         if (!room.hostId) room.hostId = socket.id;
@@ -166,57 +161,38 @@ function createConnectionRegistry(io, EVT) {
             return;
         }
 
-        removeFromQueue(socket.id);
+        // 新匹配逻辑：优先加入人数为1的公开房（password 为空）
+        for (const [roomId, room] of rooms.entries()) {
+            if (room.password) continue;
 
-        // 取队列中首个仍在线且不在房间的玩家
-        let opponentId = null;
-        while (quickMatchQueue.length > 0) {
-            const candidateId = quickMatchQueue.shift();
-            const candidateSocket = io.sockets.sockets.get(candidateId);
-            if (!candidateSocket) continue;
-            if (socketRoomMap.get(candidateId)) continue;
-            opponentId = candidateId;
-            break;
-        }
+            const hostConnected = !!room.hostId && io.sockets.sockets.has(room.hostId);
+            const guestConnected = !!room.guestId && io.sockets.sockets.has(room.guestId);
+            const playerCount = (hostConnected ? 1 : 0) + (guestConnected ? 1 : 0);
+            if (playerCount !== 1) continue;
+            if (room.hostId === socket.id || room.guestId === socket.id) {
+                emitRoomStateToMember(socket.id);
+                return;
+            }
 
-        if (!opponentId) {
-            quickMatchQueue.push(socket.id);
-            socket.emit(EVT.ROOM_STATE, {
-                roomId: '',
-                hostId: null,
-                guestId: null,
-                playerCount: 0,
-                ready: false,
-                queueing: true
-            });
-            log(socket.id, '进入随机匹配队列');
+            if (!hostConnected) room.hostId = null;
+            if (!guestConnected) room.guestId = null;
+            if (!room.hostId) room.hostId = socket.id;
+            else room.guestId = socket.id;
+
+            socket.join(roomId);
+            socketRoomMap.set(socket.id, roomId);
+            emitRoomStateToRoom(roomId);
+            log(socket.id, `匹配成功，加入公开房 ${roomId}`);
             return;
         }
 
-        const opponentSocket = io.sockets.sockets.get(opponentId);
-        if (!opponentSocket) {
-            quickMatchQueue.push(socket.id);
-            socket.emit(EVT.ROOM_STATE, {
-                roomId: '',
-                hostId: null,
-                guestId: null,
-                playerCount: 0,
-                ready: false,
-                queueing: true
-            });
-            return;
-        }
-
+        // 没有可加入的公开单人房，则创建公开房并等待下一位匹配者
         const roomId = generateRoomId();
-        rooms.set(roomId, { hostId: opponentId, guestId: socket.id, password: null });
-
-        opponentSocket.join(roomId);
+        rooms.set(roomId, { hostId: socket.id, guestId: null, password: null, lastGameStartAt: 0, gameInProgress: false });
         socket.join(roomId);
-        socketRoomMap.set(opponentId, roomId);
         socketRoomMap.set(socket.id, roomId);
-
         emitRoomStateToRoom(roomId);
-        log(socket.id, `匹配成功，房间 ${roomId}`);
+        log(socket.id, `未找到可加入公开房，已创建公开房 ${roomId}`);
     };
 
     const relayToRoomPeers = (socket, eventName, payload) => {
@@ -237,19 +213,24 @@ function createConnectionRegistry(io, EVT) {
             socket.emit(EVT.ROOM_ERROR, { message: '房间不存在' });
             return false;
         }
-        if (room.hostId !== socket.id) {
-            socket.emit(EVT.ROOM_ERROR, { message: '仅房主可开局' });
-            return false;
-        }
         if (!room.hostId || !room.guestId) {
             socket.emit(EVT.ROOM_ERROR, { message: '人数不足，无法开局' });
             return false;
         }
 
+        const now = Date.now();
+        const lastGameStartAt = Number(room.lastGameStartAt || 0);
+        if (now - lastGameStartAt < 2000) {
+            log(socket.id, `房间 ${roomId} 开局请求过快，已忽略重复请求`);
+            return false;
+        }
+        room.lastGameStartAt = now;
+        room.gameInProgress = true;
+
         io.to(roomId).emit(EVT.ROOM_GAME_STARTED, {
             roomId,
             startedBy: socket.id,
-            ts: Date.now()
+            ts: now
         });
         log(socket.id, `房间 ${roomId} 开局`);
         return true;
@@ -265,6 +246,7 @@ function createConnectionRegistry(io, EVT) {
             guestId: null,
             playerCount: 0,
             ready: false,
+            gameInProgress: false,
             isPrivate: false,
             queueing: false
         });
@@ -272,7 +254,6 @@ function createConnectionRegistry(io, EVT) {
 
     const onDisconnect = (socketId) => {
         console.log(`[断连] ${playerLabel(socketId)} 已断开，当前在线: ${io.engine.clientsCount - 1}`);
-        removeFromQueue(socketId);
 
         const roomId = socketRoomMap.get(socketId);
         if (roomId) {

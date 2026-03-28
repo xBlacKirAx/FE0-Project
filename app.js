@@ -8,6 +8,14 @@ import { createSocketHandler } from './modules/socketHandler.js';
 import { createPanelViewModels } from './modules/viewModels.js';
 import { formatAbility, formatSupport } from './modules/formatters.js';
 import { createUiActions } from './modules/uiActions.js';
+import {
+    normalizeRoomPayload,
+    deriveRoomRole,
+    deriveRoomStatusText,
+    didOpponentLeaveRoom,
+    deriveRoomScene,
+    deriveTopBarUi
+} from './modules/roomUiState.js';
 import { CombatOverlay } from './components/CombatOverlay.js';
 import { RegionPanel } from './components/RegionPanel.js';
 import { CardDetailModal } from './components/CardDetailModal.js';
@@ -106,9 +114,27 @@ createApp({
         const selectedCombatCostCardId = ref(null);
         const selectedCombatCostCardName = ref('');
         const showDeckManager = ref(false);
+        const isCompactMobile = ref(false);
         const cachedRoomPassword = ref('');
+        const startRoomButtonConsumed = ref(false);
+        const isHandlingRoomGameStart = ref(false);
+        const lastHandledRoomGameStartTs = ref(0);
         const phaseBeforeDevMode = ref(state.currentPhase.value || 'BEGINNING');
-        const canStartRoomGame = computed(() => state.roomRole.value === 'host' && state.roomReady.value);
+        const canStartRoomGame = computed(() => !!state.roomId.value && state.roomReady.value);
+        const roomScene = computed(() => deriveRoomScene({
+            connectionScene: state.connectionScene.value,
+            roomId: state.roomId.value,
+            roomQueueing: state.roomQueueing.value,
+            roomReady: state.roomReady.value,
+            roomGameInProgress: state.roomGameInProgress.value
+        }));
+        const topBarUi = computed(() => deriveTopBarUi({
+            roomScene: roomScene.value,
+            roomGameInProgress: state.roomGameInProgress.value,
+            showNextPhaseButton: showNextPhaseButton.value,
+            startRoomButtonConsumed: startRoomButtonConsumed.value,
+            isCompactMobile: isCompactMobile.value
+        }));
 
         const getCardCharaName = (card) => {
             const direct = (card?.charaName || '').trim();
@@ -304,47 +330,54 @@ createApp({
         };
 
         const updateRoomState = (payload = {}) => {
-            const roomId = String(payload.roomId || '');
-            const hostId = payload.hostId || null;
-            const guestId = payload.guestId || null;
-            const playerCount = Number(payload.playerCount || 0);
-            const queueing = !!payload.queueing;
-            const ready = !!payload.ready;
-            const isPrivate = !!payload.isPrivate;
+            const prevRoomState = {
+                roomId: String(state.roomId.value || ''),
+                playerCount: Number(state.roomPlayerCount.value || 0),
+                ready: !!state.roomReady.value
+            };
+            const nextRoomState = normalizeRoomPayload(payload);
 
-            state.roomId.value = roomId;
-            state.roomPlayerCount.value = playerCount;
-            state.roomQueueing.value = queueing;
-            state.roomReady.value = ready;
-            state.roomIsPrivate.value = isPrivate;
-
-            const myId = state.socket.id;
-            if (roomId && myId) {
-                if (hostId === myId) state.roomRole.value = 'host';
-                else if (guestId === myId) state.roomRole.value = 'guest';
-                else state.roomRole.value = '';
-            } else {
-                state.roomRole.value = '';
+            state.roomId.value = nextRoomState.roomId;
+            state.roomPlayerCount.value = nextRoomState.playerCount;
+            state.roomQueueing.value = nextRoomState.queueing;
+            state.roomReady.value = nextRoomState.ready;
+            state.roomGameInProgress.value = !!nextRoomState.gameInProgress;
+            state.roomIsPrivate.value = nextRoomState.isPrivate;
+            if (!nextRoomState.roomId) {
+                state.roomGameInProgress.value = false;
+            } else if (state.connectionScene.value === 'recovering') {
+                state.connectionScene.value = 'connected';
             }
 
-            if (queueing) {
-                state.roomStatusText.value = '匹配中...';
+            if (!prevRoomState.roomId && nextRoomState.roomId) {
+                startRoomButtonConsumed.value = false;
+            }
+
+            state.roomRole.value = deriveRoomRole({
+                roomId: nextRoomState.roomId,
+                hostId: nextRoomState.hostId,
+                guestId: nextRoomState.guestId,
+                myId: state.socket.id
+            });
+
+            state.roomStatusText.value = deriveRoomStatusText(nextRoomState);
+
+            if (nextRoomState.queueing) {
                 return;
             }
-            if (!roomId) {
-                state.roomStatusText.value = '未加入房间';
+            if (!nextRoomState.roomId) {
                 clearRoomCache();
+                startRoomButtonConsumed.value = false;
+                state.connectionScene.value = state.socket.connected ? 'connected' : 'disconnected';
                 return;
             }
 
-            const roleText = state.roomRole.value === 'host' ? '房主' : (state.roomRole.value === 'guest' ? '客方' : '成员');
-            const privateText = isPrivate ? '私密' : '公开';
-            state.roomStatusText.value = ready
-                ? `房间 ${roomId}（${privateText}/${roleText}，已就绪）`
-                : `房间 ${roomId}（${privateText}/${roleText}，等待对手）`;
+            if (didOpponentLeaveRoom(prevRoomState, nextRoomState)) {
+                alert('你的对手已离开。');
+            }
 
             saveRoomCache({
-                roomId,
+                roomId: nextRoomState.roomId,
                 password: cachedRoomPassword.value || ''
             });
         };
@@ -353,6 +386,14 @@ createApp({
             if (!EVT.ROOM_CREATE) return;
             const password = prompt('可选：输入房间口令（留空=公开房）') || '';
             cachedRoomPassword.value = String(password || '').trim();
+            if (!cachedRoomPassword.value) {
+                if (EVT.ROOM_QUICK_MATCH) {
+                    state.socket.emit(EVT.ROOM_QUICK_MATCH);
+                } else {
+                    state.socket.emit(EVT.ROOM_CREATE, { password: '' });
+                }
+                return;
+            }
             state.socket.emit(EVT.ROOM_CREATE, { password: cachedRoomPassword.value });
         };
 
@@ -375,6 +416,8 @@ createApp({
 
         const leaveRoom = () => {
             if (!EVT.ROOM_LEAVE) return;
+            startRoomButtonConsumed.value = false;
+            state.roomGameInProgress.value = false;
             clearRoomCache();
             cachedRoomPassword.value = '';
             state.socket.emit(EVT.ROOM_LEAVE);
@@ -383,9 +426,10 @@ createApp({
         const startRoomGame = () => {
             if (!EVT.ROOM_START_GAME) return;
             if (!canStartRoomGame.value) {
-                alert('仅房主可在双方就绪后开局。');
+                alert('双方就绪后才可开局。');
                 return;
             }
+            startRoomButtonConsumed.value = true;
             state.socket.emit(EVT.ROOM_START_GAME);
         };
 
@@ -574,7 +618,10 @@ createApp({
                 closeActivePanel();
             }
         });
-        const updateHeight = () => { document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`); };
+        const updateHeight = () => {
+            document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+            isCompactMobile.value = window.innerWidth < 640;
+        };
 
         onMounted(async () => {
             document.documentElement.setAttribute('data-battle-theme', BATTLE_THEME);
@@ -597,13 +644,44 @@ createApp({
                 });
             }
             if (EVT.ROOM_GAME_STARTED) {
-                state.socket.on(EVT.ROOM_GAME_STARTED, async () => {
-                    alert('房主已开局，正在同步重置对局。');
-                    await cardOps.resetGame(false);
+                state.socket.on(EVT.ROOM_GAME_STARTED, async (payload = {}) => {
+                    const eventTs = Number(payload?.ts || 0);
+                    if (isHandlingRoomGameStart.value) {
+                        return;
+                    }
+                    if (eventTs > 0 && eventTs === lastHandledRoomGameStartTs.value) {
+                        return;
+                    }
+
+                    isHandlingRoomGameStart.value = true;
+                    if (eventTs > 0) {
+                        lastHandledRoomGameStartTs.value = eventTs;
+                    }
+                    const startedBy = payload?.startedBy || null;
+                    startRoomButtonConsumed.value = true;
+                    state.roomGameInProgress.value = true;
+                    try {
+                        // 开局事件两端都会收到，这里使用 remote reset 避免双方互发 SYNC_RESET 导致重复重置。
+                        await cardOps.resetGame(true);
+
+                        // 开局后统一进入游玩模式，并按开局发起者确定先后手。
+                        state.isDevMode.value = false;
+                        const iAmStarter = !!startedBy && String(startedBy) === String(state.socket.id);
+                        state.isMyTurn.value = iAmStarter;
+                        state.currentPhase.value = 'BEGINNING';
+                        state.hasPlacedBond.value = false;
+                        state.usedBondsThisTurn.value = 0;
+                        if (state.firstPlayerOpeningTurnLocked) {
+                            state.firstPlayerOpeningTurnLocked.value = iAmStarter;
+                        }
+                    } finally {
+                        isHandlingRoomGameStart.value = false;
+                    }
                 });
             }
 
             state.socket.on('connect', () => {
+                state.connectionScene.value = state.roomId.value ? 'recovering' : 'connected';
                 const cache = loadRoomCache();
                 if (!cache?.roomId) return;
                 cachedRoomPassword.value = String(cache.password || '');
@@ -615,8 +693,15 @@ createApp({
                 }
             });
 
+            state.socket.on('disconnect', () => {
+                state.connectionScene.value = state.roomId.value ? 'recovering' : 'disconnected';
+            });
+
             // 🚀 直接用 cardOps 的终极重置初始化游戏！
             await cardOps.resetGame(true); 
+            if (!state.roomId.value) {
+                state.connectionScene.value = state.socket.connected ? 'connected' : 'disconnected';
+            }
         });
 
         return {
@@ -628,6 +713,9 @@ createApp({
             canPerformAction: rules.canPerformAction,
             canPerformClassChange: rules.canPerformClassChange,
             getCardFactionInfo: rules.getCardFactionInfo,
+            topBarUi,
+            roomScene,
+            isCompactMobile,
             activePanelTitle,
             activePanelCards,
             resolvedPanelTitle,

@@ -960,9 +960,14 @@ export function createCombatCommands({ state, socket }) {
     const beginCombatResolution = (currentState) => {
         const criticalLocked = !!currentState.combatStats.value.attackerCriticalLocked;
         const defenderEvasionLocked = !!currentState.combatStats.value.defenderEvasionLocked;
+
+        // 使用当前总战力参与战斗决策，确保纹章/被动等加成参与实际判定。
+        const currentAttackTotal = Number.isFinite(currentState.combatStats.value.myTotalPower)
+            ? currentState.combatStats.value.myTotalPower
+            : ((currentState.combatStats.value.myCardPower || 0) + (currentState.combatStats.value.mySupportPower || 0));
         const decisionContext = getInitialCombatDecisionContext(
-            currentState.combatStats.value.myCardPower,
-            currentState.combatStats.value.mySupportPower,
+            currentAttackTotal,
+            0,
             currentState.combatStats.value.oppTotalPower
         );
 

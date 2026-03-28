@@ -10,9 +10,21 @@ export const TopControlBar = {
             type: Function,
             required: true
         },
+        showResetButton: {
+            type: Boolean,
+            default: true
+        },
         onOpenDeckManager: {
             type: Function,
             required: true
+        },
+        showDeckManagerButton: {
+            type: Boolean,
+            default: true
+        },
+        showCostCounter: {
+            type: Boolean,
+            default: true
         },
         remainingCost: {
             type: Number,
@@ -21,6 +33,10 @@ export const TopControlBar = {
         totalBonds: {
             type: Number,
             default: 0
+        },
+        showTurnOwner: {
+            type: Boolean,
+            default: true
         },
         hasUndo: Boolean,
         undoDisabled: {
@@ -35,6 +51,10 @@ export const TopControlBar = {
             type: String,
             default: ''
         },
+        showPhaseName: {
+            type: Boolean,
+            default: true
+        },
         showNextPhaseButton: Boolean,
         nextPhaseLabel: {
             type: String,
@@ -47,6 +67,18 @@ export const TopControlBar = {
         roomStatusText: {
             type: String,
             default: '未加入房间'
+        },
+        showCreateRoomButton: {
+            type: Boolean,
+            default: true
+        },
+        showJoinRoomButton: {
+            type: Boolean,
+            default: true
+        },
+        showQuickMatchButton: {
+            type: Boolean,
+            default: true
         },
         onCreateRoom: {
             type: Function,
@@ -64,9 +96,17 @@ export const TopControlBar = {
             type: Function,
             required: true
         },
+        showLeaveRoomButton: {
+            type: Boolean,
+            default: false
+        },
         roomCanStart: {
             type: Boolean,
             default: false
+        },
+        showStartRoomButton: {
+            type: Boolean,
+            default: true
         },
         onStartRoomGame: {
             type: Function,
@@ -92,31 +132,32 @@ export const TopControlBar = {
 
                 <div class="w-[1px] h-3 bg-white/20"></div>
 
-                <button @click="onResetGame()" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-1.5 py-1 rounded border border-red-500/50 uppercase">
+                <button v-if="showResetButton" @click="onResetGame()" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-1.5 py-1 rounded border border-red-500/50 uppercase">
                     重置
                 </button>
 
-                <button @click="onOpenDeckManager()" class="bg-cyan-900/80 hover:bg-cyan-700 text-white text-[9px] px-1.5 py-1 rounded border border-cyan-500/50 uppercase">
+                <button v-if="showDeckManagerButton" @click="onOpenDeckManager()" class="bg-cyan-900/80 hover:bg-cyan-700 text-white text-[9px] px-1.5 py-1 rounded border border-cyan-500/50 uppercase">
                     卡组
                 </button>
 
-                <button @click="onCreateRoom()" class="bg-indigo-900/80 hover:bg-indigo-700 text-white text-[9px] px-1.5 py-1 rounded border border-indigo-500/50 uppercase">
+                <button v-if="showCreateRoomButton" @click="onCreateRoom()" class="bg-indigo-900/80 hover:bg-indigo-700 text-white text-[9px] px-1.5 py-1 rounded border border-indigo-500/50 uppercase">
                     建房
                 </button>
 
-                <button @click="onJoinRoom()" class="bg-blue-900/80 hover:bg-blue-700 text-white text-[9px] px-1.5 py-1 rounded border border-blue-500/50 uppercase">
+                <button v-if="showJoinRoomButton" @click="onJoinRoom()" class="bg-blue-900/80 hover:bg-blue-700 text-white text-[9px] px-1.5 py-1 rounded border border-blue-500/50 uppercase">
                     加入
                 </button>
 
-                <button @click="onQuickMatch()" class="bg-violet-900/80 hover:bg-violet-700 text-white text-[9px] px-1.5 py-1 rounded border border-violet-500/50 uppercase">
+                <button v-if="showQuickMatchButton" @click="onQuickMatch()" class="bg-violet-900/80 hover:bg-violet-700 text-white text-[9px] px-1.5 py-1 rounded border border-violet-500/50 uppercase">
                     匹配
                 </button>
 
-                <button @click="onLeaveRoom()" class="bg-slate-900/80 hover:bg-slate-700 text-white text-[9px] px-1.5 py-1 rounded border border-slate-500/50 uppercase">
+                <button v-if="showLeaveRoomButton" @click="onLeaveRoom()" class="bg-slate-900/80 hover:bg-slate-700 text-white text-[9px] px-1.5 py-1 rounded border border-slate-500/50 uppercase">
                     离房
                 </button>
 
                 <button
+                    v-if="showStartRoomButton"
                     @click="onStartRoomGame()"
                     :disabled="!roomCanStart"
                     :class="roomCanStart ? 'bg-emerald-900/80 hover:bg-emerald-700 border-emerald-500/50 text-white' : 'bg-emerald-900/30 border-emerald-900/60 text-emerald-300/50 cursor-not-allowed'"
@@ -126,13 +167,13 @@ export const TopControlBar = {
             </div>
 
             <div class="flex items-center gap-2">
-                <div class="flex items-center gap-1 px-1.5 py-0.5 bg-green-900/40 border border-green-500/40 rounded shadow-inner min-w-[50px] justify-center">
+                <div v-if="showCostCounter" class="flex items-center gap-1 px-1.5 py-0.5 bg-green-900/40 border border-green-500/40 rounded shadow-inner min-w-[50px] justify-center">
                     <span class="text-[8px] text-green-200">COST</span>
                     <span class="text-[10px] sm:text-[11px] font-black text-green-400 font-mono">{{ remainingCost }}</span>
                     <span class="text-[9px] text-green-600 font-mono">/ {{ totalBonds }}</span>
                 </div>
 
-                <div v-if="!isDevMode"
+                <div v-if="showTurnOwner && !isDevMode"
                      :class="isMyTurn ? 'bg-green-900/60 border-green-500/60 text-green-300' : 'bg-red-900/60 border-red-500/60 text-red-300'"
                      class="px-1.5 py-0.5 border rounded text-[8px] font-bold whitespace-nowrap">
                     {{ isMyTurn ? '我方回合' : '对手回合' }}
@@ -149,7 +190,7 @@ export const TopControlBar = {
 
             <div class="flex items-center gap-1.5 shrink-0">
                 <span class="hidden sm:inline text-[9px] text-cyan-300 max-w-[180px] truncate" :title="roomStatusText">{{ roomStatusText }}</span>
-                <span class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">{{ phaseName || 'BEGINNING' }}</span>
+                <span v-if="showPhaseName" class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">{{ phaseName || 'BEGINNING' }}</span>
 
                 <button v-if="showNextPhaseButton"
                         @click="onNextPhase()"

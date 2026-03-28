@@ -429,6 +429,9 @@ export function createAreaCommands({ state, socket, refs }) {
             if (!state.isMyTurn.value) return;
             if (!bypassPhaseCheck && state.firstPlayerOpeningTurnLocked?.value) {
                 alert('先攻第一回合不能在开始阶段抽卡。');
+                state.currentPhase.value = 'BOND';
+                const phaseName = state.PHASES?.[state.currentPhase.value]?.name || state.currentPhase.value;
+                emitSyncPhase(socket, { phase: state.currentPhase.value, phaseName });
                 return;
             }
             // 修复3：正常抽牌仅限BEGINNING阶段；转职后抽牌绕过此限制
@@ -677,6 +680,9 @@ export function createAreaCommands({ state, socket, refs }) {
         state.currentPhase.value = 'BEGINNING';
         state.hasPlacedBond.value = false;
         state.usedBondsThisTurn.value = 0;
+        if (undoStack) {
+            undoStack.value = [];
+        }
         if (state.supportInteraction) {
             state.supportInteraction.value = null;
         }
