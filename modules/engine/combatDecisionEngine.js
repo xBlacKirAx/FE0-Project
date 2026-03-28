@@ -16,8 +16,8 @@ export function getInitialCombatDecisionContext(myCardPower, mySupportPower, opp
     const supportPower = mySupportPower || 0;
     const attackPower = cardPower + supportPower;
     const defensePower = oppTotalPower || 0;
-    // 必杀：只翻倍卡片本身战力，支援战力不翻倍
-    const criticalPower = cardPower * 2 + supportPower;
+    // 必杀：攻击战力与支援战力合计后翻倍
+    const criticalPower = (cardPower + supportPower) * 2;
     const baseAttackerWins = attackPower >= defensePower;
     const criticalAttackerWins = criticalPower >= defensePower;
 

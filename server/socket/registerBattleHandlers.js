@@ -20,7 +20,7 @@ function registerBattleHandlers({ socket, EVT, log, combatState, relayToRoomPeer
             const atkTotal = combatState.pendingCombat.atkBase + combatState.pendingCombat.atkSupport;
             const defTotal = combatState.pendingCombat.defBase + defSupport;
             const result = atkTotal >= defTotal ? '击破' : '未击破';
-            const criticalWouldHit = (combatState.pendingCombat.atkBase * 2 + combatState.pendingCombat.atkSupport) >= defTotal;
+                const criticalWouldHit = ((combatState.pendingCombat.atkBase + combatState.pendingCombat.atkSupport) * 2) >= defTotal;
             log(socket.id, `战斗 → ${combatState.pendingCombat.atkName}(${atkTotal}) 攻击 ${combatState.pendingCombat.defName}(${defTotal}) → ${result}`);
             if (result === '未击破' && !criticalWouldHit) {
                 combatState.pendingCombat = null;
@@ -31,7 +31,7 @@ function registerBattleHandlers({ socket, EVT, log, combatState, relayToRoomPeer
 
     socket.on(EVT.SYNC_COMBAT_DECISION, (data) => {
         if (combatState.pendingCombat && data?.decisionType === 'critical' && data?.useSkill) {
-            const criticalPower = combatState.pendingCombat.atkBase * 2 + combatState.pendingCombat.atkSupport;
+                const criticalPower = (combatState.pendingCombat.atkBase + combatState.pendingCombat.atkSupport) * 2;
             log(socket.id, `战斗 → ${combatState.pendingCombat.atkName} 发动必杀，战力提升至 ${criticalPower}`);
             if (data?.costCard) {
                 log(socket.id, `战斗代价 → 弃置 ${cardName(data.costCard)}`);

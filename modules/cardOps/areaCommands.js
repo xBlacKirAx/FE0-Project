@@ -427,6 +427,10 @@ export function createAreaCommands({ state, socket, refs }) {
         const bypassPhaseCheck = opts?.bypassPhaseCheck === true;
         if (!state.isDevMode.value) {
             if (!state.isMyTurn.value) return;
+            if (!bypassPhaseCheck && state.firstPlayerOpeningTurnLocked?.value) {
+                alert('先攻第一回合不能在开始阶段抽卡。');
+                return;
+            }
             // 修复3：正常抽牌仅限BEGINNING阶段；转职后抽牌绕过此限制
             if (!bypassPhaseCheck && state.currentPhase.value !== 'BEGINNING') return;
         }

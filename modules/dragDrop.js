@@ -83,8 +83,8 @@ export function createDragDropHandler(state, cardOps, rules) {
         clearAttackTargetHighlight();
         if (!draggedCard.value) return;
 
-        // 【规则拦截】非攻击阶段
-        if (state.currentPhase.value !== 'ATTACK' && !state.isDevMode.value) {
+        // 【规则拦截】攻击动作不可用（含阶段不符、非回合方、先攻首回合禁攻）
+        if (!state.isDevMode.value && !canPerformAction('attack')) {
             console.warn("[规则拦截] 只能在【行动阶段】发起攻击！");
             draggedCard.value = null;
             return;
@@ -303,7 +303,7 @@ export function createDragDropHandler(state, cardOps, rules) {
         
         // 1. 尝试攻击
         const enemyCardEl = element?.closest('[data-enemy-id]');
-        if (enemyCardEl && (state.currentPhase.value === 'ATTACK' || state.isDevMode.value)) {
+        if (enemyCardEl && (state.isDevMode.value || canPerformAction('attack'))) {
             if (draggedCard.value.isTapped && !state.isDevMode.value) {
                 console.warn("[规则拦截] 已横置的卡牌无法再次攻击！");
                 draggedCard.value = null;

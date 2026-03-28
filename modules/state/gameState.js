@@ -8,6 +8,7 @@ export function createGameFlowState() {
     const isDevMode = ref(true);
     const currentPhase = ref('BEGINNING');
     const isMyTurn = ref(true);
+    const firstPlayerOpeningTurnLocked = ref(false);
     const hasPlacedBond = ref(false);
     const hasBattledThisTurn = ref(false);
 
@@ -45,6 +46,7 @@ export function createGameFlowState() {
         isDevMode,
         currentPhase,
         isMyTurn,
+        firstPlayerOpeningTurnLocked,
         hasPlacedBond,
         hasBattledThisTurn,
         oppStats,

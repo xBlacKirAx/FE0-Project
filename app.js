@@ -107,6 +107,7 @@ createApp({
         const selectedCombatCostCardName = ref('');
         const showDeckManager = ref(false);
         const cachedRoomPassword = ref('');
+        const phaseBeforeDevMode = ref(state.currentPhase.value || 'BEGINNING');
         const canStartRoomGame = computed(() => state.roomRole.value === 'host' && state.roomReady.value);
 
         const getCardCharaName = (card) => {
@@ -270,19 +271,35 @@ createApp({
 
         const toggleDevMode = () => {
             const nextIsDevMode = !state.isDevMode.value;
+            const currentPhaseSnapshot = state.currentPhase.value || 'BEGINNING';
+
+            if (nextIsDevMode) {
+                phaseBeforeDevMode.value = currentPhaseSnapshot;
+            }
+
             state.isDevMode.value = nextIsDevMode;
+
+            const resumePhase = nextIsDevMode
+                ? currentPhaseSnapshot
+                : (phaseBeforeDevMode.value || currentPhaseSnapshot || 'BEGINNING');
+            const openingTurnLocked = !nextIsDevMode;
 
             // 切到 PLAY 时，由切换者拥有当前回合；对手会被同步为非回合方。
             if (!nextIsDevMode) {
                 state.isMyTurn.value = true;
-                state.currentPhase.value = 'BEGINNING';
+                state.currentPhase.value = resumePhase;
                 state.hasPlacedBond.value = false;
                 state.usedBondsThisTurn.value = 0;
+                state.firstPlayerOpeningTurnLocked.value = openingTurnLocked;
+            } else {
+                state.firstPlayerOpeningTurnLocked.value = false;
             }
 
             state.socket.emit('sync-dev-mode', {
                 isDevMode: nextIsDevMode,
-                turnOwner: !nextIsDevMode ? 'sender' : null
+                turnOwner: !nextIsDevMode ? 'sender' : null,
+                phase: resumePhase,
+                openingTurnLocked
             });
         };
 

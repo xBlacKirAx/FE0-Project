@@ -66,11 +66,11 @@ function main() {
     assert(criticalPrompt.stage === 'awaiting-attacker-critical', '战斗决策引擎: 可必杀反杀时应等待攻击方必杀');
     const autoMiss = decision.getInitialCombatDecisionContext(10, 0, 25);
     assert(autoMiss.stage === 'auto-miss', '战斗决策引擎: 无法击破时应自动判未击破');
-    // 必杀公式验证: 卡片战力*2 + 支援战力，支援战力不翻倍
-    // cardPower=15, support=5 → base=20 < 30, critical=15*2+5=35 >= 30 → awaiting-attacker-critical
+    // 必杀公式验证: (卡片战力 + 支援战力) * 2
+    // cardPower=15, support=5 → base=20 < 30, critical=(15+5)*2=40 >= 30 → awaiting-attacker-critical
     const criticalWithSupport = decision.getInitialCombatDecisionContext(15, 5, 30);
     assert(criticalWithSupport.stage === 'awaiting-attacker-critical', '战斗决策引擎: 含支援时必杀公式计算错误');
-    assert(criticalWithSupport.criticalPower === 35, '战斗决策引擎: criticalPower 应为 cardPower*2+support=35');
+    assert(criticalWithSupport.criticalPower === 40, '战斗决策引擎: criticalPower 应为 (cardPower+support)*2=40');
 
     assert(supportEffect.getSupportEffectCatalogSize() >= 34, '支援效果引擎: 纹章效果目录数量异常');
     assert(supportEffect.getSupportEffectIdByTitle('『攻击之纹章』') === 'EMBLEM_ATTACK', '支援效果引擎: 攻击之纹章映射异常');

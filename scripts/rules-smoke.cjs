@@ -30,6 +30,7 @@ function createMockState(overrides = {}) {
     return {
         isDevMode: ref(false),
         isMyTurn: ref(true),
+        firstPlayerOpeningTurnLocked: ref(false),
         currentPhase: ref('DEPLOY'),
         bonds: ref([]),
         usedBondsThisTurn: ref(0),
@@ -54,6 +55,17 @@ function main() {
 
     const wrongTurnRules = createRulesEngine(createMockState({ isMyTurn: ref(false), currentPhase: ref('ATTACK') }));
     assert(wrongTurnRules.canPerformAction('attack') === false, '非回合方不应允许攻击');
+
+    const firstTurnRules = createRulesEngine(createMockState({
+        currentPhase: ref('BEGINNING'),
+        firstPlayerOpeningTurnLocked: ref(true)
+    }));
+    assert(firstTurnRules.canPerformAction('draw') === false, '先攻第一回合应禁止开始阶段抽牌');
+    const firstTurnAttackRules = createRulesEngine(createMockState({
+        currentPhase: ref('ATTACK'),
+        firstPlayerOpeningTurnLocked: ref(true)
+    }));
+    assert(firstTurnAttackRules.canPerformAction('attack') === false, '先攻第一回合应禁止攻击');
 
     const phaseRules = createRulesEngine(createMockState({ currentPhase: ref('BOND') }));
     assert(phaseRules.canPerformAction('placeBond') === true, 'BOND 阶段应允许放置羁绊');

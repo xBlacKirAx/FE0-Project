@@ -62,14 +62,43 @@ export function registerStateListeners({
         if (resetGame) resetGame(true);
     });
 
-    socket.on(EVT.OPPONENT_DEV_MODE_CHANGED, ({ isDevMode, turnOwner }) => {
+    socket.on(EVT.OPPONENT_DEV_MODE_CHANGED, ({ isDevMode, turnOwner, phase, openingTurnLocked }) => {
         state.isDevMode.value = isDevMode;
+        const syncedPhase = phase || state.currentPhase.value || 'BEGINNING';
+        const syncedOpeningLock = !!openingTurnLocked;
+
+        if (isDevMode) {
+            state.currentPhase.value = syncedPhase;
+            if (state.firstPlayerOpeningTurnLocked) {
+                state.firstPlayerOpeningTurnLocked.value = false;
+            }
+            return;
+        }
 
         if (!isDevMode && turnOwner === 'sender') {
             state.isMyTurn.value = false;
-            state.currentPhase.value = 'BEGINNING';
+            state.currentPhase.value = syncedPhase;
             state.hasPlacedBond.value = false;
             state.usedBondsThisTurn.value = 0;
+            if (state.firstPlayerOpeningTurnLocked) {
+                state.firstPlayerOpeningTurnLocked.value = false;
+            }
+            return;
+        }
+
+        if (!isDevMode && turnOwner === 'receiver') {
+            state.isMyTurn.value = true;
+            state.currentPhase.value = syncedPhase;
+            state.hasPlacedBond.value = false;
+            state.usedBondsThisTurn.value = 0;
+            if (state.firstPlayerOpeningTurnLocked) {
+                state.firstPlayerOpeningTurnLocked.value = syncedOpeningLock;
+            }
+            return;
+        }
+
+        if (state.firstPlayerOpeningTurnLocked) {
+            state.firstPlayerOpeningTurnLocked.value = syncedOpeningLock;
         }
     });
 

@@ -48,6 +48,9 @@ export function createTurnManager(state) {
      * 结束回合
      */
     const endTurn = () => {
+        if (state.firstPlayerOpeningTurnLocked?.value) {
+            state.firstPlayerOpeningTurnLocked.value = false;
+        }
         setBeginningPhaseState(state);
         isMyTurn.value = false;
 

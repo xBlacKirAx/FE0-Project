@@ -1016,6 +1016,10 @@ export function createCombatCommands({ state, socket }) {
     };
 
     const initiateAttack = (currentState, attackerCard, defenderCard) => {
+        if (!currentState.isDevMode.value && currentState.firstPlayerOpeningTurnLocked?.value) {
+            console.warn('[规则拦截] 先攻第一回合不能进行攻击。');
+            return;
+        }
         if (attackerCard.isTapped && !currentState.isDevMode.value) {
             console.warn('[规则拦截] 底层已拒绝：已横置的卡牌无法再次攻击！');
             return;

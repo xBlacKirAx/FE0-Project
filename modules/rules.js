@@ -77,6 +77,12 @@ export function createRulesEngine(state) {
         // PLAY 模式下，非回合方完全禁止操作
         if (!state.isMyTurn.value) return false;
 
+        if (state.firstPlayerOpeningTurnLocked?.value === true) {
+            if (actionType === 'draw' || actionType === 'attack') {
+                return false;
+            }
+        }
+
         const validPhases = {
             'draw': ['BEGINNING'],
             'placeBond': ['BOND'],

@@ -29,13 +29,13 @@ function loadCreateCombatCommands() {
                 return {
                     stage: 'awaiting-defender-evasion',
                     promptOwner: 'defender',
-                    criticalPower: (myCardPower || 0) * 2 + (mySupportPower || 0)
+                    criticalPower: ((myCardPower || 0) + (mySupportPower || 0)) * 2
                 };
             }
             return {
                 stage: 'auto-miss',
                 promptOwner: null,
-                criticalPower: (myCardPower || 0) * 2 + (mySupportPower || 0)
+                criticalPower: ((myCardPower || 0) + (mySupportPower || 0)) * 2
             };
         },
         resolveSupportEffectResult: () => null,
