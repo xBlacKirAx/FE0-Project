@@ -11,6 +11,7 @@ export const CardDetailModal = {
         },
         isDevMode: Boolean,
         isMyTurn: Boolean,
+        currentPhase: String,
         showFullImage: Boolean,
         formattedAbility: {
             type: Function,
@@ -131,12 +132,24 @@ export const CardDetailModal = {
                             </div>
                             <!-- 普通出击按钮（如果不能转职） -->
                             <div v-if="canPerformClassChange(selectedCard) === null" class="grid grid-cols-3 gap-2">
-                                <button @click="playToField(selectedCard, 'front')" class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
-                                <button @click="playToField(selectedCard, 'rear')" class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
-                                <button @click="playToBond(selectedCard)" class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
+                                <button
+                                    @click="playToField(selectedCard, 'front')"
+                                    :disabled="!isDevMode && currentPhase !== 'DEPLOY'"
+                                    :class="(!isDevMode && currentPhase !== 'DEPLOY') ? 'opacity-40 cursor-not-allowed' : ''"
+                                    class="py-2 bg-blue-700 text-white text-[10px] font-bold rounded">出阵-前</button>
+                                <button
+                                    @click="playToField(selectedCard, 'rear')"
+                                    :disabled="!isDevMode && currentPhase !== 'DEPLOY'"
+                                    :class="(!isDevMode && currentPhase !== 'DEPLOY') ? 'opacity-40 cursor-not-allowed' : ''"
+                                    class="py-2 bg-indigo-700 text-white text-[10px] font-bold rounded">出阵-后</button>
+                                <button
+                                    @click="playToBond(selectedCard)"
+                                    :disabled="!isDevMode && currentPhase !== 'BOND'"
+                                    :class="(!isDevMode && currentPhase !== 'BOND') ? 'opacity-40 cursor-not-allowed' : ''"
+                                    class="py-2 bg-green-700 text-white text-[10px] font-bold rounded">羁绊</button>
                             </div>
                         </div>
-                        <button v-else @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
+                        <button v-else-if="isDevMode" @click="returnToHandFromBoard(selectedCard)" class="w-full py-2 bg-gray-700 text-white text-[10px] rounded">收回手牌</button>
                     </div>
                     <!-- 叠放卡牌显示（转职叠放的下级卡） -->
                     <div v-if="selectedCard._stackedCards && selectedCard._stackedCards.length > 0"
@@ -170,10 +183,12 @@ export const CardDetailModal = {
                                 class="py-2 bg-amber-600 rounded text-[10px] col-span-2 font-bold uppercase">
                             {{ selectedCard.isFaceDown ? '翻开 (起立)' : '翻面 (横置/消耗)' }}
                         </button>
-                        <button @click="moveTo(selectedCard, 'graveyard')" class="py-1.5 bg-gray-800 text-[9px] rounded border border-white/10">送入弃牌区</button>
-                        <button @click="moveTo(selectedCard, 'jewels')" class="py-1.5 bg-purple-900/40 text-[9px] rounded border border-purple-500/50">转为宝玉</button>
-                        <button @click="moveTo(selectedCard, 'boundless')" class="py-1.5 bg-blue-900/40 text-[9px] rounded border border-blue-500/50">送入无限区</button>
-                        <button @click="moveTo(selectedCard, 'hand')" class="py-1.5 bg-green-900/40 text-[9px] rounded border border-green-500/50">回手牌</button>
+                        <template v-if="isDevMode">
+                            <button @click="moveTo(selectedCard, 'graveyard')" class="py-1.5 bg-gray-800 text-[9px] rounded border border-white/10">送入弃牌区</button>
+                            <button @click="moveTo(selectedCard, 'jewels')" class="py-1.5 bg-purple-900/40 text-[9px] rounded border border-purple-500/50">转为宝玉</button>
+                            <button @click="moveTo(selectedCard, 'boundless')" class="py-1.5 bg-blue-900/40 text-[9px] rounded border border-blue-500/50">送入无限区</button>
+                            <button @click="moveTo(selectedCard, 'hand')" class="py-1.5 bg-green-900/40 text-[9px] rounded border border-green-500/50">回手牌</button>
+                        </template>
                     </div>
                     <button @click="onOpenFullImage()" class="w-full py-1 text-indigo-400 text-[10px] uppercase font-bold">查看高清大图</button>
                 </div>

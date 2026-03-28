@@ -76,11 +76,75 @@ export function createAreaCommands({ state, socket, refs }) {
         });
     };
 
+    const shuffleInPlace = (arr) => {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+    };
+
     const moveTo = (card, toAreaName) => {
         const fromArea = getArea(card);
         if (!fromArea) return;
         const fromAreaName = getAreaName(fromArea);
         if (fromAreaName === toAreaName) return;
+
+        // 规则补充：战场上同charaName只能有1张。
+        // 当手牌中的无转职费用同名卡尝试出击时，按普通出击费用执行“升级”（叠放到同名卡上方）。
+        const isDeployFromHand = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
+        if (isDeployFromHand) {
+            const sameNameOnField = [...fieldFront.value, ...fieldRear.value]
+                .find(c => c.instanceId !== card.instanceId && c.charaName && card.charaName && c.charaName === card.charaName);
+            if (sameNameOnField) {
+                const isNoPromoteCost = !card.promoteCost || card.promoteCost === 'N/A';
+                if (isNoPromoteCost) {
+                    const deployCost = state.isDevMode.value ? 0 : (parseInt(card.cost, 10) || 0);
+                    const handIdx = hand.value.findIndex(c => c.instanceId === card.instanceId);
+                    if (handIdx === -1) return;
+
+                    const targetAreaName = fieldFront.value.some(c => c.instanceId === sameNameOnField.instanceId) ? 'front' : 'rear';
+                    const targetAreaArray = getAreaArray(targetAreaName);
+                    const targetIdx = targetAreaArray.findIndex(c => c.instanceId === sameNameOnField.instanceId);
+                    if (targetIdx === -1) return;
+
+                    const oldTop = targetAreaArray.splice(targetIdx, 1)[0];
+                    const newTop = hand.value.splice(handIdx, 1)[0];
+                    const inheritedStacks = oldTop._stackedCards || [];
+
+                    newTop._stackedCards = [oldTop, ...inheritedStacks];
+                    oldTop._stackedCards = [];
+                    newTop.isMainCharacter = !!oldTop.isMainCharacter;
+
+                    if (deployCost > 0 && state.usedBondsThisTurn !== undefined) {
+                        state.usedBondsThisTurn.value += deployCost;
+                    }
+
+                    undoStack.value.push({
+                        type: 'upgrade',
+                        newCard: newTop,
+                        removedFieldCard: oldTop,
+                        fieldArea: targetAreaName,
+                        oldWasMainCharacter: !!oldTop.isMainCharacter,
+                        previousPhase: state.currentPhase.value,
+                        previousHasPlacedBond: hasPlacedBond.value,
+                        costUsed: deployCost
+                    });
+                    if (undoStack.value.length > 10) undoStack.value.shift();
+
+                    // 广播旧顶卡离开战场，避免对手端出现同名叠加导致数量异常
+                    emitSyncCardMove(socket, { card: oldTop, from: targetAreaName, to: 'stacked' });
+                    targetAreaArray.push(newTop);
+                    emitSyncCardMove(socket, { card: newTop, from: 'hand', to: targetAreaName });
+                    console.log(`[升级] ${newTop?.cardName || '卡牌'} 覆盖 ${oldTop?.cardName || '卡牌'}（费用${deployCost}）`);
+                    selectedCard.value = null;
+                    return;
+                }
+
+                // 同名且具备转职费用时，直接按转职处理（不弹提示）
+                performClassChange(card, sameNameOnField);
+                return;
+            }
+        }
 
         const idx = fromArea.findIndex(c => c.instanceId === card.instanceId);
         if (idx > -1) {
@@ -157,12 +221,26 @@ export function createAreaCommands({ state, socket, refs }) {
         const removedFieldCard = fieldAreaArray.splice(fieldIdx, 1)[0];
         const inheritedStacks = removedFieldCard._stackedCards || [];
 
+        // 广播旧顶卡离开战场，避免对手端残留导致卡片数量变多
+        emitSyncCardMove(socket, { card: removedFieldCard, from: fieldArea, to: 'stacked' });
+
         // 2. 从手牌取出新卡
         const newCard = hand.value.splice(handIdx, 1)[0];
 
         // 修复1：新卡继承旧卡的叠放（旧卡 + 旧卡的叠放）
         newCard._stackedCards = [removedFieldCard, ...inheritedStacks];
         removedFieldCard._stackedCards = []; // 旧卡本身不再保存叠放引用
+        // 主人公转职时，顶层卡必须保留主人公标识
+        newCard.isMainCharacter = !!removedFieldCard.isMainCharacter;
+
+        // 转职抽1卡（与转职作为同一次可撤销动作）
+        let drawnCard = null;
+        if (deck.value.length > 0 && hand.value.length < 10) {
+            drawnCard = deck.value.pop();
+            hand.value.push(drawnCard);
+            scrollHandToLatest();
+            emitPlayerDraw(socket, { card: drawnCard });
+        }
 
         // 3. 支付费用
         if (ccCost > 0 && state.usedBondsThisTurn !== undefined) {
@@ -175,6 +253,8 @@ export function createAreaCommands({ state, socket, refs }) {
             newCard,
             removedFieldCard,
             fieldArea,
+            drawnCardId: drawnCard?.instanceId || null,
+            oldWasMainCharacter: !!removedFieldCard.isMainCharacter,
             previousPhase: state.currentPhase.value,
             previousHasPlacedBond: hasPlacedBond.value,
             costUsed: ccCost
@@ -185,8 +265,7 @@ export function createAreaCommands({ state, socket, refs }) {
         fieldAreaArray.push(newCard);
         emitSyncCardMove(socket, { card: newCard, from: 'hand', to: fieldArea });
 
-        // 6. 转职后抽1卡（绕过阶段限制）
-        drawCard({ bypassPhaseCheck: true });
+        // 不再额外写入draw类型撤销，避免需要点2次撤销。
     };
 
     const drawCard = (opts = {}) => {
@@ -287,6 +366,16 @@ export function createAreaCommands({ state, socket, refs }) {
             if (last.costUsed && state.usedBondsThisTurn !== undefined) {
                 state.usedBondsThisTurn.value -= last.costUsed;
             }
+            // 转职抽卡一并撤销：从手牌取回并洗回牌组
+            if (last.drawnCardId) {
+                const drawnIdx = hand.value.findIndex(c => c.instanceId === last.drawnCardId);
+                if (drawnIdx > -1) {
+                    const drawnCard = hand.value.splice(drawnIdx, 1)[0];
+                    deck.value.push(drawnCard);
+                    shuffleInPlace(deck.value);
+                    emitSyncCardMove(socket, { card: drawnCard, from: 'hand', to: 'deck' });
+                }
+            }
             // 在战场找到新卡，退回手牌
             const fieldAreaArr = getAreaArray(last.fieldArea);
             const newCardIdx = fieldAreaArr.findIndex(c => c.instanceId === last.newCard.instanceId);
@@ -295,13 +384,36 @@ export function createAreaCommands({ state, socket, refs }) {
                 // 恢复旧卡的叠放（排除旧卡自身，即 _stackedCards[0]）
                 last.removedFieldCard._stackedCards = newCard._stackedCards.slice(1);
                 newCard._stackedCards = [];
+                newCard.isMainCharacter = false;
                 hand.value.push(newCard);
                 emitSyncCardMove(socket, { card: newCard, from: last.fieldArea, to: 'hand' });
             }
             // 恢复旧卡到战场
+            last.removedFieldCard.isMainCharacter = !!last.oldWasMainCharacter;
             fieldAreaArr.push(last.removedFieldCard);
             emitSyncCardMove(socket, { card: last.removedFieldCard, from: 'stacked', to: last.fieldArea });
             console.log(`[撤销] 撤回转职：${last.newCard?.cardName} ← ${last.removedFieldCard?.cardName}`);
+            return;
+        }
+
+        if (last.type === 'upgrade') {
+            if (last.costUsed && state.usedBondsThisTurn !== undefined) {
+                state.usedBondsThisTurn.value -= last.costUsed;
+            }
+            const fieldAreaArr = getAreaArray(last.fieldArea);
+            const newCardIdx = fieldAreaArr.findIndex(c => c.instanceId === last.newCard.instanceId);
+            if (newCardIdx > -1) {
+                const newCard = fieldAreaArr.splice(newCardIdx, 1)[0];
+                last.removedFieldCard._stackedCards = newCard._stackedCards.slice(1);
+                newCard._stackedCards = [];
+                newCard.isMainCharacter = false;
+                hand.value.push(newCard);
+                emitSyncCardMove(socket, { card: newCard, from: last.fieldArea, to: 'hand' });
+            }
+            last.removedFieldCard.isMainCharacter = !!last.oldWasMainCharacter;
+            fieldAreaArr.push(last.removedFieldCard);
+            emitSyncCardMove(socket, { card: last.removedFieldCard, from: 'stacked', to: last.fieldArea });
+            console.log(`[撤销] 撤回升级：${last.newCard?.cardName} ← ${last.removedFieldCard?.cardName}`);
             return;
         }
 

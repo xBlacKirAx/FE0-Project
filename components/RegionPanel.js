@@ -30,6 +30,7 @@ export const RegionPanel = {
         });
 
         const isJewelPanel = computed(() => props.activePanel === 'jewels' || props.activePanel === 'oppJewels');
+        const isMyJewelPanel = computed(() => props.activePanel === 'jewels');
 
         const displayCards = computed(() => {
             if (!isJewelPanel.value) return props.panelCards;
@@ -41,6 +42,19 @@ export const RegionPanel = {
 
         const handleCardClick = (card) => {
             if (isJewelPanel.value) {
+                // 己方宝玉：第一次点击翻开，翻开后再次点击进入详情。
+                if (isMyJewelPanel.value) {
+                    if (!card.localFlipped) {
+                        const next = new Set(flippedIds.value);
+                        next.add(card.instanceId);
+                        flippedIds.value = next;
+                        return;
+                    }
+                    props.onCardClick(card);
+                    return;
+                }
+
+                // 对手宝玉仍维持原逻辑（仅DEV可翻面）
                 if (!props.isDevMode) return;
                 const next = new Set(flippedIds.value);
                 if (next.has(card.instanceId)) next.delete(card.instanceId);
@@ -53,6 +67,7 @@ export const RegionPanel = {
 
         return {
             isJewelPanel,
+            isMyJewelPanel,
             displayCards,
             handleCardClick
         };
@@ -67,7 +82,8 @@ export const RegionPanel = {
                         {{ isOpponentPanel ? '对手的' : '我的' }} {{ panelTitle }}
                     </span>
                     <div class="flex items-center gap-2">
-                        <span v-if="isJewelPanel && isDevMode" class="text-[9px] text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded">DEV · 点击翻面</span>
+                        <span v-if="isMyJewelPanel" class="text-[9px] text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">己方宝玉 · 先翻开再查看详情</span>
+                        <span v-else-if="isJewelPanel && isDevMode" class="text-[9px] text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded">DEV · 点击翻面</span>
                         <button @click="onClose()" class="text-white p-1">✕</button>
                     </div>
                 </div>
@@ -76,7 +92,7 @@ export const RegionPanel = {
                     <div v-for="card in displayCards"
                          :key="card.instanceId"
                          @click="handleCardClick(card)"
-                         :class="[isJewelPanel ? (isDevMode ? 'cursor-pointer active:scale-95' : 'cursor-default') : 'cursor-pointer', 'aspect-[55/76] relative group transition-transform']">
+                         :class="[isJewelPanel ? ((isMyJewelPanel || isDevMode) ? 'cursor-pointer active:scale-95' : 'cursor-default') : 'cursor-pointer', 'aspect-[55/76] relative group transition-transform']">
                         <img :src="isJewelPanel ? (card.localFlipped ? card.image : 'images/card_back.jpg') : (card.isFaceDown ? 'images/card_back.jpg' : card.image)"
                              class="w-full h-full object-cover rounded shadow-md transition-all"
                                 :class="{ 'opacity-50 grayscale': !isJewelPanel && card.isFaceDown }">
@@ -85,9 +101,9 @@ export const RegionPanel = {
                             <div class="bg-black/60 px-2 py-1 rounded text-[10px] text-amber-500 border border-amber-500/30">已消耗</div>
                         </div>
 
-                        <div v-if="isJewelPanel && isDevMode && !card.localFlipped"
+                        <div v-if="isJewelPanel && ((isMyJewelPanel && !card.localFlipped) || (!isMyJewelPanel && isDevMode && !card.localFlipped))"
                              class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <div class="bg-black/70 px-1.5 py-0.5 rounded text-[9px] text-amber-400">翻面</div>
+                            <div class="bg-black/70 px-1.5 py-0.5 rounded text-[9px]" :class="isMyJewelPanel ? 'text-emerald-300' : 'text-amber-400'">翻面</div>
                         </div>
                     </div>
 
