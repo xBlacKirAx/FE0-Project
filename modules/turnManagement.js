@@ -90,7 +90,7 @@ export function createTurnManager(state, cardOps) {
                 if (isMyTurn.value && currentPhase.value === 'BEGINNING') {
                     nextPhase();
                 }
-            }, 1200);
+            }, 200);
         } else {
             console.log('回合开始，自动抽1张卡。');
             // 抽卡动画结束后，会自动进入BOND阶段

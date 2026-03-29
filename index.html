@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -8,382 +9,243 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <script>
-      document.addEventListener('dragstart', e => e.preventDefault(), { capture: true });
-      // 阻止从屏幕左边缘向右划触发浏览器后退手势
-      document.addEventListener('pointerdown', e => {
-        if (e.clientX < 20) e.preventDefault();
-      }, { capture: true, passive: false });
+        document.addEventListener('dragstart', e => e.preventDefault(), { capture: true });
+        // 阻止从屏幕左边缘向右划触发浏览器后退手势
+        document.addEventListener('pointerdown', e => {
+            if (e.clientX < 20) e.preventDefault();
+        }, { capture: true, passive: false });
     </script>
-    
+
     <!-- app.js handles all module imports -->
 
 </head>
+
 <body class="text-gray-200 select-none overflow-hidden h-screen">
 
-<div id="app" class="h-full flex flex-col relative">
+    <div id="app" class="h-full flex flex-col relative">
 
-	<top-control-bar
-        :is-dev-mode="isDevMode"
-        :is-my-turn="isMyTurn"
-     :show-dev-mode-toggle="!showAiReplayPanel"
-        :on-toggle-dev-mode="toggleDevMode"
-        :on-reset-game="resetByControlBar"
-        :show-reset-button="topBarUi.showResetButton && !showAiReplayPanel"
-        :on-open-deck-manager="openDeckManager"
-        :show-deck-manager-button="topBarUi.showDeckManagerButton && !showAiReplayPanel"
-        :on-run-ai-duel="runAiDuelFromControlBar"
-        :on-open-ai-replay="openAiReplayFromControlBar"
-        :on-toggle-ai-replay-panel-hidden="toggleAiReplayPanelHiddenFromControlBar"
-        :on-ai-replay-prev="stepAiReplayPrev"
-        :on-ai-replay-next="stepAiReplayNext"
-        :on-exit-ai-replay-mode="closeAiReplayPanel"
-        :show-ai-duel-button="isDevMode && !showAiReplayPanel"
-        :show-ai-replay-button="isDevMode && !showAiReplayPanel"
-        :show-ai-replay-panel-toggle="isDevMode && showAiReplayPanel"
-        :show-ai-replay-exit-button="isDevMode && showAiReplayPanel"
-        :ai-replay-panel-hidden="isAiReplayPanelHidden"
-        :show-ai-replay-step-buttons="showAiReplayStepButtons"
-        :can-ai-replay-prev="canStepAiReplayPrev"
-        :can-ai-replay-next="canStepAiReplayNext"
-        :show-ai-replay-current-line="showAiReplayStepButtons"
-        :ai-replay-current-line="currentAiReplayEventLine"
-        :ai-duel-pending="isAiDuelPending"
-        :show-cost-counter="topBarUi.showCostCounter && !showAiReplayPanel"
-        :remaining-cost="remainingCost"
-        :total-bonds="totalBonds"
-        :show-turn-owner="topBarUi.showTurnOwner && !showAiReplayPanel"
-        :has-undo="!showAiReplayPanel && topBarUi.showResetButton && undoStack.length > 0"
-        :undo-disabled="hasBattledThisTurn"
-        :on-undo="undoLastMove"
-        :phase-name="currentPhaseName"
-        :show-phase-name="topBarUi.showPhaseName && !showAiReplayPanel"
-        :show-next-phase-button="topBarUi.showNextPhaseButton && !showAiReplayPanel"
-        :next-phase-label="nextPhaseLabel"
-        :on-next-phase="nextPhase"
-        :room-status-text="roomStatusText"
-        :show-room-status-text="!showAiReplayPanel"
-        :show-create-room-button="topBarUi.showCreateRoomButton && !showAiReplayPanel"
-        :on-create-room="createRoom"
-        :show-join-room-button="topBarUi.showJoinRoomButton && !showAiReplayPanel"
-        :on-join-room="joinRoom"
-        :show-quick-match-button="topBarUi.showQuickMatchButton && !showAiReplayPanel"
-        :on-quick-match="quickMatch"
-        :show-leave-room-button="topBarUi.showLeaveRoomButton && !showAiReplayPanel"
-        :on-leave-room="leaveRoom"
-        :show-start-room-button="topBarUi.showStartRoomButton && !showAiReplayPanel"
-        :room-can-start="canStartRoomGame"
-        :on-start-room-game="startRoomGame">
-    </top-control-bar>
-	
-    <div class="battle-container">
-        <battle-row
-            :cards="opponentRear"
-            row-class="row-opp-rear"
-            :is-enemy="true"
-            :hovered-attack-target-id="hoveredAttackTargetId"
-            :attack-range-target-ids="attackRangeTargetIds"
-            :is-guide-active="false"
-            :is-dragging-over="false"
-            :set-dragging-over="setDraggingOver"
-            :clear-dragging-over="clearDraggingOver"
-            :on-drag-over="onDragOver"
-            :on-drop-area="onDrop"
-            :on-attack-drop="onAttackDrop"
-            :on-card-click="handleMinifiedClick"
-            :on-drag-start="onDragStart"
-            :on-touch-start="onTouchStart"
-            :on-touch-move="onTouchMove"
-            :on-touch-end="onTouchEnd">
-        </battle-row>
+        <top-control-bar :is-dev-mode="isDevMode" :is-my-turn="isMyTurn" :show-dev-mode-toggle="!showAiReplayPanel"
+            :on-toggle-dev-mode="toggleDevMode" :on-reset-game="resetByControlBar"
+            :show-reset-button="topBarUi.showResetButton && !showAiReplayPanel" :on-open-deck-manager="openDeckManager"
+            :show-deck-manager-button="topBarUi.showDeckManagerButton && !showAiReplayPanel"
+            :on-run-ai-duel="runAiDuelFromControlBar" :on-open-ai-replay="openAiReplayFromControlBar"
+            :on-toggle-ai-replay-panel-hidden="toggleAiReplayPanelHiddenFromControlBar"
+            :on-ai-replay-prev="stepAiReplayPrev" :on-ai-replay-next="stepAiReplayNext"
+            :on-exit-ai-replay-mode="closeAiReplayPanel" :show-ai-duel-button="isDevMode && !showAiReplayPanel"
+            :show-ai-replay-button="isDevMode && !showAiReplayPanel"
+            :show-ai-replay-panel-toggle="isDevMode && showAiReplayPanel"
+            :show-ai-replay-exit-button="isDevMode && showAiReplayPanel" :ai-replay-panel-hidden="isAiReplayPanelHidden"
+            :show-ai-replay-step-buttons="showAiReplayStepButtons" :can-ai-replay-prev="canStepAiReplayPrev"
+            :can-ai-replay-next="canStepAiReplayNext" :show-ai-replay-current-line="showAiReplayStepButtons"
+            :ai-replay-current-line="currentAiReplayEventLine" :ai-duel-pending="isAiDuelPending"
+            :show-cost-counter="topBarUi.showCostCounter && !showAiReplayPanel" :remaining-cost="remainingCost"
+            :total-bonds="totalBonds" :show-turn-owner="topBarUi.showTurnOwner && !showAiReplayPanel"
+            :has-undo="!showAiReplayPanel && topBarUi.showResetButton && undoStack.length > 0"
+            :undo-disabled="hasBattledThisTurn" :on-undo="undoLastMove" :phase-name="currentPhaseName"
+            :show-phase-name="topBarUi.showPhaseName && !showAiReplayPanel"
+            :show-next-phase-button="topBarUi.showNextPhaseButton && !showAiReplayPanel"
+            :next-phase-label="nextPhaseLabel" :on-next-phase="nextPhase" :room-status-text="roomStatusText"
+            :show-room-status-text="!showAiReplayPanel"
+            :show-create-room-button="topBarUi.showCreateRoomButton && !showAiReplayPanel" :on-create-room="createRoom"
+            :show-join-room-button="topBarUi.showJoinRoomButton && !showAiReplayPanel" :on-join-room="joinRoom"
+            :show-quick-match-button="topBarUi.showQuickMatchButton && !showAiReplayPanel" :on-quick-match="quickMatch"
+            :show-leave-room-button="topBarUi.showLeaveRoomButton && !showAiReplayPanel" :on-leave-room="leaveRoom"
+            :show-start-room-button="topBarUi.showStartRoomButton && !showAiReplayPanel"
+            :room-can-start="canStartRoomGame" :on-start-room-game="startRoomGame">
+        </top-control-bar>
 
-        <battle-row
-            :cards="opponentFront"
-            row-class="row-opp-front"
-            :is-enemy="true"
-            :hovered-attack-target-id="hoveredAttackTargetId"
-            :attack-range-target-ids="attackRangeTargetIds"
-            :is-guide-active="false"
-            :is-dragging-over="false"
-            :set-dragging-over="setDraggingOver"
-            :clear-dragging-over="clearDraggingOver"
-            :on-drag-over="onDragOver"
-            :on-drop-area="onDrop"
-            :on-attack-drop="onAttackDrop"
-            :on-card-click="handleMinifiedClick"
-            :on-drag-start="onDragStart"
-            :on-touch-start="onTouchStart"
-            :on-touch-move="onTouchMove"
-            :on-touch-end="onTouchEnd">
-        </battle-row>
+        <div class="battle-container">
+            <battle-row :cards="opponentRear" row-class="row-opp-rear" :is-enemy="true"
+                :hovered-attack-target-id="hoveredAttackTargetId" :attack-range-target-ids="attackRangeTargetIds"
+                :is-guide-active="false" :is-dragging-over="false" :set-dragging-over="setDraggingOver"
+                :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver" :on-drop-area="onDrop"
+                :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick" :on-drag-start="onDragStart"
+                :on-touch-start="onTouchStart" :on-touch-move="onTouchMove" :on-touch-end="onTouchEnd">
+            </battle-row>
 
-        <battle-row
-            :cards="fieldFront"
-            row-class="row-my-front"
-            area="front"
-            area-label="Front"
-            :is-enemy="false"
-            :hovered-attack-target-id="hoveredAttackTargetId"
-            :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
-            :is-dragging-over="isDraggingOver === 'front'"
-            :set-dragging-over="setDraggingOver"
-            :clear-dragging-over="clearDraggingOver"
-            :on-drag-over="onDragOver"
-            :on-drop-area="onDrop"
-            :on-attack-drop="onAttackDrop"
-            :on-card-click="handleMinifiedClick"
-            :on-drag-start="onDragStart"
-            :on-touch-start="onTouchStart"
-            :on-touch-move="onTouchMove"
-            :on-touch-end="onTouchEnd">
-        </battle-row>
+            <battle-row :cards="opponentFront" row-class="row-opp-front" :is-enemy="true"
+                :hovered-attack-target-id="hoveredAttackTargetId" :attack-range-target-ids="attackRangeTargetIds"
+                :is-guide-active="false" :is-dragging-over="false" :set-dragging-over="setDraggingOver"
+                :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver" :on-drop-area="onDrop"
+                :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick" :on-drag-start="onDragStart"
+                :on-touch-start="onTouchStart" :on-touch-move="onTouchMove" :on-touch-end="onTouchEnd">
+            </battle-row>
 
-        <battle-row
-            :cards="fieldRear"
-            row-class="row-my-rear"
-            area="rear"
-            area-label="Rear"
-            :is-enemy="false"
-            :hovered-attack-target-id="hoveredAttackTargetId"
-            :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
-            :is-dragging-over="isDraggingOver === 'rear'"
-            :set-dragging-over="setDraggingOver"
-            :clear-dragging-over="clearDraggingOver"
-            :on-drag-over="onDragOver"
-            :on-drop-area="onDrop"
-            :on-attack-drop="onAttackDrop"
-            :on-card-click="handleMinifiedClick"
-            :on-drag-start="onDragStart"
-            :on-touch-start="onTouchStart"
-            :on-touch-move="onTouchMove"
-            :on-touch-end="onTouchEnd">
-        </battle-row>
-    </div>
-    <deck-widget
-        :deck-count="deck?.length || 0"
-        :on-draw-card="drawCard">
-    </deck-widget>
+            <battle-row :cards="fieldFront" row-class="row-my-front" area="front" area-label="Front" :is-enemy="false"
+                :hovered-attack-target-id="hoveredAttackTargetId"
+                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
+                :is-dragging-over="isDraggingOver === 'front'" :set-dragging-over="setDraggingOver"
+                :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver" :on-drop-area="onDrop"
+                :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick" :on-drag-start="onDragStart"
+                :on-touch-start="onTouchStart" :on-touch-move="onTouchMove" :on-touch-end="onTouchEnd">
+            </battle-row>
 
-    <div
-        v-if="showAiReplayStepButtons"
-        class="fixed left-1/2 -translate-x-1/2 bottom-3 sm:bottom-4 z-[220] w-[calc(100%-1rem)] max-w-[760px] pointer-events-none">
-        <div class="pointer-events-auto rounded-2xl border border-fuchsia-400/45 bg-black/78 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.45)] overflow-hidden">
-            <div class="flex items-center justify-between gap-2 px-3 py-2 border-b border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-950/70 via-slate-950/80 to-sky-950/70">
-                <div class="min-w-0 max-h-24 overflow-y-auto">
-                    <div class="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-fuchsia-200 uppercase">AI Replay Navigator</div>
-                    <div class="text-[11px] sm:text-[12px] text-slate-200 whitespace-pre-wrap">{{ currentAiReplayEventLine || '当前步无事件' }}</div>
-                </div>
-                <div class="shrink-0 text-[11px] sm:text-[12px] text-sky-200 font-semibold px-2 py-1 rounded-full border border-sky-400/30 bg-sky-950/40">
-                    {{ aiReplayCursor + 1 }} / {{ currentAiReplayTimelineLength }}
-                </div>
-            </div>
+            <battle-row :cards="fieldRear" row-class="row-my-rear" area="rear" area-label="Rear" :is-enemy="false"
+                :hovered-attack-target-id="hoveredAttackTargetId"
+                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode" :is-dragging-over="isDraggingOver === 'rear'"
+                :set-dragging-over="setDraggingOver" :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver"
+                :on-drop-area="onDrop" :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick"
+                :on-drag-start="onDragStart" :on-touch-start="onTouchStart" :on-touch-move="onTouchMove"
+                :on-touch-end="onTouchEnd">
+            </battle-row>
+        </div>
+        <deck-widget :deck-count="deck?.length || 0" :on-draw-card="drawCard">
+        </deck-widget>
 
-            <div class="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 p-2 bg-slate-950/65">
-                <button
-                    @click="stepAiReplayPrev()"
-                    :disabled="!canStepAiReplayPrev"
-                    :class="canStepAiReplayPrev ? 'bg-sky-700/90 hover:bg-sky-600 border-sky-300/40 text-white shadow-[0_0_18px_rgba(56,189,248,0.25)]' : 'bg-sky-950/50 border-sky-900/60 text-sky-200/35 cursor-not-allowed'"
-                    class="min-w-[92px] sm:min-w-[108px] px-3 sm:px-4 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
-                    上一步
-                </button>
-
-                <div class="hidden sm:flex items-center justify-center text-[11px] text-slate-300 px-2">
-                    逐步查看战场、支援与战斗结果
+        <div v-if="showAiReplayStepButtons"
+            class="fixed left-1/2 -translate-x-1/2 bottom-3 sm:bottom-4 z-[220] w-[calc(100%-1rem)] max-w-[760px] pointer-events-none">
+            <div
+                class="pointer-events-auto rounded-2xl border border-fuchsia-400/45 bg-black/78 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.45)] overflow-hidden">
+                <div
+                    class="flex items-center justify-between gap-2 px-3 py-2 border-b border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-950/70 via-slate-950/80 to-sky-950/70">
+                    <div class="min-w-0 max-h-24 overflow-y-auto">
+                        <div class="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-fuchsia-200 uppercase">
+                            AI Replay Navigator</div>
+                        <div class="text-[11px] sm:text-[12px] text-slate-200 whitespace-pre-wrap">{{
+                            currentAiReplayEventLine || '当前步无事件' }}</div>
+                    </div>
+                    <div
+                        class="shrink-0 text-[11px] sm:text-[12px] text-sky-200 font-semibold px-2 py-1 rounded-full border border-sky-400/30 bg-sky-950/40">
+                        {{ aiReplayCursor + 1 }} / {{ currentAiReplayTimelineLength }}
+                    </div>
                 </div>
 
-                <button
-                    @click="toggleAiReplayPanelHiddenFromControlBar()"
-                    class="px-3 py-2.5 rounded-xl border border-fuchsia-400/30 bg-fuchsia-950/45 text-fuchsia-100 hover:bg-fuchsia-900/55 text-[12px] sm:text-[13px] font-bold transition-colors">
-                    {{ isAiReplayPanelHidden ? '显示面板' : '隐藏面板' }}
-                </button>
+                <div class="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 p-2 bg-slate-950/65">
+                    <button @click="stepAiReplayPrev()" :disabled="!canStepAiReplayPrev"
+                        :class="canStepAiReplayPrev ? 'bg-sky-700/90 hover:bg-sky-600 border-sky-300/40 text-white shadow-[0_0_18px_rgba(56,189,248,0.25)]' : 'bg-sky-950/50 border-sky-900/60 text-sky-200/35 cursor-not-allowed'"
+                        class="min-w-[92px] sm:min-w-[108px] px-3 sm:px-4 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
+                        上一步
+                    </button>
 
-                <button
-                    @click="stepAiReplayNext()"
-                    :disabled="!canStepAiReplayNext"
-                    :class="canStepAiReplayNext ? 'bg-fuchsia-700/90 hover:bg-fuchsia-600 border-fuchsia-300/40 text-white shadow-[0_0_18px_rgba(217,70,239,0.25)]' : 'bg-fuchsia-950/50 border-fuchsia-900/60 text-fuchsia-200/35 cursor-not-allowed'"
-                    class="min-w-[92px] sm:min-w-[108px] px-3 sm:px-4 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
-                    下一步
-                </button>
+                    <div class="hidden sm:flex items-center justify-center text-[11px] text-slate-300 px-2">
+                        逐步查看战场、支援与战斗结果
+                    </div>
+
+                    <button @click="toggleAiReplayPanelHiddenFromControlBar()"
+                        class="px-3 py-2.5 rounded-xl border border-fuchsia-400/30 bg-fuchsia-950/45 text-fuchsia-100 hover:bg-fuchsia-900/55 text-[12px] sm:text-[13px] font-bold transition-colors">
+                        {{ isAiReplayPanelHidden ? '显示面板' : '隐藏面板' }}
+                    </button>
+
+                    <button @click="stepAiReplayNext()" :disabled="!canStepAiReplayNext"
+                        :class="canStepAiReplayNext ? 'bg-fuchsia-700/90 hover:bg-fuchsia-600 border-fuchsia-300/40 text-white shadow-[0_0_18px_rgba(217,70,239,0.25)]' : 'bg-fuchsia-950/50 border-fuchsia-900/60 text-fuchsia-200/35 cursor-not-allowed'"
+                        class="min-w-[92px] sm:min-w-[108px] px-3 sm:px-4 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
+                        下一步
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="hand-container-fixed">
-		<bond-strip
-            :bonds="bonds"
-            :current-phase="currentPhase"
-            :has-placed-bond="hasPlacedBond"
-            :is-dev-mode="isDevMode"
-            :is-dragging-over="isDraggingOver"
-            :get-card-faction-info="getCardFactionInfo"
-            :set-dragging-over="setDraggingOver"
-            :on-drop="onDrop"
-            :on-open-panel="openBondsPanel"
-            :on-select-card="selectCard">
-        </bond-strip>
+        <div class="hand-container-fixed">
+            <bond-strip :bonds="bonds" :current-phase="currentPhase" :has-placed-bond="hasPlacedBond"
+                :is-dev-mode="isDevMode" :is-dragging-over="isDraggingOver" :get-card-faction-info="getCardFactionInfo"
+                :set-dragging-over="setDraggingOver" :on-drop="onDrop" :on-open-panel="openBondsPanel"
+                :on-select-card="selectCard">
+            </bond-strip>
 
-        <hand-strip
-            :hand="hand"
-            :is-dragging-over="isDraggingOver"
-            :get-card-faction-info="getCardFactionInfo"
-            :on-card-click="handleMinifiedClick"
-            :on-touch-start="onTouchStart"
-            :on-drag-start="onDragStart"
-            :on-touch-move="onTouchMove"
-            :on-touch-end="onTouchEnd">
-        </hand-strip>
-    </div>
-    
-    <side-panel-buttons
-        mode="player"
-        :items="playerPanelButtons"
-        :on-open-panel="openPanel">
-    </side-panel-buttons>
+            <hand-strip :hand="hand" :is-dragging-over="isDraggingOver" :get-card-faction-info="getCardFactionInfo"
+                :on-card-click="handleMinifiedClick" :on-touch-start="onTouchStart" :on-drag-start="onDragStart"
+                :on-touch-move="onTouchMove" :on-touch-end="onTouchEnd">
+            </hand-strip>
+        </div>
 
-    <side-panel-buttons
-        mode="enemy"
-        :items="enemyPanelButtons"
-        :on-open-panel="openPanel">
-    </side-panel-buttons>
+        <side-panel-buttons mode="player" :items="playerPanelButtons" :on-open-panel="openPanel">
+        </side-panel-buttons>
 
-    <div
-        v-if="hoveredAttackTargetRect"
-        :class="['attack-target-screen-overlay', { 'attack-target-screen-overlay--mc': [...opponentFront, ...opponentRear].some(card => String(card.instanceId) === String(hoveredAttackTargetId) && card.isMainCharacter) }]"
-        :style="{
+        <side-panel-buttons mode="enemy" :items="enemyPanelButtons" :on-open-panel="openPanel">
+        </side-panel-buttons>
+
+        <div v-if="hoveredAttackTargetRect"
+            :class="['attack-target-screen-overlay', { 'attack-target-screen-overlay--mc': [...opponentFront, ...opponentRear].some(card => String(card.instanceId) === String(hoveredAttackTargetId) && card.isMainCharacter) }]"
+            :style="{
             top: hoveredAttackTargetRect.top + 'px',
             left: hoveredAttackTargetRect.left + 'px',
             width: hoveredAttackTargetRect.width + 'px',
             height: hoveredAttackTargetRect.height + 'px'
         }">
-    </div>
-
-    <combat-overlay
-        :is-combat-active="isCombatActive"
-        :my-support-card="mySupportCard"
-        :opp-support-card="oppSupportCard"
-        :attacker="attacker"
-        :defender="defender"
-        :combat-stats="combatStats"
-        :combat-decision="combatDecision"
-        :cost-cards="combatCostCandidates"
-        :selected-cost-card="selectedCombatCostCard"
-        :selected-cost-card-name="selectedCombatCostCardName"
-        :is-replay-mode="showAiReplayPanel"
-        :is-my-attacker="isMyCombatAttacker"
-        :on-open-cost-picker="openCombatCostPicker"
-        :on-combat-decision="handleCombatDecision">
-    </combat-overlay>
-
-    <region-panel
-        :active-panel="activePanel"
-        :panel-title="resolvedPanelTitle"
-        :panel-cards="resolvedPanelCards"
-        :is-dev-mode="isDevMode"
-        :is-opponent-panel="isOpponentPanel"
-        :on-close="closeActivePanel"
-        :on-card-click="handleRegionPanelCardClick">
-    </region-panel>
-
-    <card-detail-modal
-        :selected-card="selectedCard"
-        :primary-action-label="selectedCardAbilityPrimaryLabel"
-        :on-primary-action="onSelectedCardAbilityPrimary"
-        :secondary-action-label="selectedCardAbilitySecondaryLabel"
-        :on-secondary-action="onSelectedCardAbilitySecondary"
-        :tertiary-action-label="selectedCardAbilityTertiaryLabel"
-        :on-tertiary-action="onSelectedCardAbilityTertiary"
-        :quaternary-action-label="selectedCardAbilityQuaternaryLabel"
-        :on-quaternary-action="onSelectedCardAbilityQuaternary"
-        :is-my-card="isMyCard"
-        :is-card-in-hand="isCardInHand"
-        :is-dev-mode="isDevMode"
-        :is-my-turn="isMyTurn"
-        :current-phase="currentPhase"
-        :show-full-image="showFullImage"
-        :formatted-ability="formattedAbility"
-        :formatted-support="formattedSupport"
-        :get-area-name="getAreaName"
-        :get-area="getArea"
-        :play-to-field="playToField"
-        :play-to-bond="playToBond"
-        :return-to-hand-from-board="returnToHandFromBoard"
-        :untap-card="untapCard"
-        :toggle-bond-face="toggleBondFace"
-        :move-to="moveTo"
-        :move-field-unit="moveFieldUnit"
-        :can-perform-class-change="canPerformClassChange"
-        :perform-class-change="performClassChange"
-        :place-card-to-top-of-deck="placeCardToTopOfDeck"
-        :on-close="closeSelectedCard"
-        :on-open-full-image="openFullImage">
-    </card-detail-modal>
-
-    <opp-hand-panel
-        :active-panel="activePanel"
-        :opp-hand-cards="oppHand"
-        :opp-hand-count="oppStats.hand"
-        :is-dev-mode="isDevMode"
-        :on-close="closeActivePanel">
-    </opp-hand-panel>
-
-    <opp-deck-panel
-        :active-panel="activePanel"
-        :opp-deck-cards="oppDeck"
-        :is-dev-mode="isDevMode"
-        :on-close="closeActivePanel">
-    </opp-deck-panel>
-
-    <deck-manager-modal
-        :visible="showDeckManager"
-        :on-close="closeDeckManager">
-    </deck-manager-modal>
-
-    <ai-replay-panel
-        :visible="showAiReplayPanelVisible"
-        :compact="isCompactMobile"
-        :loading="isAiReplayLoading"
-        :replay-log="aiReplayLog"
-        :selected-game-index="aiReplayGameIndex"
-        :cursor="aiReplayCursor"
-        :on-close="closeAiReplayPanel"
-        :on-load-latest="loadLatestAiReplayLog"
-        :on-select-game="selectAiReplayGame"
-        :on-step-prev="stepAiReplayPrev"
-        :on-step-next="stepAiReplayNext"
-        :on-jump-to="jumpAiReplayTo">
-    </ai-replay-panel>
-
-    <div v-if="showFullImage && selectedCard" class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
-        <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">
-    </div>
-
-    <!-- Mulligan Overlay -->
-    <div v-if="mulliganState !== 'idle' && mulliganState !== 'done'" 
-         class="fixed top-1/4 left-1/2 -translate-x-1/2 z-[200] bg-slate-900/95 border border-sky-500/40 backdrop-blur-md flex flex-col items-center justify-center gap-4 p-6 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] min-w-[320px]">
-        
-        <div class="text-xl font-bold text-white tracking-widest">开局调度 (Mulligan)</div>
-        <div class="text-sm text-sky-200">请查看下方手牌，决定是否要将手牌洗回并重新抽取。</div>
-        
-        <div class="text-xs text-gray-400 mb-2">
-            对手状态：<span :class="opponentMulliganState === 'done' ? 'text-green-400' : 'text-amber-400'">
-                {{ opponentMulliganState === 'done' ? '已决定' : '思考中...' }}
-            </span>
         </div>
-        
-        <div class="flex gap-4 w-full">
-            <button @click="confirmMulligan" 
+
+        <combat-overlay :is-combat-active="isCombatActive" :my-support-card="mySupportCard"
+            :opp-support-card="oppSupportCard" :attacker="attacker" :defender="defender" :combat-stats="combatStats"
+            :combat-decision="combatDecision" :cost-cards="combatCostCandidates"
+            :selected-cost-card="selectedCombatCostCard" :selected-cost-card-name="selectedCombatCostCardName"
+            :is-replay-mode="showAiReplayPanel" :is-my-attacker="isMyCombatAttacker"
+            :on-open-cost-picker="openCombatCostPicker" :on-combat-decision="handleCombatDecision">
+        </combat-overlay>
+
+        <region-panel :active-panel="activePanel" :panel-title="resolvedPanelTitle" :panel-cards="resolvedPanelCards"
+            :is-dev-mode="isDevMode" :is-opponent-panel="isOpponentPanel" :on-close="closeActivePanel"
+            :on-card-click="handleRegionPanelCardClick">
+        </region-panel>
+
+        <card-detail-modal :selected-card="selectedCard" :primary-action-label="selectedCardAbilityPrimaryLabel"
+            :on-primary-action="onSelectedCardAbilityPrimary"
+            :secondary-action-label="selectedCardAbilitySecondaryLabel"
+            :on-secondary-action="onSelectedCardAbilitySecondary"
+            :tertiary-action-label="selectedCardAbilityTertiaryLabel"
+            :on-tertiary-action="onSelectedCardAbilityTertiary"
+            :quaternary-action-label="selectedCardAbilityQuaternaryLabel"
+            :on-quaternary-action="onSelectedCardAbilityQuaternary" :is-my-card="isMyCard"
+            :is-card-in-hand="isCardInHand" :is-dev-mode="isDevMode" :is-my-turn="isMyTurn"
+            :current-phase="currentPhase" :show-full-image="showFullImage" :formatted-ability="formattedAbility"
+            :formatted-support="formattedSupport" :get-area-name="getAreaName" :get-area="getArea"
+            :play-to-field="playToField" :play-to-bond="playToBond" :return-to-hand-from-board="returnToHandFromBoard"
+            :untap-card="untapCard" :toggle-bond-face="toggleBondFace" :move-to="moveTo"
+            :move-field-unit="moveFieldUnit" :can-perform-class-change="canPerformClassChange"
+            :perform-class-change="performClassChange" :place-card-to-top-of-deck="placeCardToTopOfDeck"
+            :on-close="closeSelectedCard" :on-open-full-image="openFullImage">
+        </card-detail-modal>
+
+        <opp-hand-panel :active-panel="activePanel" :opp-hand-cards="oppHand" :opp-hand-count="oppStats.hand"
+            :is-dev-mode="isDevMode" :on-close="closeActivePanel">
+        </opp-hand-panel>
+
+        <opp-deck-panel :active-panel="activePanel" :opp-deck-cards="oppDeck" :is-dev-mode="isDevMode"
+            :on-close="closeActivePanel">
+        </opp-deck-panel>
+
+        <deck-manager-modal :visible="showDeckManager" :on-close="closeDeckManager">
+        </deck-manager-modal>
+
+        <ai-replay-panel :visible="showAiReplayPanelVisible" :compact="isCompactMobile" :loading="isAiReplayLoading"
+            :replay-log="aiReplayLog" :selected-game-index="aiReplayGameIndex" :cursor="aiReplayCursor"
+            :on-close="closeAiReplayPanel" :on-load-latest="loadLatestAiReplayLog" :on-select-game="selectAiReplayGame"
+            :on-step-prev="stepAiReplayPrev" :on-step-next="stepAiReplayNext" :on-jump-to="jumpAiReplayTo">
+        </ai-replay-panel>
+
+        <div v-if="showFullImage && selectedCard"
+            class="fixed inset-0 z-[100] bg-black flex items-center justify-center p-2" @click="showFullImage = false">
+            <img :src="selectedCard.image" class="max-w-full max-h-full object-contain animate-zoom">
+        </div>
+
+        <!-- Mulligan Overlay -->
+        <div v-if="mulliganState !== 'idle' && mulliganState !== 'done'"
+            class="fixed top-1/4 left-1/2 -translate-x-1/2 z-[200] bg-slate-900/95 border border-sky-500/40 backdrop-blur-md flex flex-col items-center justify-center gap-4 p-6 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] min-w-[320px]">
+
+            <div class="text-xl font-bold text-white tracking-widest">开局调度 (Mulligan)</div>
+            <div class="text-sm text-sky-200">请查看下方手牌，决定是否要将手牌洗回并重新抽取。</div>
+
+            <div class="text-xs text-gray-400 mb-2">
+                对手状态：<span :class="opponentMulliganState === 'done' ? 'text-green-400' : 'text-amber-400'">
+                    {{ opponentMulliganState === 'done' ? '已决定' : '思考中...' }}
+                </span>
+            </div>
+
+            <div class="flex gap-4 w-full">
+                <button @click="confirmMulligan"
                     class="flex-1 py-3 bg-sky-700 hover:bg-sky-600 rounded-xl text-white font-bold transition-colors shadow-lg border border-sky-500/50">
-                保留手牌
-            </button>
-            <button @click="performMulligan" :disabled="hasMulliganed" 
+                    保留手牌
+                </button>
+                <button @click="performMulligan" :disabled="hasMulliganed"
                     class="flex-1 py-3 bg-fuchsia-700 hover:bg-fuchsia-600 rounded-xl text-white font-bold disabled:bg-slate-800 disabled:text-gray-500 disabled:border-slate-700 transition-colors shadow-lg border border-fuchsia-500/50">
-                {{ hasMulliganed ? '已重抽' : '全部重抽' }}
-            </button>
+                    {{ hasMulliganed ? '已重抽' : '全部重抽' }}
+                </button>
+            </div>
         </div>
     </div>
-</div>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="shared/socketEvents.js"></script>
-<script src="shared/rangeModel.js"></script>
-<script type="module" src="app.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="shared/socketEvents.js"></script>
+    <script src="shared/rangeModel.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
+
 </html>

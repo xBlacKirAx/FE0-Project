@@ -16,6 +16,7 @@ export function createGameFlowState() {
     const usedBondsThisTurn = ref(0);
 
     const PHASES = {
+        MULLIGAN: { name: '调度阶段' },
         BEGINNING: { name: '开始阶段' },
         BOND: { name: '羁绊阶段' },
         DEPLOY: { name: '出击阶段' },

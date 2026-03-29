@@ -136,20 +136,20 @@ export function createAreaCommands({ state, socket, refs, rules }) {
     const performMulliganOps = () => {
         // 1. 获取当前手牌数量（通常是6）
         const handCount = refs.hand.value.length;
-        
+
         // 2. 将手牌放回卡组
         refs.deck.value.push(...refs.hand.value);
         refs.hand.value = [];
-        
+
         // 3. 洗牌 (如果你里面有 shuffleDeck 函数的话，调用它)
         if (typeof shuffleDeck === 'function') {
             shuffleDeck();
         }
-        
+
         // 4. 重新抽同等数量的牌
-        for(let i = 0; i < handCount; i++) {
+        for (let i = 0; i < handCount; i++) {
             // 假设 drawCard 是在这个文件里定义的抽卡函数
-            drawCard({ bypassPhaseCheck: true }); 
+            drawCard({ bypassPhaseCheck: true });
         }
     };
     const recycleGraveyardIntoDeckIfNeeded = () => {
@@ -210,7 +210,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
             if (unitGroup.length > 1) {
                 let cardToKeep = unitGroup.find(u => u.isMainCharacter) || unitGroup[0];
                 const cardsToRemove = unitGroup.filter(u => u.instanceId !== cardToKeep.instanceId);
-                
+
                 cardsToRemove.forEach(cardToRemove => {
                     const fromArea = getArea(cardToRemove);
                     if (fromArea) {
@@ -296,22 +296,22 @@ export function createAreaCommands({ state, socket, refs, rules }) {
             const isDeploy = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
             const cost = (isDeploy && !state.isDevMode.value) ? (parseInt(card.cost) || 0) : 0;
 
-                // ── 【特】出击条件检查（非开发模式下拦截）
-                if (isDeploy && !state.isDevMode.value) {
-                    const specialCtx = {
-                        card,
-                        myFront: state.fieldFront?.value || [],
-                        myRear: state.fieldRear?.value || [],
-                        myGraveyard: graveyard.value,
-                        myGraveyardCount: graveyard.value.length,
-                        protagonistCharaName: state.protagonistCharaName?.value || null
-                    };
-                    const blocked = checkAllSpecialDeployConditions(card, specialCtx);
-                    if (blocked) {
-                        console.warn(`[规则拦截] 【特】条件不满足，无法出击：${blocked.note}`);
-                        return;
-                    }
+            // ── 【特】出击条件检查（非开发模式下拦截）
+            if (isDeploy && !state.isDevMode.value) {
+                const specialCtx = {
+                    card,
+                    myFront: state.fieldFront?.value || [],
+                    myRear: state.fieldRear?.value || [],
+                    myGraveyard: graveyard.value,
+                    myGraveyardCount: graveyard.value.length,
+                    protagonistCharaName: state.protagonistCharaName?.value || null
+                };
+                const blocked = checkAllSpecialDeployConditions(card, specialCtx);
+                if (blocked) {
+                    console.warn(`[规则拦截] 【特】条件不满足，无法出击：${blocked.note}`);
+                    return;
                 }
+            }
 
             undoStack.value.push({
                 card,
@@ -1003,7 +1003,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         }
     };
 
-    
+
 
     const resetGame = async (isRemote = false) => {
         hand.value = [];
@@ -1074,11 +1074,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
             for (let i = 0; i < 6; i++) {
                 if (deck.value.length > 0) hand.value.push(deck.value.pop());
             }
-
-            if (state.isMyTurn.value) {
-                state.mulliganState.value = 'awaiting';
-            }
-
+            state.mulliganState.value = 'awaiting';
         } catch (err) {
             console.error('加载失败', err);
         }
