@@ -1148,7 +1148,25 @@ createApp({
             state.mulliganState.value = 'done';
             state.socket.emit(EVT.MULLIGAN_DECISION, { state: 'done' });
         };
+        // 补全缺少的 performMulligan 函数
+        const performMulligan = () => {
+            // 如果已经调度过，阻止重复执行
+            if (state.hasMulliganed.value) return;
+            
+            // 标记已调度
+            state.hasMulliganed.value = true;
+            state.mulliganState.value = 'done';
 
+            // 调用底层的调度洗牌/抽卡逻辑
+            if (cardOps.performMulliganOps) {
+                cardOps.performMulliganOps();
+            }
+
+            // 发送给服务器已完成调度（假设与 confirmMulligan 发送相同状态）
+            if (EVT.MULLIGAN_DECISION) {
+                state.socket.emit(EVT.MULLIGAN_DECISION, { state: 'done' });
+            }
+        };
         watch([() => state.mulliganState.value, () => state.opponentMulliganState.value], ([myState, oppState]) => {
             if (myState === 'done' && oppState === 'done') {
                 if (state.isMyTurn.value) {
