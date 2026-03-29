@@ -155,37 +155,37 @@ export function createRulesEngine(state) {
         return { 'bonds': 'placeBond', 'front': 'deploy', 'rear': 'deploy' }[areaName];
     };
 
-    // 转职检测：检查手牌中的卡是否可以转职到战场上相同角色的卡
+    // 转职检测：检查手牌中的卡是否可以转职到战场上相同单位名的卡
     const canPerformClassChange = (handCard) => {
         if (!handCard) return null;
         if (!state.isDevMode.value && !state.isMyTurn.value) return null;
 
-        // 修复4：promoteCost 为 N/A 的卡（下级职业/固定职业）不能转职
+        // promoteCost 为 N/A 的卡（下级职业/固定职业）不能转职
         const promoteCost = handCard.promoteCost;
         if (!promoteCost || promoteCost === 'N/A') return null;
         const ccCost = parseInt(promoteCost);
         if (isNaN(ccCost) || ccCost < 0) return null;
 
-        const charaName = handCard.charaName;
-        if (!charaName) return null;
+        const cardName = handCard.cardName;
+        if (!cardName) return null;
 
-        // 检查战场上是否有相同charaName的卡
+        // 检查战场上是否有相同cardName的卡
         const matchingCardOnField = [
             ...state.fieldFront.value,
             ...state.fieldRear.value
-        ].find(c => c.charaName === charaName);
+        ].find(c => c.cardName === cardName);
 
         if (!matchingCardOnField) return null;
 
-        // 修复5：检查羁绊费用（非dev模式）
+        // 检查羁绊费用（非dev模式）
         if (!state.isDevMode.value) {
             const availableBonds = state.bonds.value.length - (state.usedBondsThisTurn?.value || 0);
             if (availableBonds < ccCost) {
-                return { valid: false, reason: 'insufficient-bonds', targetCard: matchingCardOnField, charaName, ccCost };
+                return { valid: false, reason: 'insufficient-bonds', targetCard: matchingCardOnField, cardName, ccCost };
             }
 
             // 检查势力颜色羁绊
-            const cardFaction = handCard.force || handCard.faction || handCard.symbol || '无';
+            const cardFaction = handCard.force || hand.faction || hand.symbol || '无';
             if (cardFaction !== '无' && ccCost > 0) {
                 const hasMatchingBond = state.bonds.value.some(bond => {
                     if (bond.isFaceDown) return false;
@@ -193,7 +193,7 @@ export function createRulesEngine(state) {
                     return bondFaction === cardFaction;
                 });
                 if (!hasMatchingBond) {
-                    return { valid: false, reason: 'no-faction-bond', targetCard: matchingCardOnField, charaName, ccCost };
+                    return { valid: false, reason: 'no-faction-bond', targetCard: matchingCardOnField, cardName, ccCost };
                 }
             }
         }
@@ -201,8 +201,50 @@ export function createRulesEngine(state) {
         return {
             valid: true,
             targetCard: matchingCardOnField,
-            charaName,
+            cardName,
             ccCost
+        };
+    };
+
+    const validateDeck = (deck, protagonistCardId) => {
+        const errors = [];
+        const cardCounts = {};
+        let hasCost1 = false;
+
+        if (!Array.isArray(deck)) {
+            return { isValid: false, errors: ['卡组数据无效。'] };
+        }
+
+        deck.forEach(card => {
+            const cardId = card.id;
+            cardCounts[cardId] = (cardCounts[cardId] || 0) + 1;
+            if (String(card.cost) === '1') {
+                hasCost1 = true;
+            }
+        });
+
+        if (deck.length < 50) {
+            errors.push(`卡组数量不足50张 (当前 ${deck.length}张)`);
+        }
+
+        if (!hasCost1) {
+            errors.push('卡组缺少出击费用为1的卡牌。');
+        }
+
+        if (!protagonistCardId || !deck.some(c => String(c.id).trim() === String(protagonistCardId).trim())) {
+            errors.push('卡组必须指定一张主人公牌。');
+        }
+
+        Object.entries(cardCounts).forEach(([cardId, count]) => {
+            if (count > 4) {
+                const card = deck.find(c => c.id === cardId);
+                errors.push(`卡牌 "${card?.cardName || cardId}" 超过了4张 (当前 ${count}张)`);
+            }
+        });
+
+        return {
+            isValid: errors.length === 0,
+            errors
         };
     };
 
@@ -212,6 +254,7 @@ export function createRulesEngine(state) {
         canAttackTargetByRange,
         getActionByArea,
         canPerformClassChange,
-        getCardFactionInfo
+        getCardFactionInfo,
+        validateDeck
     };
 }

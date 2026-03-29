@@ -87,7 +87,7 @@ createApp({
         // 👇 加上 rules 参数，让 cardOps 也能使用规则引擎！
         const cardOps = createCardOperations(state, rules); 
         const dragDrop = createDragDropHandler(state, cardOps, rules)
-        const turnMgr = createTurnManager(state);
+        const turnMgr = createTurnManager(state, cardOps);
         const socketHandler = createSocketHandler(state, cardOps);
         const EVT = globalThis.SOCKET_EVENTS || {};
 
@@ -141,7 +141,6 @@ createApp({
         const showAiReplayStepButtons = computed(() =>
             state.isDevMode.value
             && showAiReplayPanel.value
-            && isAiReplayPanelHidden.value
             && currentAiReplayTimelineLength.value > 0
         );
         const showAiReplayPanelVisible = computed(() => showAiReplayPanel.value && !isAiReplayPanelHidden.value);
@@ -553,18 +552,31 @@ createApp({
         };
 
         const hydrateReplayCard = (cardRef) => {
-            if (!cardRef) return null;
-            const id = String(cardRef.id || '').trim();
+            return hydrateReplayCardWithFallback(cardRef, null);
+        };
+
+        const hasReplayProp = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+
+        const hydrateReplayCardWithFallback = (cardRef, fallbackCard) => {
+            if (!cardRef && !fallbackCard) return null;
+
+            const source = cardRef && typeof cardRef === 'object' ? cardRef : {};
+            const fallback = fallbackCard && typeof fallbackCard === 'object' ? fallbackCard : {};
+            const id = String(source.id || fallback.id || '').trim();
             const base = replayCardCatalog.value.get(id) || {};
+            const nextStacks = hasReplayProp(source, '_stackedCards') ? source._stackedCards : fallback._stackedCards;
+            const fallbackStacks = Array.isArray(fallback._stackedCards) ? fallback._stackedCards : [];
 
             return {
                 ...base,
+                ...fallback,
+                ...source,
                 id,
-                instanceId: cardRef.instanceId || `${id}-replay`,
-                isTapped: !!cardRef.isTapped,
-                isMainCharacter: !!cardRef.isMainCharacter,
-                _stackedCards: Array.isArray(cardRef._stackedCards)
-                    ? cardRef._stackedCards.map(hydrateReplayCard).filter(Boolean)
+                instanceId: source.instanceId || fallback.instanceId || `${id}-replay`,
+                isTapped: hasReplayProp(source, 'isTapped') ? !!source.isTapped : !!fallback.isTapped,
+                isMainCharacter: hasReplayProp(source, 'isMainCharacter') ? !!source.isMainCharacter : !!fallback.isMainCharacter,
+                _stackedCards: Array.isArray(nextStacks)
+                    ? nextStacks.map((stackedCard, index) => hydrateReplayCardWithFallback(stackedCard, fallbackStacks[index] || null)).filter(Boolean)
                     : []
             };
         };
@@ -603,7 +615,7 @@ createApp({
             for (const cardRef of updateList) {
                 const key = getReplayCardKey(cardRef);
                 if (!key) continue;
-                const hydrated = hydrateReplayCard(cardRef);
+                const hydrated = hydrateReplayCardWithFallback(cardRef, currentMap.get(key) || null);
                 if (hydrated) currentMap.set(key, hydrated);
             }
 
@@ -611,7 +623,7 @@ createApp({
             for (const cardRef of addList) {
                 const key = getReplayCardKey(cardRef);
                 if (!key) continue;
-                const hydrated = hydrateReplayCard(cardRef);
+                const hydrated = hydrateReplayCardWithFallback(cardRef, currentMap.get(key) || null);
                 if (hydrated) currentMap.set(key, hydrated);
             }
 
@@ -736,6 +748,116 @@ createApp({
             return game.initialSnapshot || null;
         };
 
+        const clearReplayCombatState = () => {
+            state.isCombatActive.value = false;
+            state.attacker.value = null;
+            state.defender.value = null;
+            state.mySupportCard.value = null;
+            state.oppSupportCard.value = null;
+            state.combatDecision.value = {
+                ...(state.combatDecision.value || {}),
+                stage: 'idle',
+                promptOwner: null,
+                criticalPower: 0,
+                criticalUsed: false,
+                evaded: false,
+                finalAttackerWins: null
+            };
+            state.combatStats.value = {
+                ...(state.combatStats.value || {}),
+                myCardPower: 0,
+                mySupportPower: 0,
+                myTotalPower: 0,
+                oppTotalPower: 0,
+                attackerSupportApplied: 0,
+                defenderSupportApplied: 0,
+                supportNotice: null,
+                finalAttackerWins: null
+            };
+        };
+
+        const findReplayCombatEvent = (timeline, cursor, tag) => {
+            if (!Array.isArray(timeline)) return null;
+            for (let idx = cursor; idx >= 0; idx--) {
+                const event = timeline[idx] || null;
+                if (!event) continue;
+                if (event.tag === tag) return event;
+                if (tag !== 'attack-declare' && event.tag === 'attack-declare') break;
+            }
+            return null;
+        };
+
+        const applyReplayCombatState = (timeline, cursor) => {
+            clearReplayCombatState();
+
+            const currentEvent = Array.isArray(timeline) ? timeline[cursor] || null : null;
+            if (!currentEvent) return;
+
+            const combatTags = new Set(['battle-preview', 'battle-support-effect', 'battle-result']);
+            if (!combatTags.has(currentEvent.tag)) return;
+
+            const declareEvent = findReplayCombatEvent(timeline, cursor, 'attack-declare');
+            const previewEvent = findReplayCombatEvent(timeline, cursor, 'battle-preview');
+            const resultEvent = findReplayCombatEvent(timeline, cursor, 'battle-result');
+
+            const declareExtra = declareEvent?.extra || {};
+            const previewExtra = previewEvent?.extra || {};
+            const resultExtra = resultEvent?.extra || {};
+
+            const attacker = hydrateReplayCardWithFallback(previewExtra.attacker || declareExtra.attacker || null, null);
+            const defender = hydrateReplayCardWithFallback(previewExtra.defender || declareExtra.defender || null, null);
+            const attackerSupportCard = hydrateReplayCardWithFallback(previewExtra.attackerSupportCard || resultExtra.attackerSupportCard || null, null);
+            const defenderSupportCard = hydrateReplayCardWithFallback(previewExtra.defenderSupportCard || resultExtra.defenderSupportCard || null, null);
+
+            if (!attacker || !defender) return;
+
+            state.isCombatActive.value = true;
+            state.attacker.value = attacker;
+            state.defender.value = defender;
+            state.mySupportCard.value = attackerSupportCard;
+            state.oppSupportCard.value = defenderSupportCard;
+
+            const attackerSupportApplied = Number.parseInt(previewExtra.attackerSupport?.supportValue, 10) || 0;
+            const defenderSupportApplied = Number.parseInt(previewExtra.defenderSupport?.supportValue, 10) || 0;
+            const attackerPower = Number.parseInt(previewExtra.attackerPower, 10) || Number.parseInt(attacker.attack, 10) || 0;
+            const defenderPower = Number.parseInt(previewExtra.defenderPower, 10) || Number.parseInt(defender.attack, 10) || 0;
+            const supportNotice = currentEvent.tag === 'battle-support-effect'
+                ? String(currentEvent.line || '').replace(/^\[[^\]]+\]\s*/, '')
+                : null;
+
+            state.combatStats.value = {
+                ...(state.combatStats.value || {}),
+                myCardPower: Number.parseInt(attacker.attack, 10) || 0,
+                mySupportPower: attackerSupportApplied,
+                myTotalPower: attackerPower,
+                oppTotalPower: defenderPower,
+                attackerSupportApplied,
+                defenderSupportApplied,
+                supportNotice,
+                finalAttackerWins: Object.prototype.hasOwnProperty.call(resultExtra, 'finalAttackerWins')
+                    ? !!resultExtra.finalAttackerWins
+                    : null,
+                attackerCriticalLocked: false,
+                defenderEvasionLocked: false,
+                encourageDrawOnBreakMainCharacter: false,
+                opponentSupportEffectSealed: false,
+                jewelBreakCount: 1,
+                postBattleEffects: []
+            };
+
+            state.combatDecision.value = {
+                ...(state.combatDecision.value || {}),
+                stage: 'resolved',
+                promptOwner: null,
+                criticalPower: attackerPower * 2,
+                criticalUsed: false,
+                evaded: false,
+                finalAttackerWins: Object.prototype.hasOwnProperty.call(resultExtra, 'finalAttackerWins')
+                    ? !!resultExtra.finalAttackerWins
+                    : null
+            };
+        };
+
         const applyCurrentReplayCursor = () => {
             const game = getCurrentReplayGame();
             if (!game) return;
@@ -754,6 +876,8 @@ createApp({
                     applyReplayPatch(eventPatch, baseSnapshot.seatA);
                 }
             }
+
+            applyReplayCombatState(timeline, safeCursor);
         };
 
         const loadLatestAiReplayLog = async () => {
@@ -1020,6 +1144,19 @@ createApp({
             isCompactMobile.value = window.innerWidth < 640;
         };
 
+        const confirmMulligan = () => {
+            state.mulliganState.value = 'done';
+            state.socket.emit(EVT.MULLIGAN_DECISION, { state: 'done' });
+        };
+
+        watch([() => state.mulliganState.value, () => state.opponentMulliganState.value], ([myState, oppState]) => {
+            if (myState === 'done' && oppState === 'done') {
+                if (state.isMyTurn.value) {
+                    state.currentPhase.value = 'BEGINNING';
+                }
+            }
+        });
+
         onMounted(async () => {
             document.documentElement.setAttribute('data-battle-theme', BATTLE_THEME);
             window.addEventListener('resize', updateHeight);
@@ -1144,6 +1281,7 @@ createApp({
             canStepAiReplayPrev,
             canStepAiReplayNext,
             currentAiReplayEventLine,
+            currentAiReplayTimelineLength,
             isAiReplayLoading,
             aiReplayLog,
             aiReplayGameIndex,
@@ -1181,7 +1319,9 @@ createApp({
             onSelectedCardAbilitySecondary: () => activateSelectedCardAbilityByIndex(1),
             onSelectedCardAbilityTertiary: () => activateSelectedCardAbilityByIndex(2),
             onSelectedCardAbilityQuaternary: () => activateSelectedCardAbilityByIndex(3),
-            isMyCard, isCardInHand, formattedAbility, formattedSupport, handleMinifiedClick, updateHeight
+            isMyCard, isCardInHand, formattedAbility, formattedSupport, handleMinifiedClick, updateHeight,
+            confirmMulligan,
+            performMulligan
         };
     }
 }).mount('#app');

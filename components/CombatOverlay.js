@@ -17,6 +17,10 @@ export const CombatOverlay = {
             type: String,
             default: ''
         },
+        isReplayMode: {
+            type: Boolean,
+            default: false
+        },
         isMyAttacker: Boolean,
         onOpenCostPicker: {
             type: Function,
@@ -125,7 +129,7 @@ export const CombatOverlay = {
         }
     },
     template: `
-        <div v-if="isCombatActive" class="fixed inset-0 z-[150] flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden">
+        <div v-if="isCombatActive" :class="['fixed inset-0 z-[150] flex flex-col items-center justify-center p-2 sm:p-4 overflow-hidden', { 'pointer-events-none': isReplayMode }]">
             <div class="absolute inset-0 bg-black/90 backdrop-blur-md"></div>
 
             <div class="absolute inset-0 overflow-hidden pointer-events-none opacity-40">
@@ -134,7 +138,7 @@ export const CombatOverlay = {
             </div>
 
             <!-- 必杀/回避决策面板 - 绝对居中弹层，始终在屏幕内可见 -->
-            <div v-if="combatDecision?.stage && combatDecision.stage !== 'idle' && combatDecision.stage !== 'resolved'"
+            <div v-if="!isReplayMode && combatDecision?.stage && combatDecision.stage !== 'idle' && combatDecision.stage !== 'resolved'"
                 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-white/20 bg-black/55 backdrop-blur-sm px-6 py-6 text-center shadow-2xl">
                 <div v-if="canAct" class="space-y-4">
                     <div class="text-lg md:text-2xl font-black text-white">{{ decisionTitle }}</div>

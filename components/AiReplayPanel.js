@@ -45,7 +45,8 @@ export const AiReplayPanel = {
     },
     data() {
         return {
-            jumpInput: ''
+            jumpInput: '',
+            showFullLog: false,
         };
     },
     computed: {
@@ -91,6 +92,7 @@ export const AiReplayPanel = {
                 </div>
                 <div class="flex items-center gap-1">
                     <button @click="onLoadLatest()" class="text-[10px] px-2 py-1 rounded border border-fuchsia-500/40 text-fuchsia-100 hover:bg-fuchsia-900/40">刷新</button>
+                    <button @click="showFullLog = !showFullLog" class="text-[10px] px-2 py-1 rounded border border-fuchsia-500/40 text-fuchsia-100 hover:bg-fuchsia-900/40">完整日志</button>
                     <button @click="onClose()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">关闭</button>
                 </div>
             </div>
@@ -120,6 +122,16 @@ export const AiReplayPanel = {
                 <div class="rounded border border-slate-700/50 bg-slate-900/55 px-2 py-2 min-h-[58px]">
                     <div class="text-[10px] text-slate-200 break-words leading-4" v-if="currentEvent">{{ currentEvent.line }}</div>
                     <div class="text-[10px] text-slate-500" v-else>当前步无事件</div>
+                </div>
+
+                <div v-if="showFullLog" class="absolute inset-0 bg-black/90 p-3 text-[10px] text-slate-200">
+                    <div class="h-full overflow-y-auto" v-if="currentGame">
+                        <div v-for="(event, index) in currentGame.timeline" :key="index"
+                             class="leading-4 whitespace-pre-wrap"
+                             :class="{ 'text-amber-300': index === cursor }">
+                            {{ (index + 1) + ': ' + event.line }}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

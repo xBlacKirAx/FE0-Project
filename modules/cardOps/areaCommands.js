@@ -10,7 +10,7 @@ import {
 import { emitSyncPhase } from '../effects/socketEffects.js';
 import { checkAllSpecialDeployConditions, getActivatableAbilities } from '../engine/abilityEngine.js';
 
-export function createAreaCommands({ state, socket, refs }) {
+export function createAreaCommands({ state, socket, refs, rules }) {
     const {
         hand,
         fieldFront,
@@ -102,30 +102,35 @@ export function createAreaCommands({ state, socket, refs }) {
 
     const loadCardsForReset = async () => {
         const selectedDeckId = getSelectedDeckId();
+        let deckPayload = { cards: [], protagonistCardId: '' };
+
         if (selectedDeckId) {
             try {
                 const selectedDeckPassword = getSelectedDeckPassword();
                 const passwordQuery = selectedDeckPassword ? `?password=${encodeURIComponent(selectedDeckPassword)}` : '';
                 const deckRes = await fetch(`/api/decks/${selectedDeckId}/expanded-cards${passwordQuery}`);
                 if (deckRes.ok) {
-                    const deckPayload = await deckRes.json();
-                    const deckCards = Array.isArray(deckPayload?.cards) ? deckPayload.cards : [];
-                    if (deckCards.length) {
-                        return {
-                            cards: deckCards,
-                            protagonistCardId: String(deckPayload?.protagonistCardId || '').trim()
-                        };
-                    }
+                    deckPayload = await deckRes.json();
                 }
             } catch (err) {
                 console.warn('加载已选卡组失败，回退到默认卡池。', err);
             }
         }
 
-        const res = await fetch('/api/cards');
+        if (!deckPayload.cards || deckPayload.cards.length === 0) {
+            const res = await fetch('/api/cards');
+            deckPayload = { cards: await res.json(), protagonistCardId: '' };
+        }
+
+        const { isValid, errors } = rules.validateDeck(deckPayload.cards, deckPayload.protagonistCardId);
+        if (!isValid) {
+            alert(`卡组不合法，无法开始游戏：\n- ${errors.join('\n- ')}`);
+            return { cards: [], protagonistCardId: '' };
+        }
+
         return {
-            cards: await res.json(),
-            protagonistCardId: ''
+            cards: deckPayload.cards,
+            protagonistCardId: String(deckPayload.protagonistCardId || '').trim()
         };
     };
 
@@ -148,7 +153,8 @@ export function createAreaCommands({ state, socket, refs }) {
 
         recycledCardIds.push(...recycleGraveyardIntoDeckIfNeeded());
         if (deck.value.length === 0) {
-            return { drawnCard: null, recycledCardIds };
+            alert('💀 败北... 你的牌组和退避区都没有卡了，你无法抽卡。');
+            return { drawnCard: null, recycledCardIds: [] };
         }
 
         const drawnCard = deck.value.pop();
@@ -171,6 +177,39 @@ export function createAreaCommands({ state, socket, refs }) {
         });
     };
 
+    const handleUniquenessCheck = () => {
+        const allMyUnits = [...fieldFront.value, ...fieldRear.value];
+        const unitsByName = allMyUnits.reduce((acc, unit) => {
+            const name = unit.cardName;
+            if (!acc[name]) {
+                acc[name] = [];
+            }
+            acc[name].push(unit);
+            return acc;
+        }, {});
+
+        Object.values(unitsByName).forEach(unitGroup => {
+            if (unitGroup.length > 1) {
+                let cardToKeep = unitGroup.find(u => u.isMainCharacter) || unitGroup[0];
+                const cardsToRemove = unitGroup.filter(u => u.instanceId !== cardToKeep.instanceId);
+                
+                cardsToRemove.forEach(cardToRemove => {
+                    const fromArea = getArea(cardToRemove);
+                    if (fromArea) {
+                        const fromAreaName = getAreaName(fromArea);
+                        const idx = fromArea.findIndex(c => c.instanceId === cardToRemove.instanceId);
+                        if (idx > -1) {
+                            const card = fromArea.splice(idx, 1)[0];
+                            graveyard.value.push(card);
+                            emitSyncCardMove(socket, { card, to: 'graveyard', from: fromAreaName });
+                        }
+                    }
+                });
+                alert(`同名单位处理：场上存在多张 ${cardToKeep.cardName}，已自动保留一张并将其余送入退避区。`);
+            }
+        });
+    };
+
     const moveTo = (card, toAreaName) => {
         const fromArea = getArea(card);
         if (!fromArea) return;
@@ -182,7 +221,7 @@ export function createAreaCommands({ state, socket, refs }) {
         const isDeployFromHand = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
         if (isDeployFromHand) {
             const sameNameOnField = [...fieldFront.value, ...fieldRear.value]
-                .find(c => c.instanceId !== card.instanceId && c.charaName && card.charaName && c.charaName === card.charaName);
+                .find(c => c.instanceId !== card.instanceId && c.cardName && card.cardName && c.cardName === card.cardName);
             if (sameNameOnField) {
                 const isNoPromoteCost = !card.promoteCost || card.promoteCost === 'N/A';
                 if (isNoPromoteCost) {
@@ -282,6 +321,10 @@ export function createAreaCommands({ state, socket, refs }) {
                     emitSyncCardMove(socket, { card: sc, from: 'stacked', to: 'graveyard' });
                 });
                 targetCard._stackedCards = [];
+            }
+
+            if (toAreaName === 'front' || toAreaName === 'rear') {
+                handleUniquenessCheck();
             }
 
             selectedCard.value = null;
@@ -567,6 +610,8 @@ export function createAreaCommands({ state, socket, refs }) {
 
         if (!card._abilityUsedThisTurn) card._abilityUsedThisTurn = {};
         card._abilityUsedThisTurn[segment.title] = true;
+
+        handleUniquenessCheck();
     };
 
     const activateUnitAbility = (card, preferredTitle = null) => {
@@ -700,7 +745,7 @@ export function createAreaCommands({ state, socket, refs }) {
             if (!bypassPhaseCheck && state.firstPlayerOpeningTurnLocked?.value) {
                 alert('先攻第一回合不能在开始阶段抽卡。');
                 state.currentPhase.value = 'BOND';
-                const phaseName = state.PHASES?.[state.currentPhase.value]?.name || state.currentPhase.value;
+                const phaseName = state.PHASES?.['BOND']?.name || 'BOND';
                 emitSyncPhase(socket, { phase: state.currentPhase.value, phaseName });
                 return;
             }
@@ -766,6 +811,8 @@ export function createAreaCommands({ state, socket, refs }) {
             // 仅用户手动抽牌时推进阶段（转职抽牌不推进）
             if (!bypassPhaseCheck && state.currentPhase.value === 'BEGINNING' && !state.isDevMode.value) {
                 state.currentPhase.value = 'BOND';
+                const phaseName = state.PHASES?.['BOND']?.name || 'BOND';
+                emitSyncPhase(socket, { phase: state.currentPhase.value, phaseName });
             }
         };
 
@@ -938,6 +985,33 @@ export function createAreaCommands({ state, socket, refs }) {
         }
     };
 
+    const performMulligan = () => {
+        if (state.hasMulliganed.value) return;
+
+        const currentHand = hand.value.splice(0, hand.value.length);
+        deck.value.push(...currentHand);
+        shuffleInPlace(deck.value);
+
+        const newHand = [];
+        for (let i = 0; i < 6; i++) {
+            if (deck.value.length > 0) {
+                newHand.push(deck.value.pop());
+            }
+        }
+        hand.value.push(...newHand);
+
+        state.hasMulliganed.value = true;
+        state.mulliganState.value = 'done';
+        socket.emit(EVT.MULLIGAN_DECISION, { state: 'mulligan' });
+
+        currentHand.forEach(card => {
+            emitSyncCardMove(socket, { card, from: 'hand', to: 'deck' });
+        });
+        newHand.forEach(card => {
+            emitPlayerDraw(socket, { card });
+        });
+    };
+
     const resetGame = async (isRemote = false) => {
         hand.value = [];
         fieldFront.value = [];
@@ -947,7 +1021,8 @@ export function createAreaCommands({ state, socket, refs }) {
         graveyard.value = [];
         boundless.value = [];
         deck.value = [];
-        state.currentPhase.value = 'BEGINNING';
+
+        state.currentPhase.value = 'MULLIGAN';
         state.hasPlacedBond.value = false;
         state.usedBondsThisTurn.value = 0;
         if (undoStack) {
@@ -958,6 +1033,15 @@ export function createAreaCommands({ state, socket, refs }) {
         }
         if (state.hasBattledThisTurn) {
             state.hasBattledThisTurn.value = false;
+        }
+        if (state.mulliganState) {
+            state.mulliganState.value = 'idle';
+        }
+        if (state.opponentMulliganState) {
+            state.opponentMulliganState.value = 'idle';
+        }
+        if (state.hasMulliganed) {
+            state.hasMulliganed.value = false;
         }
 
         try {
@@ -997,6 +1081,11 @@ export function createAreaCommands({ state, socket, refs }) {
             for (let i = 0; i < 6; i++) {
                 if (deck.value.length > 0) hand.value.push(deck.value.pop());
             }
+
+            if (state.isMyTurn.value) {
+                state.mulliganState.value = 'awaiting';
+            }
+
         } catch (err) {
             console.error('加载失败', err);
         }
@@ -1017,6 +1106,7 @@ export function createAreaCommands({ state, socket, refs }) {
         returnToHandFromBoard,
         drawCard,
         performClassChange,
+        performMulligan,
         moveFieldUnit,
         marchRearToFrontIfNeeded,
         toggleBondFace,

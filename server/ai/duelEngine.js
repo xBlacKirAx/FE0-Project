@@ -1,8 +1,31 @@
+const fs = require('fs');
+const path = require('path');
 const { toInt, cardBrief } = require('./deckAiProfiles');
 const { normalizeRange, canHitByRange } = require('../../shared/rangeModel.js');
 
 const MAX_FRONT = 5;
 const MAX_REAR = 5;
+
+function loadEffectTimingById() {
+    try {
+        const catalogPath = path.join(__dirname, '../../data/support_effect_catalog_full.json');
+        const catalog = JSON.parse(fs.readFileSync(catalogPath, 'utf8'));
+        const map = new Map();
+        for (const item of Array.isArray(catalog) ? catalog : []) {
+            const effectId = String(item?.effectId || '').trim();
+            if (!effectId) continue;
+            const timing = Array.isArray(item?.timings)
+                ? item.timings.map(text => String(text || '').trim()).find(Boolean)
+                : '';
+            if (timing) map.set(effectId, timing);
+        }
+        return map;
+    } catch (_error) {
+        return new Map();
+    }
+}
+
+const EFFECT_TIMING_BY_ID = loadEffectTimingById();
 
 function shuffleInPlace(list) {
     for (let i = list.length - 1; i > 0; i--) {
@@ -30,6 +53,46 @@ function removeFromArea(area, instanceId) {
 function forceMatched(required, actual) {
     if (!required) return true;
     return String(required) === String(actual || '');
+}
+
+function getCardCharaName(card) {
+    const direct = String(card?.charaName || '').trim();
+    if (direct) return direct;
+
+    const fullName = String(card?.cardName || card?.name || '').trim();
+    if (!fullName) return '';
+    const idx = fullName.search(/\s/);
+    if (idx > -1) {
+        const derived = fullName.slice(idx).trim();
+        if (derived) return derived;
+    }
+    return fullName;
+}
+
+function isSupportFailed(supportCard, targetCard) {
+    const supportChara = getCardCharaName(supportCard);
+    const targetChara = getCardCharaName(targetCard);
+    if (!supportChara || !targetChara) return false;
+    return supportChara === targetChara;
+}
+
+function getSupportEffectTiming(supportCard) {
+    const effectId = String(supportCard?.supportAbility?.effectId || '').trim();
+    return String(
+        supportCard?.supportAbility?.effectTiming
+        || supportCard?.supportAbility?.keywords?.timing?.[0]
+        || EFFECT_TIMING_BY_ID.get(effectId)
+        || ''
+    ).trim();
+}
+
+function isSupportTimingMatched(timing, role) {
+    if (!timing) return true;
+    if (timing === '〖攻防型〗') return true;
+    if (timing === '〖连发技〗') return role === 'attacker';
+    if (timing === '〖攻击型〗') return role === 'attacker';
+    if (timing === '〖防御型〗') return role === 'defender';
+    return false;
 }
 
 function getAttackerArea(player, attacker) {
@@ -124,9 +187,10 @@ function drawToHand(player, count = 1) {
 }
 
 function autoMarch(player) {
-    if (player.front.length > 0 || player.rear.length === 0) return;
+    if (player.front.length > 0 || player.rear.length === 0) return [];
     const moved = player.rear.splice(0, player.rear.length);
     player.front.push(...moved);
+    return moved;
 }
 
 function hasSkillCostCard(player, charaName) {
@@ -248,6 +312,20 @@ function serializeCard(card) {
     };
 }
 
+function serializeReplayPatchCard(card) {
+    if (!card) return null;
+
+    return {
+        id: card.id,
+        instanceId: card.instanceId,
+        isMainCharacter: !!card.isMainCharacter,
+        isTapped: !!card.isTapped,
+        ...(Array.isArray(card._stackedCards) && card._stackedCards.length > 0
+            ? { _stackedCards: card._stackedCards.map(serializeReplayPatchCard).filter(Boolean) }
+            : {})
+    };
+}
+
 function serializePlayerForReplay(player) {
     return {
         seatName: player.seatName,
@@ -352,13 +430,19 @@ function buildMinimalZonePatch(prevZone, nextZone, zoneKey) {
     for (const [key, card] of nextMap.entries()) {
         const prevCard = prevMap.get(key);
         if (!prevCard) {
-            add.push({ id: card.id, instanceId: card.instanceId });
+            add.push(serializeReplayPatchCard(card));
             continue;
         }
-        // 只保存状态变化
+
         const changes = {};
+        if (prevCard.id !== card.id) changes.id = card.id;
         if (prevCard.isTapped !== card.isTapped) changes.isTapped = card.isTapped;
         if (prevCard.isMainCharacter !== card.isMainCharacter) changes.isMainCharacter = card.isMainCharacter;
+        if (!isDeepEqualByJson(prevCard._stackedCards || [], card._stackedCards || [])) {
+            changes._stackedCards = Array.isArray(card._stackedCards)
+                ? card._stackedCards.map(serializeReplayPatchCard).filter(Boolean)
+                : [];
+        }
         if (Object.keys(changes).length > 0) {
             update.push({ instanceId: card.instanceId, ...changes });
         }
@@ -437,12 +521,18 @@ function buildReplayPatch(prevSnapshot, nextSnapshot) {
 function buildBattleSnapshot({ attackerOwner, defenderOwner, attacker, defender }) {
     const attackerSupport = drawOneRaw(attackerOwner);
     const defenderSupport = drawOneRaw(defenderOwner);
+    const attackerSupportFailed = isSupportFailed(attackerSupport, attacker);
+    const defenderSupportFailed = isSupportFailed(defenderSupport, defender);
+    const attackerSupportValue = attackerSupportFailed ? 0 : toInt(attackerSupport?.support, 0);
+    const defenderSupportValue = defenderSupportFailed ? 0 : toInt(defenderSupport?.support, 0);
 
     const result = {
-        attackerPower: toInt(attacker.attack, 0) + toInt(attackerSupport?.support, 0),
-        defenderPower: toInt(defender.attack, 0) + toInt(defenderSupport?.support, 0),
+        attackerPower: toInt(attacker.attack, 0) + attackerSupportValue,
+        defenderPower: toInt(defender.attack, 0) + defenderSupportValue,
         attackerSupport,
         defenderSupport,
+        attackerSupportFailed,
+        defenderSupportFailed,
         attackerCriticalLocked: false,
         defenderEvasionLocked: false,
         jewelBreakCount: 1
@@ -457,9 +547,18 @@ function handleMainCharacterBreak(defenderOwner, jewelBreakCount, logger) {
     }
 
     const broken = Math.min(defenderOwner.jewels.length, jewelBreakCount);
-    const gained = defenderOwner.jewels.splice(defenderOwner.jewels.length - broken, broken);
+    const initialJewelCount = defenderOwner.jewels.length;
+
+    logger(`${defenderOwner.seatName} 主人公被击破，失去 ${broken} 宝玉，剩余 ${initialJewelCount - broken}`);
+
+    const gained = defenderOwner.jewels.splice(initialJewelCount - broken, broken);
     defenderOwner.hand.push(...gained);
-    logger(`${defenderOwner.seatName} 主人公被击破，失去 ${broken} 宝玉，剩余 ${defenderOwner.jewels.length}`);
+
+    for (let i = 0; i < gained.length; i++) {
+        const card = gained[i];
+        const jewelIndex = initialJewelCount - i;
+        logger(`${defenderOwner.seatName} 将 宝玉${jewelIndex}： ${getCharaName(card)} 加入手牌`);
+    }
 
     return { gameOver: defenderOwner.jewels.length <= 0 };
 }
@@ -477,24 +576,28 @@ function breakDefenderUnit(defenderOwner, defender, logger) {
     logger(`${defenderOwner.seatName} 单位被击破: ${cardBrief(unit)}`);
 }
 
-function buildSupportDetail(card) {
+function buildSupportDetail(card, supportFailed = false) {
     if (!card) {
         return {
+            id: null,
             cardId: null,
             instanceId: null,
             charaName: null,
             supportValue: 0,
             supportEffectId: null,
-            supportEffectName: null
+            supportEffectName: null,
+            supportFailed: false
         };
     }
     return {
+        id: String(card.id || '').trim() || null,
         cardId: String(card.id || '').trim() || null,
         instanceId: String(card.instanceId || '').trim() || null,
         charaName: String(card.charaName || '').trim() || null,
-        supportValue: toInt(card.support, 0),
+        supportValue: supportFailed ? 0 : toInt(card.support, 0),
         supportEffectId: String(card.supportAbility?.effectId || '').trim() || null,
-        supportEffectName: String(card.supportAbility?.effectName || card.supportAbility?.text || '').trim() || null
+        supportEffectName: String(card.supportAbility?.effectName || card.supportAbility?.text || '').trim() || null,
+        supportFailed: !!supportFailed
     };
 }
 
@@ -520,19 +623,20 @@ function formatSupportText(supportDetail, supportEffectState) {
     const supportValue = toInt(supportDetail?.supportValue, 0);
     const shouldShowAbility = !!supportEffectState?.effectName
         && (!supportEffectState.used || !supportEffectState.powerDelta);
-    return `${charaName}(援:${supportValue}${shouldShowAbility ? ` 能力:${supportEffectState.effectName}` : ''})`;
+    const failedText = supportDetail?.supportFailed ? ' 失败' : '';
+    return `${charaName}(援:${supportValue}${shouldShowAbility ? ` 能力:${supportEffectState.effectName}` : ''}${failedText})`;
 }
 
-function chooseAllyMoveTarget(owner, attacker) {
+function chooseAllyMoveTarget(owner, attacker, defender) {
     const frontCandidates = owner.front
-        .filter(card => card.instanceId !== attacker.instanceId)
+        .filter(card => card.instanceId !== attacker.instanceId && card.instanceId !== defender?.instanceId)
         .sort((left, right) => toInt(right.attack, 0) - toInt(left.attack, 0));
     if (frontCandidates.length > 0) {
         return { card: frontCandidates[0], from: 'front', to: 'rear' };
     }
 
     const rearCandidates = owner.rear
-        .filter(card => card.instanceId !== attacker.instanceId)
+        .filter(card => card.instanceId !== attacker.instanceId && card.instanceId !== defender?.instanceId)
         .sort((left, right) => toInt(right.attack, 0) - toInt(left.attack, 0));
     if (rearCandidates.length > 0) {
         return { card: rearCandidates[0], from: 'rear', to: 'front' };
@@ -649,9 +753,10 @@ function shouldUseSupportEffect(owner, context) {
     return { use: false, reason: '收益不足' };
 }
 
-function buildSupportEffectState({ supportCard, role, owner, opponent, attacker, defender }) {
+function buildSupportEffectState({ supportCard, role, owner, opponent, attacker, defender, supportFailed }) {
     const effectId = String(supportCard?.supportAbility?.effectId || '').trim() || null;
     const effectName = String(supportCard?.supportAbility?.effectName || supportCard?.supportAbility?.text || '').trim() || null;
+    const effectTiming = getSupportEffectTiming(supportCard);
     const params = supportCard?.supportAbility?.effectParams || {};
     const requiredForce = params.requiredAttackerForce || supportCard?.force || null;
     const requiredForces = Array.isArray(params.requiredAttackerForces) ? params.requiredAttackerForces : null;
@@ -675,6 +780,16 @@ function buildSupportEffectState({ supportCard, role, owner, opponent, attacker,
     };
 
     if (!effectId || !effectName) {
+        return effectState;
+    }
+
+    if (supportFailed) {
+        effectState.note = '同名支援失败';
+        return effectState;
+    }
+
+    if (!isSupportTimingMatched(effectTiming, role)) {
+        effectState.note = '时机不匹配';
         return effectState;
     }
 
@@ -738,7 +853,7 @@ function buildSupportEffectState({ supportCard, role, owner, opponent, attacker,
         }
         break;
     case 'EMBLEM_HERO':
-        if (role === 'attacker' && ((requiredForces && isAnyForceMatched(requiredForces, attacker?.force)) || forceMatched(requiredForce, attacker?.force))) {
+        if (role === 'attacker' && defender.isMainCharacter && ((requiredForces && isAnyForceMatched(requiredForces, attacker?.force)) || forceMatched(requiredForce, attacker?.force))) {
             effectState.canUse = true;
             effectState.jewelBreakCount = 2;
             effectState.resultNote = '本次主人公击破改为破坏2个宝玉';
@@ -811,7 +926,7 @@ function buildSupportEffectState({ supportCard, role, owner, opponent, attacker,
         break;
     case 'EMBLEM_SKY':
     case 'EMBLEM_COMMAND': {
-        const target = chooseAllyMoveTarget(owner, attacker);
+        const target = chooseAllyMoveTarget(owner, attacker, defender);
         if (target) {
             effectState.canUse = true;
             effectState.sideEffectType = 'move-ally';
@@ -1062,8 +1177,14 @@ function applySupportEffectState(snapshot, effectState, role, owner, opponent, a
 
 function formatSupportEffectDecision(owner, effectState) {
     if (!effectState?.effectName) return '';
+
+    const powerOnlyEmblems = new Set(['EMBLEM_ATTACK', 'EMBLEM_DEFENSE', 'EMBLEM_STRONG', 'EMBLEM_COOP', 'EMBLEM_LINK', 'EMBLEM_SIBLING']);
+    if (powerOnlyEmblems.has(effectState.effectId)) {
+        return '';
+    }
+
     if (!effectState.canUse) {
-        return `${owner.seatName} 未使用${effectState.effectName}${effectState.note ? `（${effectState.note}）` : ''}`;
+        return '';
     }
     if (!effectState.used) {
         return `${owner.seatName} 放弃发动${effectState.effectName}${effectState.decisionReason ? `（${effectState.decisionReason}）` : ''}`;
@@ -1108,14 +1229,13 @@ function serializeSupportEffectState(effectState) {
 }
 
 function runBattle({ attackerOwner, defenderOwner, attacker, defender, logger }) {
-    attacker.isTapped = true;
     const snapshot = buildBattleSnapshot({ attackerOwner, defenderOwner, attacker, defender });
 
     if (snapshot.attackerSupport) attackerOwner.graveyard.push(snapshot.attackerSupport);
     if (snapshot.defenderSupport) defenderOwner.graveyard.push(snapshot.defenderSupport);
 
-    const attackerSupportDetail = buildSupportDetail(snapshot.attackerSupport);
-    const defenderSupportDetail = buildSupportDetail(snapshot.defenderSupport);
+    const attackerSupportDetail = buildSupportDetail(snapshot.attackerSupport, snapshot.attackerSupportFailed);
+    const defenderSupportDetail = buildSupportDetail(snapshot.defenderSupport, snapshot.defenderSupportFailed);
 
     const attackerSupportEffectState = buildSupportEffectState({
         supportCard: snapshot.attackerSupport,
@@ -1123,7 +1243,8 @@ function runBattle({ attackerOwner, defenderOwner, attacker, defender, logger })
         owner: attackerOwner,
         opponent: defenderOwner,
         attacker,
-        defender
+        defender,
+        supportFailed: snapshot.attackerSupportFailed
     });
     const defenderSupportEffectState = buildSupportEffectState({
         supportCard: snapshot.defenderSupport,
@@ -1131,7 +1252,8 @@ function runBattle({ attackerOwner, defenderOwner, attacker, defender, logger })
         owner: defenderOwner,
         opponent: attackerOwner,
         attacker,
-        defender
+        defender,
+        supportFailed: snapshot.defenderSupportFailed
     });
 
     const attackerWouldWinNow = snapshot.attackerPower >= snapshot.defenderPower;
@@ -1242,9 +1364,15 @@ function runBattle({ attackerOwner, defenderOwner, attacker, defender, logger })
     const defenderBattlePowerText = formatBattlePowerText(defenderBaseAttack, defenderPowerDelta, defenderSupportDetail);
 
     logger(
-        `战斗: ${attackerOwner.seatName} ${getCharaName(attacker)}(${attackerBattlePowerText}) + ${formatSupportText(attackerSupportDetail, attackerSupportEffectState)} 总:${snapshot.attackerPower} VS ${defenderOwner.seatName} ${getCharaName(defender)}(${defenderBattlePowerText}) + ${formatSupportText(defenderSupportDetail, defenderSupportEffectState)} 总:${snapshot.defenderPower}`,
+        `战斗: ${getCharaName(attacker)}(${attackerBattlePowerText}) + ${formatSupportText(attackerSupportDetail, attackerSupportEffectState)} 总:${snapshot.attackerPower} VS ${getCharaName(defender)}(${defenderBattlePowerText}) + ${formatSupportText(defenderSupportDetail, defenderSupportEffectState)} 总:${snapshot.defenderPower}`,
         'battle-preview',
         {
+            attacker: serializeReplayPatchCard(attacker),
+            defender: serializeReplayPatchCard(defender),
+            attackerSupportCard: serializeReplayPatchCard(snapshot.attackerSupport),
+            defenderSupportCard: serializeReplayPatchCard(snapshot.defenderSupport),
+            attackerSeat: attackerOwner.seatName,
+            defenderSeat: defenderOwner.seatName,
             attackerSupport: attackerSupportDetail,
             defenderSupport: defenderSupportDetail,
             attackerPower: snapshot.attackerPower,
@@ -1282,6 +1410,12 @@ function runBattle({ attackerOwner, defenderOwner, attacker, defender, logger })
         `战斗结果: ${resultReason ? `${resultReason} ` : ''}${finalAttackerWins ? '攻击方胜' : '防御方存活'}`,
         'battle-result',
         {
+            attacker: serializeReplayPatchCard(attacker),
+            defender: serializeReplayPatchCard(defender),
+            attackerSupportCard: serializeReplayPatchCard(snapshot.attackerSupport),
+            defenderSupportCard: serializeReplayPatchCard(snapshot.defenderSupport),
+            attackerSeat: attackerOwner.seatName,
+            defenderSeat: defenderOwner.seatName,
             attackerSupport: attackerSupportDetail,
             defenderSupport: defenderSupportDetail,
             attackerPower: snapshot.attackerPower,
@@ -1426,8 +1560,14 @@ function runSingleGame({ playerA, playerB, maxTurns, logger }) {
 
         recordEvent(`${active.seatName} 回合开始 | 手牌${active.hand.length} 羁绊${active.bonds.length} 前${active.front.length} 后${active.rear.length}`, 'turn-start');
 
-        autoMarch(active);
-        autoMarch(passive);
+        let moved = autoMarch(active);
+        if (moved.length > 0) {
+            recordEvent(`${active.seatName} 自动进军: ${moved.map(c => getCharaName(c)).join(', ')}`, 'march');
+        }
+        moved = autoMarch(passive);
+        if (moved.length > 0) {
+            recordEvent(`${passive.seatName} 自动进军: ${moved.map(c => getCharaName(c)).join(', ')}`, 'march');
+        }
         applyBondPhase(active, (line) => recordEvent(line, 'bond'));
         applyDeployPhase(active, (line) => recordEvent(line, 'deploy'));
 
@@ -1438,7 +1578,10 @@ function runSingleGame({ playerA, playerB, maxTurns, logger }) {
             const attackers = active.profile.chooseAttackers({ player: active, opponent: passive });
             for (const attacker of attackers) {
                 if (attacker.isTapped) continue;
-                autoMarch(passive);
+                const moved = autoMarch(passive);
+                if (moved.length > 0) {
+                    recordEvent(`${passive.seatName} 自动进军: ${moved.map(c => getCharaName(c)).join(', ')}`, 'march');
+                }
                 const legalTargets = collectLegalTargets(active, passive, attacker);
                 if (!legalTargets.length) {
                     recordEvent(`${active.seatName} 无合法攻击目标: ${getCharaName(attacker)}(射程${normalizeRange(attacker.range)})`, 'attack-skip');
@@ -1450,7 +1593,17 @@ function runSingleGame({ playerA, playerB, maxTurns, logger }) {
                     recordEvent(`${active.seatName} 非法目标被拦截: ${getCharaName(attacker)} -> ${getCharaName(defender)}`, 'attack-skip');
                     continue;
                 }
-                recordEvent(`${active.seatName} 宣言攻击: ${getCharaName(attacker)} -> ${passive.seatName} ${getCharaName(defender)}`, 'attack-declare');
+                attacker.isTapped = true;
+                recordEvent(
+                    `${active.seatName} 宣言攻击: ${getCharaName(attacker)} -> ${passive.seatName} ${getCharaName(defender)}`,
+                    'attack-declare',
+                    {
+                        attacker: serializeReplayPatchCard(attacker),
+                        defender: serializeReplayPatchCard(defender),
+                        attackerSeat: active.seatName,
+                        defenderSeat: passive.seatName
+                    }
+                );
                 const battleResult = runBattle({
                     attackerOwner: active,
                     defenderOwner: passive,
@@ -1465,8 +1618,14 @@ function runSingleGame({ playerA, playerB, maxTurns, logger }) {
             }
         }
 
-        autoMarch(active);
-        autoMarch(passive);
+        moved = autoMarch(active);
+        if (moved.length > 0) {
+            recordEvent(`${active.seatName} 自动进军: ${moved.map(c => getCharaName(c)).join(', ')}`, 'march');
+        }
+        moved = autoMarch(passive);
+        if (moved.length > 0) {
+            recordEvent(`${passive.seatName} 自动进军: ${moved.map(c => getCharaName(c)).join(', ')}`, 'march');
+        }
         recordEvent(`${active.seatName} 回合结束`, 'turn-end');
         turn += 1;
     }
@@ -1517,15 +1676,19 @@ function runAIDuel(options) {
             if (verbose) logs.push(line);
         };
 
-        const playerA = setupPlayer({ deckDef: deckA, expandedCards: expandedA, profile: profileA, seatName: deckA.name });
-        const playerB = setupPlayer({ deckDef: deckB, expandedCards: expandedB, profile: profileB, seatName: deckB.name });
+        const playerA = setupPlayer({ deckDef: deckA, expandedCards: expandedA, profile: profileA, seatName: '玩家A' });
+        const playerB = setupPlayer({ deckDef: deckB, expandedCards: expandedB, profile: profileB, seatName: '玩家B' });
 
         const result = runSingleGame({ playerA, playerB, maxTurns, logger });
         const winner = result.winner;
 
-        if (winner === deckA.name) stats.wins[deckA.name] += 1;
-        else if (winner === deckB.name) stats.wins[deckB.name] += 1;
-        else stats.wins.draw += 1;
+        if (winner === playerA.seatName) {
+            stats.wins[deckA.name] += 1;
+        } else if (winner === playerB.seatName) {
+            stats.wins[deckB.name] += 1;
+        } else {
+            stats.wins.draw += 1;
+        }
 
         const gameDetail = {
             game: i + 1,

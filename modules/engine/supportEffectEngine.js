@@ -100,7 +100,7 @@ function isTimingMatched(timing, role) {
     if (timing === '〖连发技〗') return role === 'attacker';
     if (timing === '〖攻击型〗') return role === 'attacker';
     if (timing === '〖防御型〗') return role === 'defender';
-    return true;
+    return false;
 }
 
 function isForceMatched(requiredForce, actualForce) {

@@ -2,7 +2,7 @@
 import { createAreaCommands } from './cardOps/areaCommands.js';
 import { createCombatCommands } from './cardOps/combatCommands.js';
 
-export function createCardOperations(state) {
+export function createCardOperations(state, rules) {
     const refs = {
         hand: state.hand,
         fieldFront: state.fieldFront,
@@ -17,7 +17,7 @@ export function createCardOperations(state) {
         hasPlacedBond: state.hasPlacedBond
     };
 
-    const areaCommands = createAreaCommands({ state, socket: state.socket, refs });
+    const areaCommands = createAreaCommands({ state, socket: state.socket, refs, rules });
     const combatCommands = createCombatCommands({ state, socket: state.socket });
 
     // 💡 导出时，直接导出原生的 playToField 即可

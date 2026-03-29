@@ -13,6 +13,30 @@ export function createOpponentAreaStore(state) {
         opponentRear
     } = state;
 
+    const hasOwn = (obj, key) => !!obj && Object.prototype.hasOwnProperty.call(obj, key);
+
+    const normalizeCard = (card, fallbackCard = null) => {
+        const base = fallbackCard && typeof fallbackCard === 'object' ? fallbackCard : {};
+        const source = card && typeof card === 'object' ? card : null;
+        if (!source && !fallbackCard) return null;
+
+        const next = {
+            ...base,
+            ...(source || {})
+        };
+
+        const nextStacks = hasOwn(source, '_stackedCards')
+            ? source._stackedCards
+            : fallbackCard?._stackedCards;
+        const fallbackStacks = Array.isArray(fallbackCard?._stackedCards) ? fallbackCard._stackedCards : [];
+
+        next._stackedCards = Array.isArray(nextStacks)
+            ? nextStacks.map((stackedCard, index) => normalizeCard(stackedCard, fallbackStacks[index] || null)).filter(Boolean)
+            : [];
+
+        return next;
+    };
+
     const oppAreaRefs = {
         graveyard: oppGraveyard,
         jewels: oppJewels,
@@ -21,6 +45,29 @@ export function createOpponentAreaStore(state) {
         rear: opponentRear,
         deck: oppDeck,
         boundless: oppBoundless
+    };
+
+    const find = (instanceId) => {
+        const targetId = String(instanceId || '').trim();
+        if (!targetId) return null;
+
+        const pools = [
+            oppHand.value,
+            oppGraveyard.value,
+            oppJewels.value,
+            oppBonds.value,
+            opponentFront.value,
+            opponentRear.value,
+            oppDeck.value,
+            oppBoundless.value
+        ];
+
+        for (const pool of pools) {
+            const found = (Array.isArray(pool) ? pool : []).find(card => String(card?.instanceId || '').trim() === targetId);
+            if (found) return found;
+        }
+
+        return null;
     };
 
     const remove = (areaName, cardId) => {
@@ -35,17 +82,20 @@ export function createOpponentAreaStore(state) {
         areaRef.value = areaRef.value.filter(c => c.instanceId !== cardId);
     };
 
-    const add = (areaName, card) => {
+    const add = (areaName, card, fallbackCard = null) => {
+        const normalized = normalizeCard(card, fallbackCard);
+        if (!normalized) return;
+
         if (areaName === 'hand') {
             oppStats.value.hand++;
-            oppHand.value = [...oppHand.value, card];
+            oppHand.value = [...oppHand.value, normalized];
             return;
         }
 
         const areaRef = oppAreaRefs[areaName];
         if (!areaRef) return;
-        areaRef.value = [...areaRef.value, card];
+        areaRef.value = [...areaRef.value, normalized];
     };
 
-    return { add, remove };
+    return { add, remove, find, normalizeCard };
 }

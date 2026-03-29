@@ -5,7 +5,7 @@ import { getNextPhase, PHASE_NAME_MAP } from './engine/phaseEngine.js';
 import { setBeginningPhaseState, clearTurnUsageState, untapArea } from './commands/turnCommands.js';
 import { emitSyncPhase, emitTurnEnd, emitSyncUntapAll } from './effects/socketEffects.js';
 
-export function createTurnManager(state) {
+export function createTurnManager(state, cardOps) {
     const { currentPhase, hasPlacedBond, isMyTurn, socket } = state;
 
     /**
@@ -80,6 +80,22 @@ export function createTurnManager(state) {
         emitSyncUntapAll(socket);
 
         console.log('我的回合开始：解除横置，准备抽牌');
+        
+        // 规则 13.2.1.5: 回合开始时抽1张卡
+        // 规则 13.2.1.5.1: 先攻第一回合不抽卡
+        if (state.firstPlayerOpeningTurnLocked?.value) {
+            console.log('先攻第一回合，跳过抽卡阶段。');
+            // From v1.1.0, first turn will auto skip to bond phase.
+            setTimeout(() => {
+                if (isMyTurn.value && currentPhase.value === 'BEGINNING') {
+                    nextPhase();
+                }
+            }, 1200);
+        } else {
+            console.log('回合开始，自动抽1张卡。');
+            // 抽卡动画结束后，会自动进入BOND阶段
+            cardOps.drawCard({ isAutoDraw: false });
+        }
     };
 
     /**

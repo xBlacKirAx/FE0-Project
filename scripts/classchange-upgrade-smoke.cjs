@@ -50,6 +50,22 @@ function loadCreateAreaCommands() {
     return context.module.exports.createAreaCommands;
 }
 
+function loadCreateOpponentAreaStore() {
+    const filePath = path.join(projectRoot, 'modules/socket/opponentAreaStore.js');
+    let code = fs.readFileSync(filePath, 'utf8');
+
+    code = code.replace(/export\s+function\s+createOpponentAreaStore/g, 'function createOpponentAreaStore');
+
+    const context = {
+        module: { exports: {} },
+        exports: {},
+        console
+    };
+
+    vm.runInNewContext(`${code}\nmodule.exports = { createOpponentAreaStore };`, context, { filename: filePath });
+    return context.module.exports.createOpponentAreaStore;
+}
+
 function ref(value) {
     return { value };
 }
@@ -101,6 +117,7 @@ function assert(condition, message) {
 
 function main() {
     const createAreaCommands = loadCreateAreaCommands();
+    const createOpponentAreaStore = loadCreateOpponentAreaStore();
 
     {
         const socket = makeSocket();
@@ -200,6 +217,30 @@ function main() {
         assert(state.usedBondsThisTurn.value === 3, '升级应支付普通出击费用');
         assert(socket.__moves.some(m => m.from === 'front' && m.to === 'stacked' && m.card.instanceId === 'f2'), '升级应广播旧顶卡离场到 stacked');
         assert(socket.__moves.some(m => m.from === 'hand' && m.to === 'front' && m.card.instanceId === 'h2'), '升级应广播新卡上场');
+
+        const receiverState = {
+            oppStats: ref({ hand: 1, bonds: 0, active: 0 }),
+            oppHand: ref([{ instanceId: 'h2', cardName: '可升级新卡', charaName: '罗伊' }]),
+            oppGraveyard: ref([]),
+            oppJewels: ref([]),
+            oppBonds: ref([]),
+            oppDeck: ref([]),
+            oppBoundless: ref([]),
+            opponentFront: ref([{ instanceId: 'f2', cardName: '场上旧卡', charaName: '罗伊', isMainCharacter: false }]),
+            opponentRear: ref([])
+        };
+        const areaStore = createOpponentAreaStore(receiverState);
+        const oldMove = socket.__moves.find(m => m.from === 'front' && m.to === 'stacked' && m.card.instanceId === 'f2');
+        const newMove = socket.__moves.find(m => m.from === 'hand' && m.to === 'front' && m.card.instanceId === 'h2');
+
+        areaStore.remove(oldMove.from, oldMove.card.instanceId);
+        areaStore.add(oldMove.to, oldMove.card, areaStore.find(oldMove.card.instanceId));
+        areaStore.remove(newMove.from, newMove.card.instanceId);
+        areaStore.add(newMove.to, newMove.card, areaStore.find(newMove.card.instanceId));
+
+        assert(receiverState.opponentFront.value.length === 1 && receiverState.opponentFront.value[0].instanceId === 'h2', '对手端同步后应显示升级后的新顶层');
+        assert((receiverState.opponentFront.value[0]._stackedCards || []).length === 1, '对手端同步后应保留堆叠卡数量');
+        assert(receiverState.opponentFront.value[0]._stackedCards[0]?.instanceId === 'f2', '对手端同步后应能看到旧顶层作为堆叠卡');
     }
 
     {

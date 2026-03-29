@@ -42,6 +42,10 @@ export function createGameFlowState() {
     const combatDecision = ref(createInitialCombatDecision());
     const supportInteraction = ref(null);
 
+    const mulliganState = ref('idle'); // idle, awaiting, done
+    const hasMulliganed = ref(false);
+    const opponentMulliganState = ref('idle');
+
     return {
         isDevMode,
         currentPhase,
@@ -60,6 +64,9 @@ export function createGameFlowState() {
         oppSupportCard,
         combatStats,
         combatDecision,
-        supportInteraction
+        supportInteraction,
+        mulliganState,
+        hasMulliganed,
+        opponentMulliganState
     };
 }
