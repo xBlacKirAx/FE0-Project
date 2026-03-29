@@ -121,25 +121,6 @@ export function createAreaCommands({ state, socket, refs, rules }) {
             const res = await fetch('/api/cards');
             deckPayload = { cards: await res.json(), protagonistCardId: '' };
         }
-        const performMulliganOps = () => {
-            // 1. 获取当前手牌数量（通常是6）
-            const handCount = refs.hand.value.length;
-            
-            // 2. 将手牌放回卡组
-            refs.deck.value.push(...refs.hand.value);
-            refs.hand.value = [];
-            
-            // 3. 洗牌 (如果你里面有 shuffleDeck 函数的话，调用它)
-            if (typeof shuffleDeck === 'function') {
-                shuffleDeck();
-            }
-            
-            // 4. 重新抽同等数量的牌
-            for(let i = 0; i < handCount; i++) {
-                // 假设 drawCard 是在这个文件里定义的抽卡函数
-                drawCard({ isAutoDraw: true }); 
-            }
-        };
 
         const { isValid, errors } = rules.validateDeck(deckPayload.cards, deckPayload.protagonistCardId);
         if (!isValid) {
@@ -149,11 +130,28 @@ export function createAreaCommands({ state, socket, refs, rules }) {
 
         return {
             cards: deckPayload.cards,
-            protagonistCardId: String(deckPayload.protagonistCardId || '').trim(),
-            performMulliganOps
+            protagonistCardId: String(deckPayload.protagonistCardId || '').trim()
         };
     };
-
+    const performMulliganOps = () => {
+        // 1. 获取当前手牌数量（通常是6）
+        const handCount = refs.hand.value.length;
+        
+        // 2. 将手牌放回卡组
+        refs.deck.value.push(...refs.hand.value);
+        refs.hand.value = [];
+        
+        // 3. 洗牌 (如果你里面有 shuffleDeck 函数的话，调用它)
+        if (typeof shuffleDeck === 'function') {
+            shuffleDeck();
+        }
+        
+        // 4. 重新抽同等数量的牌
+        for(let i = 0; i < handCount; i++) {
+            // 假设 drawCard 是在这个文件里定义的抽卡函数
+            drawCard({ bypassPhaseCheck: true }); 
+        }
+    };
     const recycleGraveyardIntoDeckIfNeeded = () => {
         if (deck.value.length !== 0 || graveyard.value.length === 0) return [];
 
@@ -1005,32 +1003,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         }
     };
 
-    const performMulligan = () => {
-        if (state.hasMulliganed.value) return;
-
-        const currentHand = hand.value.splice(0, hand.value.length);
-        deck.value.push(...currentHand);
-        shuffleInPlace(deck.value);
-
-        const newHand = [];
-        for (let i = 0; i < 6; i++) {
-            if (deck.value.length > 0) {
-                newHand.push(deck.value.pop());
-            }
-        }
-        hand.value.push(...newHand);
-
-        state.hasMulliganed.value = true;
-        state.mulliganState.value = 'done';
-        socket.emit(EVT.MULLIGAN_DECISION, { state: 'mulligan' });
-
-        currentHand.forEach(card => {
-            emitSyncCardMove(socket, { card, from: 'hand', to: 'deck' });
-        });
-        newHand.forEach(card => {
-            emitPlayerDraw(socket, { card });
-        });
-    };
+    
 
     const resetGame = async (isRemote = false) => {
         hand.value = [];
@@ -1126,7 +1099,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         returnToHandFromBoard,
         drawCard,
         performClassChange,
-        performMulligan,
+        performMulliganOps,
         moveFieldUnit,
         marchRearToFrontIfNeeded,
         toggleBondFace,

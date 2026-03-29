@@ -356,12 +356,27 @@
     </div>
 
     <!-- Mulligan Overlay -->
-    <div v-if="mulliganState !== 'idle' && mulliganState !== 'done'" class="fixed inset-0 z-[200] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center gap-4">
-        <div class="text-2xl font-bold text-white">Mulligan Phase</div>
-        <div class="text-gray-300">Opponent is {{ opponentMulliganState }}.</div>
-        <div class="flex gap-4">
-            <button @click="confirmMulligan" class="px-6 py-3 bg-blue-600 hover:bg-blue-500 rounded-lg text-white font-bold">Keep Hand</button>
-            <button @click="performMulligan" :disabled="hasMulliganed" class="px-6 py-3 bg-red-600 hover:bg-red-500 rounded-lg text-white font-bold disabled:bg-gray-500">Mulligan</button>
+    <div v-if="mulliganState !== 'idle' && mulliganState !== 'done'" 
+         class="fixed top-1/4 left-1/2 -translate-x-1/2 z-[200] bg-slate-900/95 border border-sky-500/40 backdrop-blur-md flex flex-col items-center justify-center gap-4 p-6 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] min-w-[320px]">
+        
+        <div class="text-xl font-bold text-white tracking-widest">开局调度 (Mulligan)</div>
+        <div class="text-sm text-sky-200">请查看下方手牌，决定是否要将手牌洗回并重新抽取。</div>
+        
+        <div class="text-xs text-gray-400 mb-2">
+            对手状态：<span :class="opponentMulliganState === 'done' ? 'text-green-400' : 'text-amber-400'">
+                {{ opponentMulliganState === 'done' ? '已决定' : '思考中...' }}
+            </span>
+        </div>
+        
+        <div class="flex gap-4 w-full">
+            <button @click="confirmMulligan" 
+                    class="flex-1 py-3 bg-sky-700 hover:bg-sky-600 rounded-xl text-white font-bold transition-colors shadow-lg border border-sky-500/50">
+                保留手牌
+            </button>
+            <button @click="performMulligan" :disabled="hasMulliganed" 
+                    class="flex-1 py-3 bg-fuchsia-700 hover:bg-fuchsia-600 rounded-xl text-white font-bold disabled:bg-slate-800 disabled:text-gray-500 disabled:border-slate-700 transition-colors shadow-lg border border-fuchsia-500/50">
+                {{ hasMulliganed ? '已重抽' : '全部重抽' }}
+            </button>
         </div>
     </div>
 </div>
