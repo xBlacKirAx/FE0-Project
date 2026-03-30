@@ -11,6 +11,8 @@ const { registerTurnModeHandlers } = require('./server/socket/registerTurnModeHa
 const { createConnectionRegistry } = require('./server/socket/connectionRegistry');
 const { createDeckRouter } = require('./server/decks/deckRoutes');
 const { createAiRouter } = require('./server/ai/aiRoutes');
+const { aiProfiles } = require('./server/ai/deckAiProfiles');
+const deckRepository = require('./server/decks/deckRepository');
 
 const app = express();
 const server = http.createServer(app);
@@ -22,6 +24,26 @@ const cardsData = JSON.parse(fs.readFileSync(path.join(__dirname, 'cards_b01.jso
 
 app.get('/', (req, res) => { res.sendFile(path.join(__dirname, 'index.html')); });
 app.get('/api/cards', (req, res) => { res.json(cardsData); });
+
+app.get('/api/ai-duel-options', (req, res) => {
+    try {
+        // 严格限定：只在 data/hidden-decks/AI 目录下寻找对战用卡组
+        const aiDecks = deckRepository.readAll({ password: 'AI' });
+
+        const availableAuthors = [
+            { key: 'gemini', label: 'Gemini (智能强化版)' },
+            { key: 'copilot', label: 'Copilot (基础版)' }
+        ];
+        res.json({
+            decks: aiDecks.filter(d => d.cards.length > 0),
+            authors: availableAuthors,
+        });
+    } catch (error) {
+        console.error('Failed to get AI duel options:', error);
+        res.status(500).json({ error: 'Failed to load options' });
+    }
+});
+
 app.use('/api/decks', createDeckRouter({ cardPool: cardsData }));
 app.use('/api/ai', createAiRouter({ cardPool: cardsData }));
 

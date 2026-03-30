@@ -117,6 +117,14 @@ createApp({
         const selectedCombatCostCardName = ref('');
         const showDeckManager = ref(false);
         const isAiDuelPending = ref(false);
+        const showAiDuelSetup = ref(false);
+        const isAiDuelRunning = ref(false);
+        const aiDuelLogHtml = ref('');
+        const aiDuelOptions = ref({ authors: [], decks: [] });
+        const aiDuelSetup = ref({
+            author1: 'gemini', deckId1: '',
+            author2: 'gemini', deckId2: ''
+        });
         const showAiReplayPanel = ref(false);
         const isAiReplayPanelHidden = ref(false);
         const isAiReplayLoading = ref(false);
@@ -505,35 +513,69 @@ createApp({
                 alert('仅开发者模式可使用 AI 对战功能。');
                 return;
             }
-            if (isAiDuelPending.value) return;
+            showAiDuelSetup.value = true;
+            // 每次打开弹窗时都重新获取最新卡组，加上时间戳防止浏览器缓存
+            try {
+                const res = await fetch('/api/ai-duel-options?t=' + Date.now());
+                const data = await res.json();
+                aiDuelOptions.value = data;
+                if (data.authors && data.authors.length > 0) {
+                    if (!aiDuelSetup.value.author1) aiDuelSetup.value.author1 = data.authors[0].key;
+                    if (!aiDuelSetup.value.author2) aiDuelSetup.value.author2 = data.authors[0].key;
+                }
+                if (data.decks && data.decks.length > 0) {
+                    if (!aiDuelSetup.value.deckId1 || !data.decks.find(d => d.id === aiDuelSetup.value.deckId1)) aiDuelSetup.value.deckId1 = data.decks[0].id;
+                    if (!aiDuelSetup.value.deckId2 || !data.decks.find(d => d.id === aiDuelSetup.value.deckId2)) aiDuelSetup.value.deckId2 = data.decks[Math.min(1, data.decks.length - 1)].id;
+                }
+            } catch (err) {
+                console.error('获取对战选项失败', err);
+            }
+        };
 
-            isAiDuelPending.value = true;
+        const startAiDuel = async () => {
+            if (isAiDuelRunning.value) return;
+            
+            isAiDuelRunning.value = true;
+            aiDuelLogHtml.value = '正在运行 AI 对战，请稍候...\n';
+            if (!aiDuelSetup.value.deckId1 || !aiDuelSetup.value.deckId2) {
+                aiDuelLogHtml.value += `错误: 请先在上方选择有效卡组\n`;
+                isAiDuelRunning.value = false;
+                return;
+            }
             try {
                 const response = await fetch('/api/ai/duel', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: 'AI', games: 10, maxTurns: 35 })
+                    body: JSON.stringify({
+                        password: 'AI',
+                        games: 10,
+                        maxTurns: 35,
+                        deckA: aiDuelSetup.value.deckId1,
+                        deckB: aiDuelSetup.value.deckId2,
+                        authorA: aiDuelSetup.value.author1,
+                        authorB: aiDuelSetup.value.author2
+                    })
                 });
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
-                    alert(payload?.message || 'AI 对战执行失败。');
+                    aiDuelLogHtml.value += `错误: ${payload?.message || '执行失败'}\n`;
                     return;
                 }
 
                 const wins = payload?.wins || {};
                 const summary = [
                     'AI 对战完成（DEV）',
-                    `${payload?.deckA || '卡组A'}: ${wins[payload?.deckA] || 0} 胜`,
-                    `${payload?.deckB || '卡组B'}: ${wins[payload?.deckB] || 0} 胜`,
+                    `先手 (${payload.profileALabel}): ${wins[payload.profileALabel] ?? 0} 胜`,
+                    `后手 (${payload.profileBLabel}): ${wins[payload.profileBLabel] ?? 0} 胜`,
                     `平局: ${wins.draw || 0}`,
                     `日志ID: ${payload?.logId || '无'}`
                 ].join('\n');
-                alert(summary);
+                aiDuelLogHtml.value += summary + '\n';
             } catch (err) {
                 console.error('[AI Duel] 运行失败', err);
-                alert('AI 对战运行失败，请查看控制台日志。');
+                aiDuelLogHtml.value += `错误: AI 对战运行失败 (${err.message})\n`;
             } finally {
-                isAiDuelPending.value = false;
+                isAiDuelRunning.value = false;
             }
         };
 
@@ -1292,6 +1334,12 @@ createApp({
             showDeckManager,
             isAiDuelPending,
             runAiDuelFromControlBar,
+            showAiDuelSetup,
+            aiDuelSetup,
+            aiDuelOptions,
+            isAiDuelRunning,
+            aiDuelLogHtml,
+            startAiDuel,
             showAiReplayPanel,
             showAiReplayPanelVisible,
             isAiReplayPanelHidden,

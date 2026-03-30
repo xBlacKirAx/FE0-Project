@@ -1660,11 +1660,18 @@ function runAIDuel(options) {
         verbose = false
     } = options;
 
+    const seatAName = profileA.label || '玩家A';
+    const seatBName = profileB.label || '玩家B';
+
     const stats = {
         totalGames: games,
         wins: {
-            [deckA.name]: 0,
-            [deckB.name]: 0,
+            // 使用AI策略名作为key，避免卡组名重复导致统计错误
+            [seatAName]: 0,
+            [seatBName]: 0,
+            // 保留deckName用于向后兼容或特殊场景
+            _deckNameA: deckA.name,
+            _deckNameB: deckB.name,
             draw: 0
         },
         details: []
@@ -1676,16 +1683,16 @@ function runAIDuel(options) {
             if (verbose) logs.push(line);
         };
 
-        const playerA = setupPlayer({ deckDef: deckA, expandedCards: expandedA, profile: profileA, seatName: '玩家A' });
-        const playerB = setupPlayer({ deckDef: deckB, expandedCards: expandedB, profile: profileB, seatName: '玩家B' });
+        const playerA = setupPlayer({ deckDef: deckA, expandedCards: expandedA, profile: profileA, seatName: seatAName });
+        const playerB = setupPlayer({ deckDef: deckB, expandedCards: expandedB, profile: profileB, seatName: seatBName });
 
         const result = runSingleGame({ playerA, playerB, maxTurns, logger });
         const winner = result.winner;
 
         if (winner === playerA.seatName) {
-            stats.wins[deckA.name] += 1;
+            stats.wins[seatAName] += 1;
         } else if (winner === playerB.seatName) {
-            stats.wins[deckB.name] += 1;
+            stats.wins[seatBName] += 1;
         } else {
             stats.wins.draw += 1;
         }

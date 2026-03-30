@@ -109,9 +109,9 @@ function shouldUseSupportEffectByStyle(ctx, style = 'midrange') {
     }
 }
 
-const sacredMidrangeProfile = {
-    key: 'sacred-midrange',
-    label: 'AI 圣痕中速压制',
+const copilotMidrangeProfile = {
+    key: 'copilotMidrangeProfile',
+    label: 'Copilot中速压制',
     chooseBondCard({ player }) {
         if (!player.hand.length) return null;
         const sorted = [...player.hand].sort((a, b) => {
@@ -174,9 +174,9 @@ const sacredMidrangeProfile = {
     }
 };
 
-const lightSwordAggroProfile = {
-    key: 'light-sword-aggro',
-    label: 'AI 光剑飞兵速攻',
+const copilotAggroProfile = {
+    key: 'copilotAggroProfile',
+    label: 'Copilot光剑飞兵速攻',
     chooseBondCard({ player }) {
         if (!player.hand.length) return null;
         const sorted = [...player.hand].sort((a, b) => {
@@ -241,11 +241,154 @@ const lightSwordAggroProfile = {
     }
 };
 
-function inferProfileByDeckName(deckName = '') {
+const geminiMidrangeProfile = {
+    key: 'geminiMidrangeProfile',
+    label: 'Gemini圣痕中速压制',
+    chooseBondCard({ player }) {
+        if (!player.hand.length) return null;
+        // Gemini智能判断：如果在中后期费用足够（>=5），且手牌质量都很高，则停止放置羁绊以保留神速回避资源
+        if (player.bonds.length >= 5 && player.hand.every(c => toInt(c.cost, 0) <= player.bonds.length)) {
+            return null;
+        }
+        const sorted = [...player.hand].sort((a, b) => {
+            const aMain = (a.charaName || '') === player.protagonistCharaName ? 1 : 0;
+            const bMain = (b.charaName || '') === player.protagonistCharaName ? 1 : 0;
+            if (aMain !== bMain) return aMain - bMain; // 绝对保留主人公
+            // Gemini优先将高费但无支援值的牌转为羁绊
+            const aScore = toInt(a.cost, 0) * 10 - toInt(a.support, 0) * 5 - toInt(a.attack, 0) * 0.5;
+            const bScore = toInt(b.cost, 0) * 10 - toInt(b.support, 0) * 5 - toInt(b.attack, 0) * 0.5;
+            return bScore - aScore;
+        });
+        return sorted[0] || null;
+    },
+    rankDeployCandidate({ card, sameNameOnField, player }) {
+        let score = buildCommonRank(card);
+        if ((card.force || '') === '圣痕') score += 20; // 提升本家配合权重
+        if (sameNameOnField) {
+            const promoteCost = toInt(card.promoteCost, -1);
+            if (promoteCost >= 0) score += 35; // 极高优先级进行转职抽牌
+            else score += 15;
+        }
+        // 费用完美贴合度（剩余费用若完美打出该牌则加分）
+        if (player) {
+            const remainingCost = Math.max(0, player.bonds.length - player.usedBondsThisTurn);
+            if (toInt(card.cost, 0) === remainingCost) score += 12;
+        }
+        return score;
+    },
+    chooseAttackers({ player }) {
+        const all = [...player.front, ...player.rear].filter(card => !card.isTapped);
+        // Gemini策略：先用低攻单位去骗出神速回避，最后用高攻大将（或主人公）进行致命一击
+        return all.sort((a, b) => {
+            const aMain = a.isMainCharacter ? 1 : 0;
+            const bMain = b.isMainCharacter ? 1 : 0;
+            if (aMain !== bMain) return aMain - bMain; // 主人公最后攻击
+            return toInt(a.attack, 0) - toInt(b.attack, 0); // 低攻先动
+        });
+    },
+    chooseTarget({ opponent, legalTargets }) {
+        const pool = Array.isArray(legalTargets) && legalTargets.length > 0
+            ? legalTargets
+            : (opponent.front.length > 0 ? opponent.front : opponent.rear);
+        if (!pool.length) return null;
+        return [...pool].sort((a, b) => {
+            const aMain = a.isMainCharacter ? 1 : 0;
+            const bMain = b.isMainCharacter ? 1 : 0;
+            // 斩杀判定：如果对手0宝玉，绝对锁定主人公
+            if (opponent.jewels.length === 0 && aMain !== bMain) return bMain - aMain;
+            // 中速解场判定：优先击杀高威胁的敌方非主人公单位（控场）
+            if (aMain !== bMain) return aMain - bMain; 
+            return toInt(b.attack, 0) - toInt(a.attack, 0); // 打攻击力最高的
+        })[0];
+    },
+    shouldUseCritical(ctx) {
+        if (ctx.attackerCriticalLocked) return false;
+        if (!ctx.canPay) return false;
+        if (ctx.canLethalNow) return true; // 斩杀必交
+        if (ctx.criticalWouldWin && ctx.defenderPower >= 70 && ctx.handCount >= 3) return true; // 破除高威胁防线
+        if (ctx.criticalWouldWin && ctx.defenderIsMainCharacter && ctx.defenderJewels <= 2) return true; // 压迫主人公
+        return false;
+    },
+    shouldUseEvasion(ctx) {
+        if (ctx.defenderEvasionLocked) return false;
+        if (!ctx.canPay) return false;
+        if (ctx.defenderIsMainCharacter) {
+            if (ctx.defenderJewels <= 1) return true; // 濒死必躲
+            if (ctx.handCount >= 5) return true; // 手牌充裕则保血
+        }
+        if (!ctx.defenderIsMainCharacter && ctx.handCount >= 4 && ctx.defenderPower >= 60) return true; // 保护己方优质战力
+        return false;
+    },
+    shouldUseSupportEffect(ctx) {
+        return shouldUseSupportEffectByStyle(ctx, 'midrange');
+    }
+};
+
+const geminiAggroProfile = {
+    key: 'geminiAggroProfile',
+    label: 'Gemini光剑飞兵速攻',
+    chooseBondCard({ player }) {
+        // Gemini极速快攻：满3-4费即停止放羁绊，全力倾泻手牌铺场
+        if (player.bonds.length >= 4) return null;
+        if (!player.hand.length) return null;
+        const sorted = [...player.hand].sort((a, b) => {
+            const aMain = (a.charaName || '') === player.protagonistCharaName ? 1 : 0;
+            const bMain = (b.charaName || '') === player.protagonistCharaName ? 1 : 0;
+            if (aMain !== bMain) return aMain - bMain;
+            // 优先献祭高费卡，因为快攻根本打不出高费
+            return toInt(b.cost, 0) - toInt(a.cost, 0);
+        });
+        return sorted[0] || null;
+    },
+    rankDeployCandidate({ card, sameNameOnField }) {
+        let score = buildCommonRank(card);
+        if (isFlying(card)) score += 30; // 快攻极大化飞行单位的切后排和高机动价值
+        if (toInt(card.cost, 0) <= 2) score += 25; // 铺场核心
+        if (sameNameOnField) score += 15;
+        return score;
+    },
+    chooseAttackers({ player }) {
+        const all = [...player.front, ...player.rear].filter(card => !card.isTapped);
+        // 快攻同样低攻先动，破除神速回避
+        return all.sort((a, b) => toInt(a.attack, 0) - toInt(b.attack, 0));
+    },
+    chooseTarget({ opponent, legalTargets }) {
+        const pool = Array.isArray(legalTargets) && legalTargets.length > 0
+            ? legalTargets
+            : (opponent.front.length > 0 ? opponent.front : opponent.rear);
+        if (!pool.length) return null;
+        return [...pool].sort((a, b) => {
+            const aMain = a.isMainCharacter ? 1 : 0;
+            const bMain = b.isMainCharacter ? 1 : 0;
+            if (aMain !== bMain) return bMain - aMain; // 绝对地无脑打脸（主人公）
+            return toInt(a.cost, 0) - toInt(b.cost, 0); // 必须解场时挑最便宜的捏
+        })[0];
+    },
+    shouldUseCritical(ctx) {
+        if (ctx.attackerCriticalLocked) return false;
+        if (!ctx.canPay) return false;
+        if (ctx.canLethalNow) return true;
+        if (ctx.defenderIsMainCharacter) return true; // 只要打脸就交必杀
+        return false;
+    },
+    shouldUseEvasion(ctx) {
+        if (ctx.defenderEvasionLocked) return false;
+        if (!ctx.canPay) return false;
+        if (ctx.defenderIsMainCharacter && ctx.defenderJewels === 0) return true; // 只有斩杀线才回避，其余手牌全拿去转职或攻击
+        return false;
+    },
+    shouldUseSupportEffect(ctx) {
+        return shouldUseSupportEffectByStyle(ctx, 'aggro');
+    }
+};
+
+function inferProfileByDeckName(deckName = '', author = 'gemini') {
     const text = String(deckName || '');
-    if (text.includes('圣痕')) return sacredMidrangeProfile;
-    if (text.includes('光剑') || text.includes('光之剑') || text.includes('飞兵')) return lightSwordAggroProfile;
-    return sacredMidrangeProfile;
+    const isAggro = text.includes('光剑') || text.includes('光之剑') || text.includes('飞兵');
+    if (author === 'copilot') {
+        return isAggro ? copilotAggroProfile : copilotMidrangeProfile;
+    }
+    return isAggro ? geminiAggroProfile : geminiMidrangeProfile;
 }
 
 function cardBrief(card) {
@@ -253,9 +396,19 @@ function cardBrief(card) {
     return `${getCardName(card)}(攻${toInt(card.attack, 0)}/援${toInt(card.support, 0)}/费${toInt(card.cost, 0)})`;
 }
 
+const aiProfiles = {
+    copilotMidrangeProfile,
+    copilotAggroProfile,
+    geminiMidrangeProfile,
+    geminiAggroProfile
+};
+
 module.exports = {
-    sacredMidrangeProfile,
-    lightSwordAggroProfile,
+    copilotMidrangeProfile,
+    copilotAggroProfile,
+    geminiMidrangeProfile,
+    geminiAggroProfile,
+    aiProfiles,
     inferProfileByDeckName,
     toInt,
     cardBrief

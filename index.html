@@ -205,6 +205,59 @@
         <deck-manager-modal :visible="showDeckManager" :on-close="closeDeckManager">
         </deck-manager-modal>
 
+        <!-- AI Duel Setup Modal -->
+        <div v-if="showAiDuelSetup" class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showAiDuelSetup = false">
+            <div class="bg-slate-900 border border-sky-500/30 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                <h2 class="text-xl font-bold p-4 border-b border-sky-500/20 text-sky-200 flex-shrink-0">AI 对战设置</h2>
+                <div class="flex-1 overflow-y-auto">
+                    <div class="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Player 1 -->
+                        <div class="border border-fuchsia-500/30 rounded-lg p-4 flex flex-col gap-3">
+                            <h3 class="font-bold text-fuchsia-300">AI 1 (先手)</h3>
+                            <div>
+                                <label class="text-sm text-gray-400">使用卡组</label>
+                                <select v-model="aiDuelSetup.deckId1" class="w-full bg-slate-800 border border-slate-600 rounded mt-1 p-2">
+                                    <option v-for="deck in aiDuelOptions.decks" :value="deck.id">{{ deck.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-400">AI 执牌者</label>
+                                <select v-model="aiDuelSetup.author1" class="w-full bg-slate-800 border border-slate-600 rounded mt-1 p-2">
+                                    <option v-for="author in aiDuelOptions.authors" :value="author.key">{{ author.label }}</option>
+                                </select>
+                            </div>
+                        </div>
+                        <!-- Player 2 -->
+                        <div class="border border-green-500/30 rounded-lg p-4 flex flex-col gap-3">
+                            <h3 class="font-bold text-green-300">AI 2 (后手)</h3>
+                            <div>
+                                <label class="text-sm text-gray-400">使用卡组</label>
+                                <select v-model="aiDuelSetup.deckId2" class="w-full bg-slate-800 border border-slate-600 rounded mt-1 p-2">
+                                     <option v-for="deck in aiDuelOptions.decks" :value="deck.id">{{ deck.name }}</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="text-sm text-gray-400">AI 执牌者</label>
+                                <select v-model="aiDuelSetup.author2" class="w-full bg-slate-800 border border-slate-600 rounded mt-1 p-2">
+                                    <option v-for="author in aiDuelOptions.authors" :value="author.key">{{ author.label }}</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-black/30">
+                        <h3 class="font-bold mb-2">对战日志</h3>
+                        <pre class="text-xs text-gray-300 whitespace-pre-wrap font-mono" v-html="aiDuelLogHtml"></pre>
+                    </div>
+                </div>
+                <div class="p-4 flex justify-between items-center border-t border-sky-500/20 flex-shrink-0">
+                    <button @click="startAiDuel" :disabled="isAiDuelRunning" class="px-6 py-2 bg-sky-600 hover:bg-sky-500 rounded-lg text-white font-bold disabled:bg-slate-700 disabled:text-gray-400">
+                        {{ isAiDuelRunning ? '对战中...' : '开始对战' }}
+                    </button>
+                    <button @click="showAiDuelSetup = false" class="px-6 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg">关闭</button>
+                </div>
+            </div>
+        </div>
+
         <ai-replay-panel :visible="showAiReplayPanelVisible" :compact="isCompactMobile" :loading="isAiReplayLoading"
             :replay-log="aiReplayLog" :selected-game-index="aiReplayGameIndex" :cursor="aiReplayCursor"
             :on-close="closeAiReplayPanel" :on-load-latest="loadLatestAiReplayLog" :on-select-game="selectAiReplayGame"
