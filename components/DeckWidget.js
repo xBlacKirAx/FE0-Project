@@ -7,12 +7,25 @@ export const DeckWidget = {
         onDrawCard: {
             type: Function,
             required: true
+        },
+        showDrawGuide: {
+            type: Boolean,
+            default: false
+        },
+        highlightGuide: {
+            type: Boolean,
+            default: false
         }
     },
     template: `
-        <div class="fixed right-2 sm:right-6 bottom-[130px] sm:bottom-[150px] z-[90] flex flex-col items-center cursor-pointer group" @click="onDrawCard()">
-            <span class="text-[10px] sm:text-xs text-white font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] bg-black/60 px-2 py-0.5 rounded-full mb-1">
-                Deck: {{ deckCount }}
+        <div
+            :class="highlightGuide ? 'next-phase-guide ring-2 ring-amber-300/80 rounded-lg shadow-[0_0_14px_rgba(251,191,36,0.55)]' : ''"
+            class="fixed right-2 sm:right-6 bottom-[130px] sm:bottom-[150px] z-[90] flex flex-col items-center cursor-pointer group p-1"
+            @click="onDrawCard()">
+            <span
+                :class="showDrawGuide ? 'bg-amber-700/80 text-amber-100 border border-amber-300/50 animate-pulse' : 'bg-black/60 text-white'"
+                class="text-[10px] sm:text-xs font-bold drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] px-2 py-0.5 rounded-full mb-1">
+                {{ showDrawGuide ? '请抽卡' : ('Deck: ' + deckCount) }}
             </span>
 
             <div class="relative transition-transform duration-200 group-hover:-translate-y-2 group-active:scale-95">

@@ -68,12 +68,22 @@ io.on('connection', (socket) => {
         connectionRegistry.quickMatch(socket);
     });
 
+    if (EVT.PLAYER_SET_NAME) {
+        socket.on(EVT.PLAYER_SET_NAME, (payload = {}) => {
+            connectionRegistry.setPlayerName(socket, payload.playerName);
+        });
+    }
+
     socket.on(EVT.ROOM_LEAVE, () => {
         connectionRegistry.leaveCurrentRoom(socket);
     });
 
     socket.on(EVT.ROOM_START_GAME, () => {
         connectionRegistry.startRoomGame(socket);
+    });
+
+    socket.on(EVT.MULLIGAN_DECISION, (payload = {}) => {
+        connectionRegistry.handleMulliganDecision(socket, payload);
     });
 
     socket.on('disconnect', () => {

@@ -3,10 +3,17 @@
 const { ref } = Vue;
 
 export function createNetworkState() {
-    const socket = io();
+    const playerName = String(localStorage.getItem('fe0.playerDisplayName') || '').trim();
+    const socket = io({
+        auth: {
+            playerName
+        }
+    });
     const connectionScene = ref('connected');
     const roomId = ref('');
     const roomRole = ref('');
+    const roomHostName = ref('');
+    const roomGuestName = ref('');
     const roomPlayerCount = ref(0);
     const roomReady = ref(false);
     const roomIsPrivate = ref(false);
@@ -19,6 +26,8 @@ export function createNetworkState() {
         connectionScene,
         roomId,
         roomRole,
+        roomHostName,
+        roomGuestName,
         roomPlayerCount,
         roomReady,
         roomIsPrivate,

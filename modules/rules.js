@@ -4,7 +4,10 @@
 export function createRulesEngine(state) {
     const rangeModel = globalThis.RANGE_MODEL;
     const normalizeRange = rangeModel?.normalizeRange || ((raw) => {
-        const text = String(raw || '').trim();
+        const text = String(raw || '')
+            .trim()
+            .replace(/\s+/g, '')
+            .replace(/[～~至到—–−‑﹣－]/g, '-');
         if (text === '1' || text === '2' || text === '1-2' || text === '-') return text;
         return '-';
     });

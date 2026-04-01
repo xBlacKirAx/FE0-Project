@@ -12,6 +12,17 @@ export const DeckManagerModal = {
         '女神纹章': '茶',
         '无': '无'
     }),
+    forceTheme: Object.freeze({
+        '光之剑': { primary: '#3f1716', secondary: '#5a2220', accent: '#c08484' },
+        '圣痕': { primary: '#18263f', secondary: '#22365a', accent: '#8fa9c7' },
+        '白夜': { primary: '#3a3d44', secondary: '#525866', accent: '#b7bec9' },
+        '暗夜': { primary: '#241a3f', secondary: '#34265a', accent: '#a79bc9' },
+        '寻踪的纹章': { primary: '#1a3528', secondary: '#25503b', accent: '#8eb7a4' },
+        '神器': { primary: '#301b3f', secondary: '#46285a', accent: '#b39bc9' },
+        '圣战旗': { primary: '#4a3216', secondary: '#654622', accent: '#cdb086' },
+        '女神纹章': { primary: '#4b2a1b', secondary: '#663b28', accent: '#c9a592' },
+        default: { primary: '#2f1b1b', secondary: '#3d2531', accent: '#b99a84' }
+    }),
     supportTimingOptions: Object.freeze([
         { key: 'attack', label: '〖攻击型〗', value: '〖攻击型〗' },
         { key: 'defense', label: '〖防御型〗', value: '〖防御型〗' },
@@ -62,6 +73,9 @@ export const DeckManagerModal = {
         };
     },
     computed: {
+        playerDeckPassword() {
+            return String(localStorage.getItem('fe0.playerDisplayName') || '').trim();
+        },
         selectedDeck() {
             return this.decks.find(d => d.id === this.selectedDeckId) || null;
         },
@@ -72,7 +86,11 @@ export const DeckManagerModal = {
             return this.isViewingHiddenDecks ? '隐藏卡组列表' : '现有卡组列表';
         },
         deckListSubtitle() {
-            return this.isViewingHiddenDecks ? '当前正在查看该口令文件夹下的卡组。' : '当前显示公开卡组。';
+            return `当前显示：${this.currentDeckPassword || '公共'}`;
+        },
+        deckScopeLabel() {
+            if (!this.currentDeckPassword) return '公共';
+            return this.currentDeckPassword === this.playerDeckPassword ? `玩家：${this.currentDeckPassword}` : `口令：${this.currentDeckPassword}`;
         },
         builderDeck() {
             return this.draftDeck;
@@ -237,6 +255,33 @@ export const DeckManagerModal = {
                 card: map.get(item.cardId) || null
             }));
         },
+        deckThemePalette() {
+            const counter = new Map();
+            for (const item of this.selectedDeckCardDetails) {
+                const force = String(item?.card?.force || '').trim();
+                if (!force) continue;
+                counter.set(force, (counter.get(force) || 0) + (Number(item.count) || 0));
+            }
+            const topForces = [...counter.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([force]) => force);
+            const themes = this.$options.forceTheme || {};
+            const first = themes[topForces[0]] || themes.default;
+            const second = themes[topForces[1]] || first;
+            return { first, second };
+        },
+        deckThemeModalStyle() {
+            const p = this.deckThemePalette;
+            return {
+                background: `linear-gradient(180deg, ${p.first.primary}66 0%, ${p.second.primary}44 42%, rgba(10,10,12,0.95) 100%)`,
+                borderColor: `${p.first.accent}66`
+            };
+        },
+        deckThemeHeaderStyle() {
+            const p = this.deckThemePalette;
+            return {
+                background: `linear-gradient(180deg, ${p.first.secondary}66 0%, ${p.second.primary}44 100%)`,
+                borderBottomColor: `${p.first.accent}33`
+            };
+        },
         previewCardIndex() {
             if (!this.previewCard) return -1;
             return this.builderCards.findIndex(card => String(card.id) === String(this.previewCard.id));
@@ -265,13 +310,47 @@ export const DeckManagerModal = {
             }
         }
     },
+    mounted() {
+        window.addEventListener('fe0:player-name-updated', this.handlePlayerNameUpdated);
+    },
+    unmounted() {
+        window.removeEventListener('fe0:player-name-updated', this.handlePlayerNameUpdated);
+    },
     methods: {
+        themedChipStyle(active = false) {
+            const palette = this.deckThemePalette || this.$options.forceTheme.default;
+            if (active) {
+                return {
+                    borderColor: `${palette.first.accent}99`,
+                    color: '#fef3c7',
+                    background: `${palette.first.primary}66`
+                };
+            }
+            return {
+                borderColor: `${palette.second.accent}55`,
+                color: '#fbcfe8',
+                background: '#24121488'
+            };
+        },
         clearPendingPreview() {
             if (this.pendingPreviewTimer) {
                 clearTimeout(this.pendingPreviewTimer);
             }
             this.pendingPreviewTimer = null;
             this.pendingPreviewCardId = '';
+        },
+        handlePlayerNameUpdated(event) {
+            const nextName = String(event?.detail?.playerName || '').trim();
+            const password = String(event?.detail?.password || '');
+            if (!nextName) return;
+            if (password) {
+                this.setIdentityPassword(nextName, password);
+            }
+            this.currentDeckPassword = nextName;
+            if (!this.activeDeckPassword) {
+                this.activeDeckPassword = nextName;
+            }
+            this.refreshDecks(false, nextName, password).catch(() => {});
         },
         async readJsonResponse(res, endpointLabel) {
             const contentType = String(res.headers.get('content-type') || '').toLowerCase();
@@ -288,12 +367,42 @@ export const DeckManagerModal = {
                 throw new Error(`${endpointLabel} JSON 解析失败：${error.message}`);
             }
         },
-        buildDeckScopeQuery(password = this.currentDeckPassword) {
-            const normalized = String(password || '').trim();
-            return normalized ? `?password=${encodeURIComponent(normalized)}` : '';
+        getIdentityPassword(username) {
+            const key = String(username || '').trim();
+            if (!key) return '';
+            try {
+                const raw = localStorage.getItem('fe0.identityPasswordMap');
+                const parsed = raw ? JSON.parse(raw) : {};
+                if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return '';
+                return String(parsed[key] || '');
+            } catch {
+                return '';
+            }
         },
-        getDeckEndpoint(path = '', password = this.currentDeckPassword) {
-            return `/api/decks${path}${this.buildDeckScopeQuery(password)}`;
+        setIdentityPassword(username, password) {
+            const key = String(username || '').trim();
+            if (!key) return;
+            try {
+                const raw = localStorage.getItem('fe0.identityPasswordMap');
+                const parsed = raw ? JSON.parse(raw) : {};
+                const map = parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+                map[key] = String(password || '');
+                localStorage.setItem('fe0.identityPasswordMap', JSON.stringify(map));
+            } catch {
+                // ignore
+            }
+        },
+        buildDeckScopeQuery(password = this.currentDeckPassword, accessPassword = '') {
+            const normalized = String(password || '').trim();
+            if (!normalized) return '';
+            const token = String(accessPassword || '').trim();
+            if (!token) return `?password=${encodeURIComponent(normalized)}`;
+            return `?password=${encodeURIComponent(normalized)}&accessPassword=${encodeURIComponent(token)}`;
+        },
+        getDeckEndpoint(path = '', password = this.currentDeckPassword, accessPassword = '') {
+            const normalized = String(password || '').trim();
+            const resolvedAccess = normalized ? (accessPassword || this.getIdentityPassword(normalized)) : '';
+            return `/api/decks${path}${this.buildDeckScopeQuery(password, resolvedAccess)}`;
         },
         getDeckTotal(deck) {
             return (deck?.cards || []).reduce((sum, item) => sum + (Number(item.count) || 0), 0);
@@ -335,17 +444,16 @@ export const DeckManagerModal = {
             try {
                 this.activeDeckId = localStorage.getItem('fe0.selectedDeckId') || '';
                 this.activeDeckPassword = localStorage.getItem('fe0.selectedDeckPassword') || '';
-                this.currentDeckPassword = '';
-                const [cardsRes, decksRes] = await Promise.all([
-                    fetch('/api/cards'),
-                    fetch('/api/decks')
-                ]);
-                const [cards, decks] = await Promise.all([
-                    this.readJsonResponse(cardsRes, '/api/cards'),
-                    this.readJsonResponse(decksRes, '/api/decks')
-                ]);
+                const playerNamePassword = String(localStorage.getItem('fe0.playerDisplayName') || '').trim();
+                this.currentDeckPassword = playerNamePassword;
+                if (playerNamePassword && !this.activeDeckPassword) {
+                    this.activeDeckPassword = playerNamePassword;
+                    localStorage.setItem('fe0.selectedDeckPassword', playerNamePassword);
+                }
+                const cardsRes = await fetch('/api/cards');
+                const cards = await this.readJsonResponse(cardsRes, '/api/cards');
                 this.cardPool = Array.isArray(cards) ? cards : [];
-                this.decks = Array.isArray(decks) ? decks : [];
+                await this.refreshDecks(false, this.currentDeckPassword);
                 if (!this.selectedDeckId && this.decks.length > 0) {
                     this.selectedDeckId = this.decks[0].id;
                 }
@@ -356,9 +464,12 @@ export const DeckManagerModal = {
                 this.loading = false;
             }
         },
-        async refreshDecks(keepSelection = true, password = this.currentDeckPassword) {
+        async refreshDecks(keepSelection = true, password = this.currentDeckPassword, explicitAccessPassword = '') {
             const normalized = String(password || '').trim();
-            const endpoint = normalized ? `/api/decks/hidden?password=${encodeURIComponent(normalized)}` : '/api/decks';
+            const resolvedAccessPassword = normalized ? (explicitAccessPassword || this.getIdentityPassword(normalized)) : '';
+            const endpoint = normalized
+                ? `/api/decks/hidden?password=${encodeURIComponent(normalized)}${resolvedAccessPassword ? `&accessPassword=${encodeURIComponent(resolvedAccessPassword)}` : ''}`
+                : '/api/decks';
             const res = await fetch(endpoint);
             const decks = await this.readJsonResponse(res, endpoint);
             if (!res.ok) {
@@ -396,7 +507,26 @@ export const DeckManagerModal = {
                 return;
             }
             try {
-                await this.refreshDecks(false, password);
+                const requirementRes = await fetch(`/api/decks/identity/requirements?username=${encodeURIComponent(password)}`);
+                const requirement = await this.readJsonResponse(requirementRes, '/api/decks/identity/requirements');
+                let accessPassword = '';
+                if (requirementRes.ok && requirement?.requiresPassword) {
+                    const pwd = window.prompt('该用户名目录已设置密码，请输入密码：');
+                    if (pwd === null) return;
+                    accessPassword = String(pwd);
+                    const verifyRes = await fetch('/api/decks/identity/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ username: password, password: accessPassword })
+                    });
+                    const verifyPayload = await this.readJsonResponse(verifyRes, '/api/decks/identity/verify');
+                    if (!verifyRes.ok) {
+                        alert(verifyPayload?.message || '密码验证失败');
+                        return;
+                    }
+                    this.setIdentityPassword(password, accessPassword);
+                }
+                await this.refreshDecks(false, password, accessPassword);
                 this.closeDeckActions();
             } catch (error) {
                 alert(error.message || '加载隐藏卡组失败');
@@ -405,6 +535,15 @@ export const DeckManagerModal = {
         async returnToPublicDecks() {
             this.closeDeckActions();
             await this.refreshDecks(false, '');
+        },
+        async switchToPlayerDecks() {
+            const password = this.playerDeckPassword;
+            if (!password) {
+                alert('当前用户名为空，请先设置用户名。');
+                return;
+            }
+            this.closeDeckActions();
+            await this.refreshDecks(false, password);
         },
         async deleteDeck(id) {
             if (!id) return;
@@ -445,7 +584,7 @@ export const DeckManagerModal = {
             if (this.currentDeckPassword) localStorage.setItem('fe0.selectedDeckPassword', this.currentDeckPassword);
             else localStorage.removeItem('fe0.selectedDeckPassword');
             this.actionDeckId = '';
-            alert('已设置为当前对战卡组。下次重置将使用该卡组。');
+            alert('已设置为当前对战卡组。');
         },
         async addCardToDeck(card) {
             const options = arguments[1] || {};
@@ -1035,7 +1174,9 @@ export const DeckManagerModal = {
     template: `
         <div v-if="visible" class="fixed inset-0 z-[90] flex items-center justify-center p-4 touch-manipulation" @dragstart.prevent @dblclick.prevent>
             <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" @click="requestModalClose()"></div>
-            <div class="relative w-full max-w-6xl h-[92vh] sm:h-[88vh] lg:h-[86vh] bg-neutral-900 border border-cyan-600/40 rounded-xl overflow-y-auto lg:overflow-hidden">
+            <div
+                class="relative w-full max-w-6xl h-[92vh] sm:h-[88vh] lg:h-[86vh] rounded-xl overflow-y-auto lg:overflow-hidden"
+                :style="deckThemeModalStyle">
                 <div v-if="currentView === 'manager'" class="h-full flex flex-col p-3 gap-3">
                     <div class="flex items-center justify-between gap-3">
                         <div>
@@ -1043,27 +1184,39 @@ export const DeckManagerModal = {
                             <div class="text-[11px] text-gray-400">{{ deckListSubtitle }}</div>
                         </div>
                         <div class="flex items-center gap-2 shrink-0">
-                            <button @click="promptDeckPasswordAccess()" class="px-3 py-2 text-xs bg-violet-700 rounded shrink-0">
+                            <button @click="promptDeckPasswordAccess()" :style="themedChipStyle(false)" class="px-3 py-2 text-xs rounded border shrink-0">
                                 输入口令
                             </button>
-                            <button v-if="isViewingHiddenDecks" @click="returnToPublicDecks()" class="px-3 py-2 text-xs bg-white/10 rounded shrink-0 text-gray-100">
-                                返回公开卡组
-                            </button>
-                            <button @click="createEmptyDeck()" :disabled="saving" class="px-3 py-2 text-xs bg-cyan-700 rounded shrink-0">
+                            <button @click="createEmptyDeck()" :disabled="saving" :style="themedChipStyle(true)" class="px-3 py-2 text-xs rounded border shrink-0">
                                 新建新卡组
                             </button>
                         </div>
                     </div>
 
+                    <div class="flex items-center gap-2">
+                        <button
+                            @click="returnToPublicDecks()"
+                            :style="themedChipStyle(!currentDeckPassword)"
+                            class="px-3 py-1.5 text-xs rounded border">
+                            公共
+                        </button>
+                        <button
+                            @click="switchToPlayerDecks()"
+                            :style="themedChipStyle(currentDeckPassword === playerDeckPassword && !!playerDeckPassword)"
+                            class="px-3 py-1.5 text-xs rounded border">
+                            玩家
+                        </button>
+                    </div>
+
                     <div class="flex flex-wrap gap-2 relative z-[2]">
-                        <button @click="showImportPanel = !showImportPanel" class="px-2 py-1 text-xs bg-fuchsia-800/80 rounded">
+                        <button @click="showImportPanel = !showImportPanel" :style="themedChipStyle(showImportPanel)" class="px-2 py-1 text-xs rounded border">
                             {{ showImportPanel ? '收起导入' : '导入 JSON' }}
                         </button>
                     </div>
 
                     <div :class="showImportPanel ? 'flex' : 'hidden'" class="flex-col gap-2">
                         <textarea v-model="importText" class="w-full h-24 lg:h-28 text-[10px] p-2 bg-black/40 border border-white/10 rounded" placeholder="粘贴卡组 JSON"></textarea>
-                        <button @click="importDeckJson()" class="px-2 py-1 text-xs bg-fuchsia-700 rounded self-start">导入 JSON</button>
+                        <button @click="importDeckJson()" :style="themedChipStyle(true)" class="px-2 py-1 text-xs rounded border self-start">导入 JSON</button>
                     </div>
 
                     <div class="flex-1 min-h-0 border border-white/10 rounded p-2 overflow-y-auto">
@@ -1098,7 +1251,7 @@ export const DeckManagerModal = {
                 </div>
 
                 <div v-else class="h-full w-full p-3 flex flex-col gap-3 min-h-0 overflow-hidden">
-                    <div class="sticky top-0 z-10 -mx-3 px-3 pt-0 pb-2 bg-neutral-900/96 backdrop-blur-sm border-b border-white/5">
+                    <div class="sticky top-0 z-10 -mx-3 px-3 pt-0 pb-2 backdrop-blur-sm border-b" :style="deckThemeHeaderStyle">
                         <div class="flex items-center justify-between gap-3 mb-2">
                             <div>
                                 <div class="text-sm font-bold text-emerald-300">构筑器</div>
@@ -1130,25 +1283,25 @@ export const DeckManagerModal = {
                         </div>
                         <template v-else>
                             <div class="flex flex-wrap gap-2">
-                                <button @click="openFilterPicker('force')" class="px-2 py-1 text-xs rounded border border-cyan-500/40 bg-cyan-900/20 text-cyan-200">
+                                <button @click="openFilterPicker('force')" :style="themedChipStyle(selectedForceFilters.length > 0)" class="px-2 py-1 text-xs rounded border">
                                     {{ filterButtonLabel('force') }}
                                 </button>
-                                <button @click="openFilterPicker('cost')" class="px-2 py-1 text-xs rounded border border-amber-500/40 bg-amber-900/20 text-amber-200">
+                                <button @click="openFilterPicker('cost')" :style="themedChipStyle(selectedCostFilters.length > 0)" class="px-2 py-1 text-xs rounded border">
                                     {{ filterButtonLabel('cost') }}
                                 </button>
-                                <button @click="openFilterPicker('attack')" class="px-2 py-1 text-xs rounded border border-red-500/40 bg-red-900/20 text-red-200">
+                                <button @click="openFilterPicker('attack')" :style="themedChipStyle(selectedAttackFilters.length > 0)" class="px-2 py-1 text-xs rounded border">
                                     {{ filterButtonLabel('attack') }}
                                 </button>
-                                <button @click="openFilterPicker('supportValue')" class="px-2 py-1 text-xs rounded border border-lime-500/40 bg-lime-900/20 text-lime-200">
+                                <button @click="openFilterPicker('supportValue')" :style="themedChipStyle(selectedSupportFilters.length > 0)" class="px-2 py-1 text-xs rounded border">
                                     {{ filterButtonLabel('supportValue') }}
                                 </button>
-                                <button @click="openFilterPicker('supportAbility')" class="px-2 py-1 text-xs rounded border border-fuchsia-500/40 bg-fuchsia-900/20 text-fuchsia-200">
+                                <button @click="openFilterPicker('supportAbility')" :style="themedChipStyle(selectedSupportTimings.length > 0 || selectedSupportEmblems.length > 0)" class="px-2 py-1 text-xs rounded border">
                                     {{ filterButtonLabel('supportAbility') }}
                                 </button>
-                                <button @click="openSortDialog()" class="px-2 py-1 text-xs rounded border border-indigo-500/40 bg-indigo-900/20 text-indigo-200">
+                                <button @click="openSortDialog()" :style="themedChipStyle(sortMode === 'pinyin')" class="px-2 py-1 text-xs rounded border">
                                     {{ sortButtonLabel() }}
                                 </button>
-                                <button v-if="filterSummaryText" @click="clearAllFilters()" class="px-2 py-1 text-xs rounded border border-white/15 bg-white/5 text-gray-200">
+                                <button v-if="filterSummaryText" @click="clearAllFilters()" :style="themedChipStyle(false)" class="px-2 py-1 text-xs rounded border">
                                     清除筛选
                                 </button>
                             </div>
@@ -1180,15 +1333,15 @@ export const DeckManagerModal = {
                                     @click="handleBuilderCardTap(card, $event)"
                                     @dblclick.prevent="handleBuilderCardDoubleTap(card)"
                                         :title="card.cardName || card.name || card.id"
-                                        class="group relative aspect-[5/7] overflow-hidden rounded border border-white/10 bg-black/30 hover:border-cyan-400/70 hover:shadow-[0_0_18px_rgba(34,211,238,0.2)] transition-all">
-                                    <img :src="getCardImage(card)" :alt="card.cardName || card.name || card.id" class="w-full h-full object-cover" draggable="false" />
+                                        class="group relative rounded-lg border border-amber-700/25 bg-[#1e1111]/45 p-1 hover:border-amber-400/60 hover:shadow-[0_0_18px_rgba(251,191,36,0.2)] transition-all">
+                                    <img :src="getCardImage(card)" :alt="card.cardName || card.name || card.id" class="w-full h-[128px] sm:h-[144px] object-contain" draggable="false" />
                                     <div v-if="sortMode === 'pinyin' && !isSelectingProtagonist" class="absolute left-1 top-1 max-w-[70%] rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-semibold text-amber-200 truncate">
                                         {{ getSortDisplayName(card) }}
                                     </div>
-                                    <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-1.5 py-1 text-[9px] text-white opacity-90 group-hover:opacity-100">
+                                    <div class="absolute inset-x-1 bottom-1 bg-gradient-to-t from-black/90 via-black/40 to-transparent px-1.5 py-1 text-[9px] text-white/90 opacity-90 group-hover:opacity-100 rounded">
                                         {{ card.id }}
                                     </div>
-                                    <div v-if="selectedDeckMap.get(card.id)" class="absolute top-1 right-1 min-w-5 h-5 px-1 rounded-full bg-cyan-500 text-[10px] font-bold text-black flex items-center justify-center">
+                                    <div v-if="selectedDeckMap.get(card.id)" class="absolute top-1 right-1 min-w-5 h-5 px-1 rounded-full bg-amber-500 text-[10px] font-bold text-black flex items-center justify-center">
                                         {{ selectedDeckMap.get(card.id) }}
                                     </div>
                                 </button>
@@ -1237,21 +1390,29 @@ export const DeckManagerModal = {
 
                 <div v-if="showDeckContentsModal" class="absolute inset-0 z-[94] flex items-center justify-center p-4">
                     <div class="absolute inset-0 bg-black/75" @click="closeDeckContentsModal()"></div>
-                    <div class="relative w-full max-w-lg max-h-[80vh] rounded-xl border border-white/10 bg-neutral-950 p-4 flex flex-col gap-3">
+                    <div class="relative w-full max-w-lg max-h-[80vh] rounded-xl border border-amber-700/25 bg-[#160f0f]/95 p-4 flex flex-col gap-3">
                         <div class="flex items-center justify-between gap-3">
                             <div>
                                 <div class="text-sm font-bold text-emerald-300">现有卡组内容</div>
                                 <div class="text-[10px] text-gray-400">共 {{ selectedDeckCardDetails.length }} 种 / {{ selectedDeckTotal }} 张</div>
                             </div>
-                            <button @click="closeDeckContentsModal()" class="px-2 py-1 text-xs rounded bg-white/5 text-gray-300">关闭</button>
+                            <button @click="closeDeckContentsModal()" class="px-2 py-1 text-xs rounded bg-amber-900/30 text-amber-100 border border-amber-700/25">关闭</button>
                         </div>
                         <div class="overflow-y-auto min-h-0">
-                            <button v-for="item in selectedDeckCardDetails" :key="item.cardId" @click="removeCardFromDeck(item.cardId)" class="w-full flex items-center gap-2 text-left text-[11px] px-2 py-1 rounded hover:bg-emerald-900/30">
-                                <img v-if="item.card" :src="getCardImage(item.card)" class="w-8 h-11 rounded object-cover border border-white/10" draggable="false" />
-                                <div class="min-w-0 flex-1">
-                                    <div class="truncate">x{{ item.count }} {{ cardTitle(item.cardId) }}</div>
-                                </div>
-                            </button>
+                            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                <button
+                                    v-for="item in selectedDeckCardDetails"
+                                    :key="item.cardId"
+                                    @click="removeCardFromDeck(item.cardId)"
+                                    class="relative rounded-lg border border-amber-700/25 bg-[#1e1111]/45 p-1 hover:border-amber-400/60 transition-all">
+                                    <img v-if="item.card" :src="getCardImage(item.card)" class="w-full h-[120px] sm:h-[132px] rounded object-contain" draggable="false" />
+                                    <div v-else class="w-full h-[120px] sm:h-[132px] rounded bg-black/40"></div>
+                                    <div class="absolute top-1 right-1 min-w-5 h-5 px-1 rounded-full bg-amber-500 text-[10px] font-bold text-black flex items-center justify-center">
+                                        {{ item.count }}
+                                    </div>
+                                    <div class="mt-1 text-[10px] text-amber-100/85 truncate text-left">{{ cardTitle(item.cardId) }}</div>
+                                </button>
+                            </div>
                             <div v-if="!selectedDeckCardDetails.length" class="text-[11px] text-gray-500">暂无卡牌</div>
                         </div>
                     </div>

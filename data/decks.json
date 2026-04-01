@@ -84,5 +84,69 @@
     ],
     "createdAt": "2026-03-28T05:26:40.867Z",
     "updatedAt": "2026-03-28T05:26:40.867Z"
+  },
+  {
+    "id": "deck_5fec6f7f0bd7",
+    "name": "蓝单库洛姆",
+    "format": "standard",
+    "notes": "",
+    "protagonistCardId": "B01-053",
+    "protagonistCharaName": "库洛姆",
+    "cards": [
+      {
+        "cardId": "B01-053",
+        "count": 4
+      },
+      {
+        "cardId": "B01-051",
+        "count": 4
+      },
+      {
+        "cardId": "B01-056",
+        "count": 4
+      },
+      {
+        "cardId": "B01-054",
+        "count": 4
+      },
+      {
+        "cardId": "B01-058",
+        "count": 4
+      },
+      {
+        "cardId": "B01-057",
+        "count": 4
+      },
+      {
+        "cardId": "B01-061",
+        "count": 4
+      },
+      {
+        "cardId": "B01-060",
+        "count": 4
+      },
+      {
+        "cardId": "B01-059",
+        "count": 4
+      },
+      {
+        "cardId": "B01-076",
+        "count": 4
+      },
+      {
+        "cardId": "B01-075",
+        "count": 4
+      },
+      {
+        "cardId": "B01-077",
+        "count": 2
+      },
+      {
+        "cardId": "B01-078",
+        "count": 4
+      }
+    ],
+    "createdAt": "2026-03-31T19:57:48.215Z",
+    "updatedAt": "2026-03-31T19:57:48.215Z"
   }
 ]

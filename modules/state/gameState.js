@@ -20,7 +20,7 @@ export function createGameFlowState() {
         BEGINNING: { name: '开始阶段' },
         BOND: { name: '羁绊阶段' },
         DEPLOY: { name: '出击阶段' },
-        ATTACK: { name: '攻击阶段' },
+        ATTACK: { name: '行动阶段' },
         END: { name: '结束阶段' }
     };
 

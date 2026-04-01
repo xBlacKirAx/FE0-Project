@@ -41,7 +41,7 @@ export const HandStrip = {
                      [getCardFactionInfo(card).borderColor]: true
                  }"
                  draggable="true"
-                 @dragstart="onDragStart(card)"
+                 @dragstart="onDragStart(card, $event)"
                  @click="onCardClick(card)"
                  @touchstart="onTouchStart($event, card, 'hand')"
                  @touchmove="onTouchMove($event)"

@@ -33,6 +33,30 @@ import { AiReplayPanel } from './components/AiReplayPanel.js';
 const { createApp, computed, onMounted, watch, ref } = Vue;
 
 const ROOM_CACHE_KEY = 'fe0.roomCache';
+const FORCE_THEME = Object.freeze({
+    '光之剑': { primary: '#3f1716', secondary: '#5a2220', accent: '#c08484' },
+    '圣痕': { primary: '#18263f', secondary: '#22365a', accent: '#8fa9c7' },
+    '白夜': { primary: '#3a3d44', secondary: '#525866', accent: '#b7bec9' },
+    '暗夜': { primary: '#241a3f', secondary: '#34265a', accent: '#a79bc9' },
+    '寻踪的纹章': { primary: '#1a3528', secondary: '#25503b', accent: '#8eb7a4' },
+    '神器': { primary: '#301b3f', secondary: '#46285a', accent: '#b39bc9' },
+    '圣战旗': { primary: '#4a3216', secondary: '#654622', accent: '#cdb086' },
+    '女神纹章': { primary: '#4b2a1b', secondary: '#663b28', accent: '#c9a592' },
+    default: { primary: '#2f1b1b', secondary: '#3d2531', accent: '#b99a84' }
+});
+
+function deriveThemeFromCards(cards = []) {
+    const counts = new Map();
+    for (const card of cards) {
+        const force = String(card?.force || '').trim();
+        if (!force) continue;
+        counts.set(force, (counts.get(force) || 0) + 1);
+    }
+    const topForces = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([force]) => force);
+    const first = FORCE_THEME[topForces[0]] || FORCE_THEME.default;
+    const second = FORCE_THEME[topForces[1]] || first;
+    return { first, second };
+}
 
 function saveRoomCache(cache) {
     try {
@@ -110,6 +134,35 @@ createApp({
             state.isDevMode.value || (state.isMyTurn.value && (state.currentPhase.value || 'BEGINNING') !== 'BEGINNING')
         );
         const nextPhaseLabel = computed(() => (state.currentPhase.value || 'BEGINNING') === 'END' ? '结束' : 'NEXT');
+        const hasDeployableOrClassChangeCard = computed(() => {
+            const handCards = Array.isArray(state.hand.value) ? state.hand.value : [];
+            return handCards.some((card) => {
+                if (rules.canDeployCard(card)?.valid) return true;
+                const cc = rules.canPerformClassChange(card);
+                return !!cc?.valid;
+            });
+        });
+        const noActionableAttacker = computed(() => {
+            const myUnits = [...(state.fieldFront.value || []), ...(state.fieldRear.value || [])];
+            const untapped = myUnits.filter(card => !card?.isTapped);
+            if (!untapped.length) return true;
+            const enemies = [...(state.opponentFront.value || []), ...(state.opponentRear.value || [])];
+            if (!enemies.length) return true;
+            return !untapped.some(attacker =>
+                enemies.some(defender => rules.canAttackTargetByRange(attacker, defender)?.valid)
+            );
+        });
+        const highlightNextPhase = computed(() => {
+            if (!showNextPhaseButton.value || state.isDevMode.value || !state.isMyTurn.value) return false;
+            if (state.currentPhase.value === 'DEPLOY') {
+                return remainingCost.value <= 0 || !hasDeployableOrClassChangeCard.value;
+            }
+            if (state.currentPhase.value === 'ATTACK') {
+                if (state.firstPlayerOpeningTurnLocked?.value) return true;
+                return noActionableAttacker.value;
+            }
+            return false;
+        });
         const isMyCombatAttacker = computed(() => ['fieldFront', 'fieldRear'].some(area =>
             state[area].value.some(card => card.instanceId === state.attacker.value?.instanceId)
         ));
@@ -153,10 +206,27 @@ createApp({
         );
         const showAiReplayPanelVisible = computed(() => showAiReplayPanel.value && !isAiReplayPanelHidden.value);
         const isCompactMobile = ref(false);
+        const aiReplayNavigatorPosition = ref({ x: 12, y: 64 });
+        const aiReplayNavigatorInitialized = ref(false);
+        const aiReplayNavigatorDrag = ref({
+            active: false,
+            pointerId: null,
+            offsetX: 0,
+            offsetY: 0
+        });
+        const aiReplayNavigatorStyle = computed(() => ({
+            left: `${aiReplayNavigatorPosition.value.x}px`,
+            top: `${aiReplayNavigatorPosition.value.y}px`
+        }));
         const cachedRoomPassword = ref('');
         const startRoomButtonConsumed = ref(false);
         const isHandlingRoomGameStart = ref(false);
         const lastHandledRoomGameStartTs = ref(0);
+        const hasShownMulliganWaitNotice = ref(false);
+        const hasShownFirstPlayerNoDrawNotice = ref(false);
+        const roomMulliganDone = ref(false);
+        const roomFlowNotice = ref('');
+        let roomFlowNoticeTimer = null;
         const phaseBeforeDevMode = ref(state.currentPhase.value || 'BEGINNING');
         const canStartRoomGame = computed(() => !!state.roomId.value && state.roomReady.value);
         const roomScene = computed(() => deriveRoomScene({
@@ -166,6 +236,14 @@ createApp({
             roomReady: state.roomReady.value,
             roomGameInProgress: state.roomGameInProgress.value
         }));
+        const showBattleUi = computed(() => roomScene.value === 'in-game');
+        const showDeckDrawGuide = computed(() =>
+            showBattleUi.value
+            && state.isMyTurn.value
+            && state.currentPhase.value === 'BEGINNING'
+            && !state.firstPlayerOpeningTurnLocked.value
+            && !state.isDevMode.value
+        );
         const topBarUi = computed(() => deriveTopBarUi({
             roomScene: roomScene.value,
             roomGameInProgress: state.roomGameInProgress.value,
@@ -173,6 +251,94 @@ createApp({
             startRoomButtonConsumed: startRoomButtonConsumed.value,
             isCompactMobile: isCompactMobile.value
         }));
+        const playerDisplayName = ref('');
+        const playerDisplayNameInput = ref('');
+        const isEditingPlayerDisplayName = ref(false);
+        const entryDeckPreview = ref({ deckName: '', protagonistCharaName: '', cards: [] });
+        const entryDeckPreviewMode = ref('all');
+        const entryPreviewSelectedCard = ref(null);
+        const entryTheme = computed(() => deriveThemeFromCards(entryDeckPreview.value?.cards || []));
+        const entryThemeStyle = computed(() => ({
+            background: `linear-gradient(180deg, ${entryTheme.value.first.primary}99 0%, ${entryTheme.value.second.primary}66 55%, transparent 100%)`
+        }));
+        const entryPanelStyle = computed(() => ({
+            background: `linear-gradient(180deg, ${entryTheme.value.first.secondary}55 0%, ${entryTheme.value.second.primary}44 60%, transparent 100%)`
+        }));
+        const entryTabActiveStyle = computed(() => ({
+            borderColor: `${entryTheme.value.first.accent}99`,
+            color: '#fef3c7',
+            background: `${entryTheme.value.first.primary}66`
+        }));
+        const entryTabInactiveStyle = computed(() => ({
+            borderColor: `${entryTheme.value.second.accent}55`,
+            color: '#fecdd3',
+            background: '#24121488'
+        }));
+        const entryDeckPreviewSections = computed(() => {
+            const cards = Array.isArray(entryDeckPreview.value?.cards) ? entryDeckPreview.value.cards : [];
+            const cardMap = new Map();
+            for (const card of cards) {
+                const key = String(card?.id || card?.cardId || card?.cardName || card?.name || '');
+                if (!key) continue;
+                if (!cardMap.has(key)) {
+                    cardMap.set(key, {
+                        ...card,
+                        _entryCount: 1
+                    });
+                    continue;
+                }
+                const existing = cardMap.get(key);
+                existing._entryCount = Number(existing._entryCount || 1) + 1;
+            }
+            const uniqueCards = [...cardMap.values()];
+            const protagonist = String(entryDeckPreview.value?.protagonistCharaName || '').trim();
+
+            if (entryDeckPreviewMode.value === 'protagonist') {
+                const filtered = protagonist
+                    ? uniqueCards.filter(card => String(card?.charaName || '').trim() === protagonist)
+                    : [];
+                return [{ key: 'protagonist', title: protagonist ? `主人公线：${protagonist}` : '未设置主人公', cards: filtered }];
+            }
+
+            if (entryDeckPreviewMode.value === 'cost') {
+                const groups = new Map();
+                for (const card of uniqueCards) {
+                    const cost = Number.parseInt(card?.cost, 10);
+                    const key = Number.isFinite(cost) ? String(cost) : '未知';
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key).push(card);
+                }
+                return [...groups.entries()]
+                    .sort((a, b) => {
+                        if (a[0] === '未知') return 1;
+                        if (b[0] === '未知') return -1;
+                        return Number(a[0]) - Number(b[0]);
+                    })
+                    .map(([key, groupedCards]) => ({
+                        key: `cost-${key}`,
+                        title: `费用 ${key}`,
+                        cards: groupedCards
+                    }));
+            }
+
+            if (entryDeckPreviewMode.value === 'force') {
+                const groups = new Map();
+                for (const card of uniqueCards) {
+                    const key = String(card?.force || '未知势力').trim() || '未知势力';
+                    if (!groups.has(key)) groups.set(key, []);
+                    groups.get(key).push(card);
+                }
+                return [...groups.entries()]
+                    .sort((a, b) => a[0].localeCompare(b[0], 'zh-Hans-CN'))
+                    .map(([key, groupedCards]) => ({
+                        key: `force-${key}`,
+                        title: `势力 ${key}`,
+                        cards: groupedCards
+                    }));
+            }
+
+            return [{ key: 'all', title: '全部卡牌', cards: uniqueCards }];
+        });
 
         const getCardCharaName = (card) => {
             const direct = (card?.charaName || '').trim();
@@ -185,6 +351,243 @@ createApp({
                 if (derived) return derived;
             }
             return fullName;
+        };
+
+        const showRoomFlowNotice = (message, duration = 2200) => {
+            roomFlowNotice.value = String(message || '').trim();
+            if (roomFlowNoticeTimer) clearTimeout(roomFlowNoticeTimer);
+            if (!duration || duration <= 0) {
+                roomFlowNoticeTimer = null;
+                return;
+            }
+            roomFlowNoticeTimer = setTimeout(() => {
+                roomFlowNotice.value = '';
+                roomFlowNoticeTimer = null;
+            }, duration);
+        };
+
+        const ensureOpeningHandVisible = () => {
+            if ((state.hand.value?.length || 0) > 0) return;
+            const toDraw = Math.min(6, state.deck.value?.length || 0);
+            for (let i = 0; i < toDraw; i++) {
+                const card = state.deck.value.pop();
+                if (!card) break;
+                card.isFaceDown = false;
+                state.hand.value.push(card);
+            }
+        };
+        const finalizeMulliganIfReady = (firstPlayerId) => {
+            if (roomMulliganDone.value) return;
+            roomMulliganDone.value = true;
+            state.opponentMulliganState.value = 'done';
+            const iAmFirstPlayer = !!firstPlayerId && String(firstPlayerId) === String(state.socket.id);
+            if (iAmFirstPlayer && !hasShownFirstPlayerNoDrawNotice.value) {
+                state.currentPhase.value = 'BEGINNING';
+                showRoomFlowNotice('双方调度完成。你为先攻，先攻第一回合无法抽卡，直接进入羁绊阶段。', 2800);
+                state.currentPhase.value = 'BOND';
+                state.hasPlacedBond.value = false;
+                if (EVT.SYNC_PHASE) {
+                    state.socket.emit(EVT.SYNC_PHASE, {
+                        phase: 'BOND',
+                        phaseName: state.PHASES?.BOND?.name || 'BOND'
+                    });
+                }
+                hasShownFirstPlayerNoDrawNotice.value = true;
+                return;
+            }
+            if (!iAmFirstPlayer) {
+                state.currentPhase.value = 'MULLIGAN';
+                showRoomFlowNotice('双方调度完成。等待先攻玩家行动。', 2200);
+            }
+        };
+
+        const getDefaultPlayerDisplayName = () => {
+            const seed = Math.random().toString(36).slice(2, 8).toUpperCase();
+            return `玩家${seed}`;
+        };
+
+        const getIdentityPasswordMap = () => {
+            try {
+                const raw = localStorage.getItem('fe0.identityPasswordMap');
+                const parsed = raw ? JSON.parse(raw) : {};
+                return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+            } catch {
+                return {};
+            }
+        };
+
+        const setIdentityPassword = (username, password) => {
+            const key = String(username || '').trim();
+            if (!key) return;
+            const map = getIdentityPasswordMap();
+            map[key] = String(password || '');
+            localStorage.setItem('fe0.identityPasswordMap', JSON.stringify(map));
+        };
+
+        const getIdentityPassword = (username) => {
+            const key = String(username || '').trim();
+            if (!key) return '';
+            const map = getIdentityPasswordMap();
+            return String(map[key] || '');
+        };
+
+        const logoutAndClearIdentityData = async () => {
+            const ok = window.confirm('确认登出并清除本地身份数据？将重置用户名与本地口令选择。');
+            if (!ok) return;
+            localStorage.removeItem('fe0.playerDisplayName');
+            localStorage.removeItem('fe0.selectedDeckId');
+            localStorage.removeItem('fe0.selectedDeckPassword');
+            localStorage.removeItem('fe0.identityPasswordMap');
+            loadPlayerDisplayName();
+            await loadEntryDeckPreview();
+            alert('已登出，并清除本地身份数据。');
+        };
+
+        const loadPlayerDisplayName = () => {
+            const saved = String(localStorage.getItem('fe0.playerDisplayName') || '').trim();
+            const nextName = saved || getDefaultPlayerDisplayName();
+            playerDisplayName.value = nextName;
+            playerDisplayNameInput.value = nextName;
+            if (!saved) localStorage.setItem('fe0.playerDisplayName', nextName);
+            const accessPassword = getIdentityPassword(nextName);
+            const query = accessPassword
+                ? `?password=${encodeURIComponent(nextName)}&accessPassword=${encodeURIComponent(accessPassword)}`
+                : `?password=${encodeURIComponent(nextName)}`;
+            fetch(`/api/decks/hidden${query}`).catch(() => {});
+        };
+
+        const startEditPlayerDisplayName = () => {
+            playerDisplayNameInput.value = playerDisplayName.value;
+            isEditingPlayerDisplayName.value = true;
+        };
+
+        const savePlayerDisplayName = async () => {
+            const previousName = String(playerDisplayName.value || '').trim();
+            const next = String(playerDisplayNameInput.value || '').trim();
+            const finalName = next || getDefaultPlayerDisplayName();
+            let verifiedPassword = '';
+            if (previousName && previousName !== finalName) {
+                const password = window.prompt('请输入该用户名对应密码：');
+                if (password === null) return;
+                if (!String(password).trim()) {
+                    alert('密码不能为空。');
+                    return;
+                }
+                const passwordConfirm = window.prompt('请再次输入密码确认：');
+                if (passwordConfirm === null) return;
+                if (String(passwordConfirm) !== String(password)) {
+                    alert('两次输入的密码不一致。');
+                    return;
+                }
+                try {
+                    const response = await fetch('/api/decks/identity/switch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            oldUsername: previousName,
+                            newUsername: finalName,
+                            password: String(password)
+                        })
+                    });
+                    const rawText = await response.text().catch(() => '');
+                    let payload = {};
+                    try {
+                        payload = rawText ? JSON.parse(rawText) : {};
+                    } catch {
+                        payload = { message: rawText.slice(0, 120) || '服务返回非 JSON，可能未重启到最新版本。' };
+                    }
+                    if (!response.ok) {
+                        alert(payload?.message || '用户名切换失败。');
+                        return;
+                    }
+                    setIdentityPassword(finalName, password);
+                    verifiedPassword = String(password);
+                } catch {
+                    alert('用户名切换失败，请稍后重试。');
+                    return;
+                }
+            }
+            playerDisplayName.value = finalName;
+            playerDisplayNameInput.value = finalName;
+            const currentSelectedDeckPassword = String(localStorage.getItem('fe0.selectedDeckPassword') || '').trim();
+            localStorage.setItem('fe0.playerDisplayName', finalName);
+            if (currentSelectedDeckPassword) {
+                localStorage.setItem('fe0.selectedDeckPassword', finalName);
+            } else {
+                localStorage.removeItem('fe0.selectedDeckPassword');
+            }
+            window.dispatchEvent(new CustomEvent('fe0:player-name-updated', { detail: { playerName: finalName, password: verifiedPassword } }));
+            if (EVT.PLAYER_SET_NAME) {
+                state.socket.emit(EVT.PLAYER_SET_NAME, { playerName: finalName });
+            }
+            isEditingPlayerDisplayName.value = false;
+            await loadEntryDeckPreview();
+        };
+
+        const cancelEditPlayerDisplayName = () => {
+            playerDisplayNameInput.value = playerDisplayName.value;
+            isEditingPlayerDisplayName.value = false;
+        };
+
+        const loadEntryDeckPreview = async () => {
+            const selectedDeckId = String(localStorage.getItem('fe0.selectedDeckId') || '').trim();
+            const selectedDeckPassword = String(localStorage.getItem('fe0.selectedDeckPassword') || '').trim();
+            if (!selectedDeckId) {
+                entryDeckPreview.value = { deckName: '未选择卡组', protagonistCharaName: '', cards: [] };
+                return;
+            }
+            try {
+                const accessPassword = getIdentityPassword(selectedDeckPassword);
+                const query = selectedDeckPassword
+                    ? `?password=${encodeURIComponent(selectedDeckPassword)}${accessPassword ? `&accessPassword=${encodeURIComponent(accessPassword)}` : ''}`
+                    : '';
+                const response = await fetch(`/api/decks/${encodeURIComponent(selectedDeckId)}/expanded-cards${query}`);
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    entryDeckPreview.value = { deckName: payload?.message || '卡组加载失败', protagonistCharaName: '', cards: [] };
+                    return;
+                }
+                entryDeckPreview.value = {
+                    deckName: String(payload?.deckName || '当前卡组'),
+                    protagonistCharaName: String(payload?.protagonistCharaName || '').trim(),
+                    cards: Array.isArray(payload?.cards) ? payload.cards : []
+                };
+            } catch {
+                entryDeckPreview.value = { deckName: '卡组加载失败', protagonistCharaName: '', cards: [] };
+            }
+        };
+        const openEntryPreviewCardDetail = (card) => {
+            entryPreviewSelectedCard.value = card || null;
+        };
+        const closeEntryPreviewCardDetail = () => {
+            entryPreviewSelectedCard.value = null;
+        };
+        const getEntryCardAbilityText = (card) => {
+            if (!card) return '';
+            if (typeof card.ability === 'string') return card.ability;
+            const direct = String(card.ability?.text || '').trim();
+            if (direct) return direct;
+            const entries = Array.isArray(card.ability?.entries) ? card.ability.entries : [];
+            if (!entries.length) return '';
+            return entries
+                .map((entry) => {
+                    const title = String(entry?.title || '').trim();
+                    const type = String(entry?.type || '').trim();
+                    const effect = String(entry?.effectText || entry?.rawText || '').trim();
+                    const head = `${title ? `『${title}』` : ''}${type}`.trim();
+                    return `${head}${head && effect ? ' ' : ''}${effect}`.trim();
+                })
+                .filter(Boolean)
+                .join('\n');
+        };
+        const getEntryCardSupportText = (card) => {
+            if (!card) return '';
+            if (typeof card.supportAbility === 'string') return card.supportAbility;
+            const direct = String(card.supportAbility?.text || '').trim();
+            if (direct) return direct;
+            const effectName = String(card.supportAbility?.effectName || '').trim();
+            const effectText = String(card.supportAbility?.effectText || '').trim();
+            return `${effectName ? `『${effectName}』` : ''}${effectText ? (effectName ? ' ' : '') + effectText : ''}`.trim();
         };
 
         const isLocalDecisionActor = computed(() => {
@@ -350,7 +753,7 @@ createApp({
             if (!card || !ability || !cardOps.activateUnitAbility) return;
             const ok = cardOps.activateUnitAbility(card, ability.title);
             if (!ok) {
-                alert('能力发动失败：费用不足或条件不满足。');
+                showRoomFlowNotice('能力发动失败：费用不足或条件不满足。', 2400);
             }
         };
 
@@ -419,6 +822,9 @@ createApp({
             if (!prevRoomState.roomId && nextRoomState.roomId) {
                 startRoomButtonConsumed.value = false;
             }
+            if (nextRoomState.ready && !prevRoomState.ready) {
+                startRoomButtonConsumed.value = false;
+            }
 
             state.roomRole.value = deriveRoomRole({
                 roomId: nextRoomState.roomId,
@@ -426,6 +832,8 @@ createApp({
                 guestId: nextRoomState.guestId,
                 myId: state.socket.id
             });
+            if (state.roomHostName) state.roomHostName.value = String(nextRoomState.hostName || '');
+            if (state.roomGuestName) state.roomGuestName.value = String(nextRoomState.guestName || '');
 
             state.roomStatusText.value = deriveRoomStatusText(nextRoomState);
 
@@ -440,7 +848,25 @@ createApp({
             }
 
             if (didOpponentLeaveRoom(prevRoomState, nextRoomState)) {
-                alert('你的对手已离开。');
+                showRoomFlowNotice('你的对手已离开房间。', 2600);
+            }
+
+            if (
+                prevRoomState.roomId
+                && prevRoomState.roomId === nextRoomState.roomId
+                && prevRoomState.playerCount === 1
+                && nextRoomState.playerCount === 2
+            ) {
+                const opponentName = state.roomRole.value === 'host'
+                    ? String(nextRoomState.guestName || '')
+                    : state.roomRole.value === 'guest'
+                        ? String(nextRoomState.hostName || '')
+                        : '';
+                if (opponentName) {
+                    showRoomFlowNotice(`${opponentName} 加入房间`, 2200);
+                } else {
+                    showRoomFlowNotice('有玩家加入房间', 2200);
+                }
             }
 
             saveRoomCache({
@@ -1004,6 +1430,65 @@ createApp({
             applyCurrentReplayCursor();
         };
 
+        const resetAiReplayNavigatorDefaultPosition = () => {
+            const width = isCompactMobile.value ? 216 : 260;
+            const height = 96;
+            const centeredX = Math.round((window.innerWidth - width) / 2);
+            const nearBondY = Math.round(window.innerHeight - height - 132);
+            aiReplayNavigatorPosition.value = clampAiReplayNavigatorPosition(centeredX, nearBondY, width, height);
+            aiReplayNavigatorInitialized.value = true;
+        };
+
+        const clampAiReplayNavigatorPosition = (x, y, panelWidth = 260, panelHeight = 96) => {
+            const maxX = Math.max(8, window.innerWidth - panelWidth - 8);
+            const maxY = Math.max(56, window.innerHeight - panelHeight - 8);
+            return {
+                x: Math.min(Math.max(8, Math.round(x)), maxX),
+                y: Math.min(Math.max(56, Math.round(y)), maxY)
+            };
+        };
+
+        const startAiReplayNavigatorDrag = (event) => {
+            const panelEl = event?.currentTarget?.closest?.('[data-ai-replay-nav-panel]');
+            if (!panelEl) return;
+            const rect = panelEl.getBoundingClientRect();
+            aiReplayNavigatorDrag.value = {
+                active: true,
+                pointerId: event.pointerId,
+                offsetX: event.clientX - rect.left,
+                offsetY: event.clientY - rect.top
+            };
+            event.currentTarget.setPointerCapture?.(event.pointerId);
+        };
+
+        const moveAiReplayNavigatorDrag = (event) => {
+            const drag = aiReplayNavigatorDrag.value;
+            if (!drag.active || drag.pointerId !== event.pointerId) return;
+            const panelEl = event?.currentTarget?.closest?.('[data-ai-replay-nav-panel]');
+            const rect = panelEl?.getBoundingClientRect();
+            const panelWidth = rect?.width || 260;
+            const panelHeight = rect?.height || 96;
+            const next = clampAiReplayNavigatorPosition(
+                event.clientX - drag.offsetX,
+                event.clientY - drag.offsetY,
+                panelWidth,
+                panelHeight
+            );
+            aiReplayNavigatorPosition.value = next;
+        };
+
+        const endAiReplayNavigatorDrag = (event) => {
+            const drag = aiReplayNavigatorDrag.value;
+            if (!drag.active || drag.pointerId !== event.pointerId) return;
+            aiReplayNavigatorDrag.value = {
+                active: false,
+                pointerId: null,
+                offsetX: 0,
+                offsetY: 0
+            };
+            event.currentTarget.releasePointerCapture?.(event.pointerId);
+        };
+
         const closeDeckManager = () => {
             showDeckManager.value = false;
         };
@@ -1184,11 +1669,24 @@ createApp({
         const updateHeight = () => {
             document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
             isCompactMobile.value = window.innerWidth < 640;
+            if (!aiReplayNavigatorInitialized.value) {
+                resetAiReplayNavigatorDefaultPosition();
+            }
+            aiReplayNavigatorPosition.value = clampAiReplayNavigatorPosition(
+                aiReplayNavigatorPosition.value.x,
+                aiReplayNavigatorPosition.value.y,
+                isCompactMobile.value ? 216 : 260,
+                96
+            );
         };
 
         const confirmMulligan = () => {
             state.mulliganState.value = 'done';
             state.socket.emit(EVT.MULLIGAN_DECISION, { state: 'done' });
+            if (state.opponentMulliganState.value !== 'done') {
+                showRoomFlowNotice('你已完成调度，等待对手完成调度...', 0);
+                hasShownMulliganWaitNotice.value = true;
+            }
         };
         // 补全缺少的 performMulligan 函数
         const performMulligan = () => {
@@ -1208,19 +1706,54 @@ createApp({
             if (EVT.MULLIGAN_DECISION) {
                 state.socket.emit(EVT.MULLIGAN_DECISION, { state: 'done' });
             }
+            if (state.opponentMulliganState.value !== 'done') {
+                showRoomFlowNotice('你已完成调度，等待对手完成调度...', 0);
+                hasShownMulliganWaitNotice.value = true;
+            }
         };
         watch([() => state.mulliganState.value, () => state.opponentMulliganState.value], ([myState, oppState]) => {
-            if (myState === 'done' && oppState === 'done') {
-                if (state.isMyTurn.value) {
-                    state.currentPhase.value = 'BEGINNING';
-                }
+            if (roomMulliganDone.value) return;
+            if (myState === 'done' && oppState !== 'done' && !hasShownMulliganWaitNotice.value) {
+                showRoomFlowNotice('你已完成调度，等待对手完成调度...', 0);
+                hasShownMulliganWaitNotice.value = true;
             }
+            // 兜底：若房间完成事件丢失，但本地已观测到双方完成，则直接推进。
+            if (myState === 'done' && oppState === 'done') {
+                const fallbackFirstPlayerId = state.firstPlayerOpeningTurnLocked?.value ? state.socket.id : null;
+                finalizeMulliganIfReady(fallbackFirstPlayerId);
+            }
+        });
+        watch(showDeckManager, async (visible) => {
+            if (!visible) await loadEntryDeckPreview();
         });
 
         onMounted(async () => {
             document.documentElement.setAttribute('data-battle-theme', BATTLE_THEME);
             window.addEventListener('resize', updateHeight);
             updateHeight();
+            window.addEventListener('fe0:notice', (event) => {
+                const message = event?.detail?.message || '';
+                const duration = Number(event?.detail?.duration || 2200);
+                if (!message) return;
+                showRoomFlowNotice(message, duration);
+            });
+            if (!window.__fe0AlertPatched) {
+                const nativeAlert = window.alert.bind(window);
+                window.alert = (message) => {
+                    const text = String(message || '');
+                    if (
+                        text.includes('开局完成') ||
+                        text.includes('请先进行调度') ||
+                        text.includes('已完成调度') ||
+                        text.includes('先攻第一回合无法抽卡')
+                    ) {
+                        showRoomFlowNotice(text, 2800);
+                        return;
+                    }
+                    nativeAlert(message);
+                };
+                window.__fe0AlertPatched = true;
+            }
 
             // 启动网络监听
             socketHandler.setupSocketListeners();
@@ -1234,7 +1767,7 @@ createApp({
             if (EVT.ROOM_ERROR) {
                 state.socket.on(EVT.ROOM_ERROR, (payload) => {
                     const message = payload?.message || '房间操作失败';
-                    alert(message);
+                    showRoomFlowNotice(message, 3200);
                 });
             }
             if (EVT.ROOM_GAME_STARTED) {
@@ -1252,6 +1785,7 @@ createApp({
                         lastHandledRoomGameStartTs.value = eventTs;
                     }
                     const startedBy = payload?.startedBy || null;
+                    const firstPlayerId = payload?.firstPlayerId || startedBy || null;
                     startRoomButtonConsumed.value = true;
                     state.roomGameInProgress.value = true;
                     try {
@@ -1260,22 +1794,65 @@ createApp({
 
                         // 开局后统一进入游玩模式，并按开局发起者确定先后手。
                         state.isDevMode.value = false;
-                        const iAmStarter = !!startedBy && String(startedBy) === String(state.socket.id);
+                        ensureOpeningHandVisible();
+                        const iAmStarter = !!firstPlayerId && String(firstPlayerId) === String(state.socket.id);
                         state.isMyTurn.value = iAmStarter;
-                        state.currentPhase.value = 'BEGINNING';
+                        state.currentPhase.value = 'MULLIGAN';
+                        state.opponentMulliganState.value = 'awaiting';
+                        roomMulliganDone.value = false;
+                        hasShownMulliganWaitNotice.value = false;
+                        hasShownFirstPlayerNoDrawNotice.value = false;
                         state.hasPlacedBond.value = false;
                         state.usedBondsThisTurn.value = 0;
                         if (state.firstPlayerOpeningTurnLocked) {
                             state.firstPlayerOpeningTurnLocked.value = iAmStarter;
                         }
+                        showRoomFlowNotice(iAmStarter ? '开局完成：你是先攻，请先进行调度。' : '开局完成：对手为先攻，请先进行调度。', 0);
                     } finally {
                         isHandlingRoomGameStart.value = false;
+                    }
+                });
+            }
+            if (EVT.ROOM_MULLIGAN_STATE) {
+                state.socket.on(EVT.ROOM_MULLIGAN_STATE, (payload = {}) => {
+                    const hostDone = !!payload?.hostDone;
+                    const guestDone = !!payload?.guestDone;
+                    const bothDone = hostDone && guestDone;
+                    const myRole = String(state.roomRole.value || '');
+                    const myDone = myRole === 'host' ? hostDone : myRole === 'guest' ? guestDone : state.mulliganState.value === 'done';
+                    const oppDone = myRole === 'host' ? guestDone : myRole === 'guest' ? hostDone : false;
+                    if (myDone) state.mulliganState.value = 'done';
+                    state.opponentMulliganState.value = oppDone ? 'done' : 'awaiting';
+                    if (state.mulliganState.value === 'done' && !bothDone && !hasShownMulliganWaitNotice.value) {
+                        showRoomFlowNotice('你已完成调度，等待对手完成调度...', 0);
+                        hasShownMulliganWaitNotice.value = true;
+                    }
+                    if (bothDone) {
+                        finalizeMulliganIfReady(payload?.firstPlayerId || null);
+                    }
+                });
+            }
+            if (EVT.ROOM_MULLIGAN_DONE) {
+                state.socket.on(EVT.ROOM_MULLIGAN_DONE, (payload = {}) => {
+                    finalizeMulliganIfReady(payload?.firstPlayerId || null);
+                });
+            }
+            if (EVT.SYNC_PHASE) {
+                state.socket.on(EVT.SYNC_PHASE, (payload = {}) => {
+                    const phase = String(payload?.phase || '').trim();
+                    if (!phase) return;
+                    state.currentPhase.value = phase;
+                    if (phase === 'BOND') {
+                        state.hasPlacedBond.value = false;
                     }
                 });
             }
 
             state.socket.on('connect', () => {
                 state.connectionScene.value = state.roomId.value ? 'recovering' : 'connected';
+                if (EVT.PLAYER_SET_NAME) {
+                    state.socket.emit(EVT.PLAYER_SET_NAME, { playerName: playerDisplayName.value });
+                }
                 const cache = loadRoomCache();
                 if (!cache?.roomId) return;
                 cachedRoomPassword.value = String(cache.password || '');
@@ -1291,8 +1868,8 @@ createApp({
                 state.connectionScene.value = state.roomId.value ? 'recovering' : 'disconnected';
             });
 
-            // 🚀 直接用 cardOps 的终极重置初始化游戏！
-            await cardOps.resetGame(true); 
+            loadPlayerDisplayName();
+            await loadEntryDeckPreview();
             if (!state.roomId.value) {
                 state.connectionScene.value = state.socket.connected ? 'connected' : 'disconnected';
             }
@@ -1309,7 +1886,29 @@ createApp({
             getCardFactionInfo: rules.getCardFactionInfo,
             topBarUi,
             roomScene,
+            roomFlowNotice,
+            showBattleUi,
+            showDeckDrawGuide,
             isCompactMobile,
+            playerDisplayName,
+            playerDisplayNameInput,
+            isEditingPlayerDisplayName,
+            startEditPlayerDisplayName,
+            savePlayerDisplayName,
+            cancelEditPlayerDisplayName,
+            logoutAndClearIdentityData,
+            entryDeckPreview,
+            entryDeckPreviewMode,
+            entryThemeStyle,
+            entryPanelStyle,
+            entryTabActiveStyle,
+            entryTabInactiveStyle,
+            entryDeckPreviewSections,
+            entryPreviewSelectedCard,
+            openEntryPreviewCardDetail,
+            closeEntryPreviewCardDetail,
+            getEntryCardAbilityText,
+            getEntryCardSupportText,
             activePanelTitle,
             activePanelCards,
             resolvedPanelTitle,
@@ -1319,6 +1918,7 @@ createApp({
             totalBonds,
             currentPhaseName,
             showNextPhaseButton,
+            highlightNextPhase,
             nextPhaseLabel,
             isMyCombatAttacker,
             playerPanelButtons,
@@ -1360,6 +1960,10 @@ createApp({
             stepAiReplayPrev,
             stepAiReplayNext,
             jumpAiReplayTo,
+            aiReplayNavigatorStyle,
+            startAiReplayNavigatorDrag,
+            moveAiReplayNavigatorDrag,
+            endAiReplayNavigatorDrag,
             createRoom,
             joinRoom,
             quickMatch,

@@ -9,7 +9,11 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="style.css">
     <script>
-        document.addEventListener('dragstart', e => e.preventDefault(), { capture: true });
+        document.addEventListener('dragstart', e => {
+            const target = e.target;
+            const allowDrag = target?.closest?.('.deployable-card, .card-base');
+            if (!allowDrag) e.preventDefault();
+        }, { capture: true });
         // 阻止从屏幕左边缘向右划触发浏览器后退手势
         document.addEventListener('pointerdown', e => {
             if (e.clientX < 20) e.preventDefault();
@@ -24,10 +28,10 @@
 
     <div id="app" class="h-full flex flex-col relative">
 
-        <top-control-bar :is-dev-mode="isDevMode" :is-my-turn="isMyTurn" :show-dev-mode-toggle="!showAiReplayPanel"
+        <top-control-bar :is-dev-mode="isDevMode" :is-my-turn="isMyTurn" :show-dev-mode-toggle="!showAiReplayPanel && !(isCompactMobile && roomScene === 'in-game')"
             :on-toggle-dev-mode="toggleDevMode" :on-reset-game="resetByControlBar"
             :show-reset-button="topBarUi.showResetButton && !showAiReplayPanel" :on-open-deck-manager="openDeckManager"
-            :show-deck-manager-button="topBarUi.showDeckManagerButton && !showAiReplayPanel"
+            :show-deck-manager-button="!showAiReplayPanel && (roomScene === 'waiting' || roomScene === 'ready')"
             :on-run-ai-duel="runAiDuelFromControlBar" :on-open-ai-replay="openAiReplayFromControlBar"
             :on-toggle-ai-replay-panel-hidden="toggleAiReplayPanelHiddenFromControlBar"
             :on-ai-replay-prev="stepAiReplayPrev" :on-ai-replay-next="stepAiReplayNext"
@@ -40,12 +44,13 @@
             :ai-replay-current-line="currentAiReplayEventLine" :ai-duel-pending="isAiDuelPending"
             :show-cost-counter="topBarUi.showCostCounter && !showAiReplayPanel" :remaining-cost="remainingCost"
             :total-bonds="totalBonds" :show-turn-owner="topBarUi.showTurnOwner && !showAiReplayPanel"
-            :has-undo="!showAiReplayPanel && topBarUi.showResetButton && undoStack.length > 0"
+            :has-undo="!showAiReplayPanel && showBattleUi && undoStack.length > 0"
             :undo-disabled="hasBattledThisTurn" :on-undo="undoLastMove" :phase-name="currentPhaseName"
             :show-phase-name="topBarUi.showPhaseName && !showAiReplayPanel"
             :show-next-phase-button="topBarUi.showNextPhaseButton && !showAiReplayPanel"
+            :highlight-next-phase="highlightNextPhase"
             :next-phase-label="nextPhaseLabel" :on-next-phase="nextPhase" :room-status-text="roomStatusText"
-            :show-room-status-text="!showAiReplayPanel"
+            :show-room-status-text="!showAiReplayPanel && !(isCompactMobile && roomScene === 'in-game')"
             :show-create-room-button="topBarUi.showCreateRoomButton && !showAiReplayPanel" :on-create-room="createRoom"
             :show-join-room-button="topBarUi.showJoinRoomButton && !showAiReplayPanel" :on-join-room="joinRoom"
             :show-quick-match-button="topBarUi.showQuickMatchButton && !showAiReplayPanel" :on-quick-match="quickMatch"
@@ -53,18 +58,23 @@
             :show-start-room-button="topBarUi.showStartRoomButton && !showAiReplayPanel"
             :room-can-start="canStartRoomGame" :on-start-room-game="startRoomGame">
         </top-control-bar>
+        <div
+            v-if="roomFlowNotice"
+            class="fixed left-1/2 -translate-x-1/2 top-[44px] sm:top-[48px] z-[235] px-3 py-1.5 rounded-xl border border-amber-400/35 bg-black/75 text-amber-100 text-[11px] sm:text-xs shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
+            {{ roomFlowNotice }}
+        </div>
 
-        <div class="battle-container">
-            <battle-row :cards="opponentRear" row-class="row-opp-rear" :is-enemy="true"
-                :hovered-attack-target-id="hoveredAttackTargetId" :attack-range-target-ids="attackRangeTargetIds"
+        <div v-if="showBattleUi" class="battle-container">
+            <battle-row :cards="opponentRear" row-class="row-opp-rear" row-key="opp-rear" :is-enemy="true"
+                :hovered-attack-target-id="hoveredAttackTargetId" :attack-range-target-ids="attackRangeTargetIds" :attack-range-target-areas="attackRangeTargetAreas"
                 :is-guide-active="false" :is-dragging-over="false" :set-dragging-over="setDraggingOver"
                 :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver" :on-drop-area="onDrop"
                 :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick" :on-drag-start="onDragStart"
                 :on-touch-start="onTouchStart" :on-touch-move="onTouchMove" :on-touch-end="onTouchEnd">
             </battle-row>
 
-            <battle-row :cards="opponentFront" row-class="row-opp-front" :is-enemy="true"
-                :hovered-attack-target-id="hoveredAttackTargetId" :attack-range-target-ids="attackRangeTargetIds"
+            <battle-row :cards="opponentFront" row-class="row-opp-front" row-key="opp-front" :is-enemy="true"
+                :hovered-attack-target-id="hoveredAttackTargetId" :attack-range-target-ids="attackRangeTargetIds" :attack-range-target-areas="attackRangeTargetAreas"
                 :is-guide-active="false" :is-dragging-over="false" :set-dragging-over="setDraggingOver"
                 :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver" :on-drop-area="onDrop"
                 :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick" :on-drag-start="onDragStart"
@@ -73,7 +83,7 @@
 
             <battle-row :cards="fieldFront" row-class="row-my-front" area="front" area-label="Front" :is-enemy="false"
                 :hovered-attack-target-id="hoveredAttackTargetId"
-                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode"
+                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode && !highlightNextPhase"
                 :is-dragging-over="isDraggingOver === 'front'" :set-dragging-over="setDraggingOver"
                 :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver" :on-drop-area="onDrop"
                 :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick" :on-drag-start="onDragStart"
@@ -82,60 +92,144 @@
 
             <battle-row :cards="fieldRear" row-class="row-my-rear" area="rear" area-label="Rear" :is-enemy="false"
                 :hovered-attack-target-id="hoveredAttackTargetId"
-                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode" :is-dragging-over="isDraggingOver === 'rear'"
+                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode && !highlightNextPhase" :is-dragging-over="isDraggingOver === 'rear'"
                 :set-dragging-over="setDraggingOver" :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver"
                 :on-drop-area="onDrop" :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick"
                 :on-drag-start="onDragStart" :on-touch-start="onTouchStart" :on-touch-move="onTouchMove"
                 :on-touch-end="onTouchEnd">
             </battle-row>
         </div>
-        <deck-widget :deck-count="deck?.length || 0" :on-draw-card="drawCard">
-        </deck-widget>
-
-        <div v-if="showAiReplayStepButtons"
-            class="fixed left-1/2 -translate-x-1/2 bottom-3 sm:bottom-4 z-[220] w-[calc(100%-1rem)] max-w-[760px] pointer-events-none">
-            <div
-                class="pointer-events-auto rounded-2xl border border-fuchsia-400/45 bg-black/78 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.45)] overflow-hidden">
-                <div
-                    class="flex items-center justify-between gap-2 px-3 py-2 border-b border-fuchsia-500/20 bg-gradient-to-r from-fuchsia-950/70 via-slate-950/80 to-sky-950/70">
-                    <div class="min-w-0 max-h-24 overflow-y-auto">
-                        <div class="text-[10px] sm:text-[11px] font-bold tracking-[0.18em] text-fuchsia-200 uppercase">
-                            AI Replay Navigator</div>
-                        <div class="text-[11px] sm:text-[12px] text-slate-200 whitespace-pre-wrap">{{
-                            currentAiReplayEventLine || '当前步无事件' }}</div>
+        <div v-else class="flex-1 pt-14 sm:pt-16 px-4 sm:px-6 pb-0 overflow-hidden">
+            <div class="h-full p-2 sm:p-3 flex flex-col gap-3" :style="entryThemeStyle">
+                <div class="flex items-center justify-between gap-3 flex-wrap">
+                    <div class="text-amber-100">
+                        <div class="text-xs sm:text-sm text-amber-300/75 tracking-wide">当前用户</div>
+                        <div v-if="!isEditingPlayerDisplayName" class="text-lg sm:text-xl font-bold tracking-wide text-amber-100">{{ playerDisplayName }}</div>
+                        <div v-else class="flex items-center gap-2 mt-1">
+                            <input
+                                v-model="playerDisplayNameInput"
+                                type="text"
+                                maxlength="24"
+                                class="w-[220px] max-w-[70vw] bg-[#241214]/75 border border-amber-500/30 rounded px-2 py-1 text-sm text-amber-50">
+                            <button @click="savePlayerDisplayName()" class="px-2 py-1 rounded border border-emerald-500/35 bg-emerald-900/45 text-emerald-100 text-xs">保存</button>
+                            <button @click="cancelEditPlayerDisplayName()" class="px-2 py-1 rounded border border-rose-500/25 bg-rose-950/35 text-rose-100 text-xs">取消</button>
+                        </div>
                     </div>
-                    <div
-                        class="shrink-0 text-[11px] sm:text-[12px] text-sky-200 font-semibold px-2 py-1 rounded-full border border-sky-400/30 bg-sky-950/40">
-                        {{ aiReplayCursor + 1 }} / {{ currentAiReplayTimelineLength }}
+                    <div class="flex items-center gap-2">
+                        <button
+                            v-if="!isEditingPlayerDisplayName"
+                            @click="startEditPlayerDisplayName()"
+                            class="px-3 py-1.5 rounded border border-amber-500/35 bg-amber-950/30 hover:bg-amber-900/40 text-amber-100 text-xs sm:text-sm">
+                            修改用户名
+                        </button>
+                        <button
+                            @click="logoutAndClearIdentityData()"
+                            class="px-3 py-1.5 rounded border border-rose-500/35 bg-rose-950/30 hover:bg-rose-900/40 text-rose-100 text-xs sm:text-sm">
+                            登出
+                        </button>
+                        <button
+                            @click="openDeckManager()"
+                            class="px-3 py-1.5 rounded border border-red-500/35 bg-red-950/30 hover:bg-red-900/40 text-rose-100 text-xs sm:text-sm">
+                            打开卡组管理
+                        </button>
                     </div>
                 </div>
+                <div class="flex-1 min-h-0 p-2 sm:p-3" :style="entryPanelStyle">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="text-xs sm:text-sm text-amber-200/90">当前选定卡组预览</div>
+                        <div class="text-[11px] text-rose-100/85">{{ entryDeckPreview.deckName }}</div>
+                    </div>
+                    <div class="flex items-center gap-2 mb-3">
+                        <button
+                            @click="entryDeckPreviewMode = 'all'"
+                            :style="entryDeckPreviewMode === 'all' ? entryTabActiveStyle : entryTabInactiveStyle"
+                            class="px-2.5 py-1 rounded text-[11px] border">
+                            全部
+                        </button>
+                        <button
+                            @click="entryDeckPreviewMode = 'protagonist'"
+                            :style="entryDeckPreviewMode === 'protagonist' ? entryTabActiveStyle : entryTabInactiveStyle"
+                            class="px-2.5 py-1 rounded text-[11px] border">
+                            主人公线
+                        </button>
+                        <button
+                            @click="entryDeckPreviewMode = 'cost'"
+                            :style="entryDeckPreviewMode === 'cost' ? entryTabActiveStyle : entryTabInactiveStyle"
+                            class="px-2.5 py-1 rounded text-[11px] border">
+                            按费用
+                        </button>
+                        <button
+                            @click="entryDeckPreviewMode = 'force'"
+                            :style="entryDeckPreviewMode === 'force' ? entryTabActiveStyle : entryTabInactiveStyle"
+                            class="px-2.5 py-1 rounded text-[11px] border">
+                            按势力
+                        </button>
+                    </div>
+                    <div class="h-full overflow-auto pr-1 space-y-3 pb-8">
+                        <div v-for="section in entryDeckPreviewSections" :key="section.key">
+                            <div class="text-[11px] text-amber-200/85 mb-1.5">{{ section.title }}</div>
+                            <div class="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-2">
+                                <button
+                                    v-for="(card, idx) in section.cards"
+                                    :key="section.key + '-' + (card.instanceId || card.id || card.cardName || card.name || 'c') + '-' + idx"
+                                    @click="openEntryPreviewCardDetail(card)"
+                                    class="relative rounded-lg border border-amber-700/25 bg-[#1e1111]/45 p-1">
+                                    <img
+                                        v-if="card.image"
+                                        :src="card.image"
+                                        :alt="card.cardName || card.name || 'card'"
+                                        class="w-full h-[140px] sm:h-[160px] object-contain">
+                                    <div v-else class="w-full h-[140px] sm:h-[160px] flex items-center justify-center text-[10px] text-slate-400 px-1 text-center">
+                                        {{ card.cardName || card.name || '无图像' }}
+                                    </div>
+                                    <div
+                                        v-if="(card._entryCount || 1) > 1"
+                                        class="absolute top-1 right-1 min-w-5 h-5 px-1 rounded-full bg-amber-500 text-[10px] font-bold text-black flex items-center justify-center">
+                                        {{ card._entryCount }}
+                                    </div>
+                                </button>
+                            </div>
+                        </div>
+                        <div v-if="!entryDeckPreview.cards.length" class="text-center text-slate-400 text-sm py-8">
+                            暂无可预览卡组。请先在卡组管理中选择当前卡组。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <deck-widget v-if="showBattleUi" :deck-count="deck?.length || 0" :show-draw-guide="showDeckDrawGuide" :highlight-guide="showDeckDrawGuide" :on-draw-card="drawCard">
+        </deck-widget>
 
-                <div class="grid grid-cols-[auto_1fr_auto_auto] items-center gap-2 p-2 bg-slate-950/65">
+        <div
+            v-if="showAiReplayStepButtons"
+            data-ai-replay-nav-panel
+            class="fixed z-[240] pointer-events-auto w-[210px] sm:w-[260px]"
+            :style="aiReplayNavigatorStyle">
+            <div class="rounded-2xl border border-fuchsia-400/45 bg-black/78 backdrop-blur-xl shadow-[0_18px_60px_rgba(0,0,0,0.45)] overflow-hidden">
+                <div
+                    class="h-5 flex items-center justify-center text-fuchsia-200/80 bg-fuchsia-950/50 border-b border-fuchsia-500/25 cursor-move touch-none select-none"
+                    @pointerdown="startAiReplayNavigatorDrag"
+                    @pointermove="moveAiReplayNavigatorDrag"
+                    @pointerup="endAiReplayNavigatorDrag"
+                    @pointercancel="endAiReplayNavigatorDrag">
+                    ⋮⋮
+                </div>
+                <div class="grid grid-cols-2 gap-2 p-2 bg-slate-950/65">
                     <button @click="stepAiReplayPrev()" :disabled="!canStepAiReplayPrev"
                         :class="canStepAiReplayPrev ? 'bg-sky-700/90 hover:bg-sky-600 border-sky-300/40 text-white shadow-[0_0_18px_rgba(56,189,248,0.25)]' : 'bg-sky-950/50 border-sky-900/60 text-sky-200/35 cursor-not-allowed'"
-                        class="min-w-[92px] sm:min-w-[108px] px-3 sm:px-4 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
+                        class="px-3 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
                         上一步
                     </button>
-
-                    <div class="hidden sm:flex items-center justify-center text-[11px] text-slate-300 px-2">
-                        逐步查看战场、支援与战斗结果
-                    </div>
-
-                    <button @click="toggleAiReplayPanelHiddenFromControlBar()"
-                        class="px-3 py-2.5 rounded-xl border border-fuchsia-400/30 bg-fuchsia-950/45 text-fuchsia-100 hover:bg-fuchsia-900/55 text-[12px] sm:text-[13px] font-bold transition-colors">
-                        {{ isAiReplayPanelHidden ? '显示面板' : '隐藏面板' }}
-                    </button>
-
                     <button @click="stepAiReplayNext()" :disabled="!canStepAiReplayNext"
                         :class="canStepAiReplayNext ? 'bg-fuchsia-700/90 hover:bg-fuchsia-600 border-fuchsia-300/40 text-white shadow-[0_0_18px_rgba(217,70,239,0.25)]' : 'bg-fuchsia-950/50 border-fuchsia-900/60 text-fuchsia-200/35 cursor-not-allowed'"
-                        class="min-w-[92px] sm:min-w-[108px] px-3 sm:px-4 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
+                        class="px-3 py-2.5 rounded-xl border text-[12px] sm:text-[13px] font-bold transition-colors">
                         下一步
                     </button>
                 </div>
             </div>
         </div>
-        <div class="hand-container-fixed">
-            <bond-strip :bonds="bonds" :current-phase="currentPhase" :has-placed-bond="hasPlacedBond"
+        <div v-if="showBattleUi" class="hand-container-fixed">
+            <bond-strip :bonds="bonds" :current-phase="currentPhase" :is-my-turn="isMyTurn" :has-placed-bond="hasPlacedBond"
                 :is-dev-mode="isDevMode" :is-dragging-over="isDraggingOver" :get-card-faction-info="getCardFactionInfo"
                 :set-dragging-over="setDraggingOver" :on-drop="onDrop" :on-open-panel="openBondsPanel"
                 :on-select-card="selectCard">
@@ -147,13 +241,13 @@
             </hand-strip>
         </div>
 
-        <side-panel-buttons mode="player" :items="playerPanelButtons" :on-open-panel="openPanel">
+        <side-panel-buttons v-if="showBattleUi" mode="player" :items="playerPanelButtons" :on-open-panel="openPanel">
         </side-panel-buttons>
 
-        <side-panel-buttons mode="enemy" :items="enemyPanelButtons" :on-open-panel="openPanel">
+        <side-panel-buttons v-if="showBattleUi" mode="enemy" :items="enemyPanelButtons" :on-open-panel="openPanel">
         </side-panel-buttons>
 
-        <div v-if="hoveredAttackTargetRect"
+        <div v-if="showBattleUi && hoveredAttackTargetRect"
             :class="['attack-target-screen-overlay', { 'attack-target-screen-overlay--mc': [...opponentFront, ...opponentRear].some(card => String(card.instanceId) === String(hoveredAttackTargetId) && card.isMainCharacter) }]"
             :style="{
             top: hoveredAttackTargetRect.top + 'px',
@@ -163,7 +257,7 @@
         }">
         </div>
 
-        <combat-overlay :is-combat-active="isCombatActive" :my-support-card="mySupportCard"
+        <combat-overlay v-if="showBattleUi" :is-combat-active="isCombatActive" :my-support-card="mySupportCard"
             :opp-support-card="oppSupportCard" :attacker="attacker" :defender="defender" :combat-stats="combatStats"
             :combat-decision="combatDecision" :cost-cards="combatCostCandidates"
             :selected-cost-card="selectedCombatCostCard" :selected-cost-card-name="selectedCombatCostCardName"
@@ -171,12 +265,12 @@
             :on-open-cost-picker="openCombatCostPicker" :on-combat-decision="handleCombatDecision">
         </combat-overlay>
 
-        <region-panel :active-panel="activePanel" :panel-title="resolvedPanelTitle" :panel-cards="resolvedPanelCards"
+        <region-panel v-if="showBattleUi" :active-panel="activePanel" :panel-title="resolvedPanelTitle" :panel-cards="resolvedPanelCards"
             :is-dev-mode="isDevMode" :is-opponent-panel="isOpponentPanel" :on-close="closeActivePanel"
             :on-card-click="handleRegionPanelCardClick">
         </region-panel>
 
-        <card-detail-modal :selected-card="selectedCard" :primary-action-label="selectedCardAbilityPrimaryLabel"
+        <card-detail-modal v-if="showBattleUi" :selected-card="selectedCard" :primary-action-label="selectedCardAbilityPrimaryLabel"
             :on-primary-action="onSelectedCardAbilityPrimary"
             :secondary-action-label="selectedCardAbilitySecondaryLabel"
             :on-secondary-action="onSelectedCardAbilitySecondary"
@@ -194,16 +288,61 @@
             :on-close="closeSelectedCard" :on-open-full-image="openFullImage">
         </card-detail-modal>
 
-        <opp-hand-panel :active-panel="activePanel" :opp-hand-cards="oppHand" :opp-hand-count="oppStats.hand"
+        <opp-hand-panel v-if="showBattleUi" :active-panel="activePanel" :opp-hand-cards="oppHand" :opp-hand-count="oppStats.hand"
             :is-dev-mode="isDevMode" :on-close="closeActivePanel">
         </opp-hand-panel>
 
-        <opp-deck-panel :active-panel="activePanel" :opp-deck-cards="oppDeck" :is-dev-mode="isDevMode"
+        <opp-deck-panel v-if="showBattleUi" :active-panel="activePanel" :opp-deck-cards="oppDeck" :is-dev-mode="isDevMode"
             :on-close="closeActivePanel">
         </opp-deck-panel>
 
         <deck-manager-modal :visible="showDeckManager" :on-close="closeDeckManager">
         </deck-manager-modal>
+
+        <div
+            v-if="!showBattleUi && entryPreviewSelectedCard"
+            class="fixed inset-0 z-[230] flex items-center justify-center p-4">
+            <div class="absolute inset-0 bg-black/85 backdrop-blur-sm" @click="closeEntryPreviewCardDetail()"></div>
+            <div class="relative w-full max-w-md rounded-2xl border border-amber-500/35 bg-[#160f0f]/95 overflow-hidden">
+                <div class="flex p-4 gap-4 bg-[#2a1713]/60 border-b border-amber-700/25">
+                    <div class="w-20 h-28 flex-shrink-0 shadow-lg">
+                        <img :src="entryPreviewSelectedCard.image" class="w-full h-full object-contain rounded">
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-bold text-amber-100 text-sm leading-tight">{{ entryPreviewSelectedCard.cardName || entryPreviewSelectedCard.name }}</h3>
+                        <div class="grid grid-cols-2 gap-x-2 mt-2 text-[11px] text-amber-200/70">
+                            <div>费用: <span class="text-amber-100">{{ entryPreviewSelectedCard.cost }}</span></div>
+                            <div>射程: <span class="text-amber-100">{{ entryPreviewSelectedCard.range || '-' }}</span></div>
+                            <div>战力: <span class="text-rose-300 font-bold">{{ entryPreviewSelectedCard.attack }}</span></div>
+                            <div>支援: <span class="text-yellow-300">{{ entryPreviewSelectedCard.support }}</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="px-4 py-3 space-y-3 max-h-[52vh] overflow-y-auto">
+                    <div>
+                        <div class="text-[10px] text-amber-300 font-bold mb-1 uppercase">Unit Ability / 单元能力</div>
+                        <div
+                            class="text-[11px] leading-relaxed text-amber-50/90 whitespace-pre-wrap"
+                            v-html="formattedAbility(getEntryCardAbilityText(entryPreviewSelectedCard))">
+                        </div>
+                    </div>
+                    <div>
+                        <div class="text-[10px] text-yellow-300 font-bold mb-1 uppercase">Support Ability / 支援能力</div>
+                        <div
+                            class="text-[11px] leading-relaxed text-amber-100/85 whitespace-pre-wrap"
+                            v-html="formattedSupport(getEntryCardSupportText(entryPreviewSelectedCard))">
+                        </div>
+                    </div>
+                </div>
+                <div class="p-3 border-t border-amber-700/25 bg-[#1f1212]/60">
+                    <button
+                        @click="closeEntryPreviewCardDetail()"
+                        class="w-full py-2 rounded border border-amber-500/40 bg-amber-900/35 text-amber-100 text-[12px] font-bold">
+                        关闭
+                    </button>
+                </div>
+            </div>
+        </div>
 
         <!-- AI Duel Setup Modal -->
         <div v-if="showAiDuelSetup" class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showAiDuelSetup = false">
@@ -270,7 +409,7 @@
         </div>
 
         <!-- Mulligan Overlay -->
-        <div v-if="mulliganState !== 'idle' && mulliganState !== 'done'"
+        <div v-if="showBattleUi && mulliganState !== 'idle' && mulliganState !== 'done'"
             class="fixed top-1/4 left-1/2 -translate-x-1/2 z-[200] bg-slate-900/95 border border-sky-500/40 backdrop-blur-md flex flex-col items-center justify-center gap-4 p-6 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.8)] min-w-[320px]">
 
             <div class="text-xl font-bold text-white tracking-widest">开局调度 (Mulligan)</div>

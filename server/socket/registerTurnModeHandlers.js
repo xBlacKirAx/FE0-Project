@@ -1,6 +1,7 @@
 function registerTurnModeHandlers({ socket, EVT, log, relayToRoomPeers }) {
     socket.on(EVT.SYNC_PHASE, (data) => {
         log(socket.id, `阶段切换 → ${data?.phaseName || data?.phase}`);
+        relayToRoomPeers(socket, EVT.SYNC_PHASE, data);
     });
 
     socket.on(EVT.TURN_END, () => {
@@ -12,6 +13,7 @@ function registerTurnModeHandlers({ socket, EVT, log, relayToRoomPeers }) {
         log(socket.id, `切换模式 → isDevMode:${data?.isDevMode}`);
         relayToRoomPeers(socket, EVT.OPPONENT_DEV_MODE_CHANGED, data);
     });
+
 }
 
 module.exports = { registerTurnModeHandlers };

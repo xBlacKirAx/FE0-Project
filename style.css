@@ -2,12 +2,23 @@
 /* style.css 全量替换或修改以下部分 */
 :root {
     --app-height: 100vh;
+    /* 射程高亮主题色（默认鲜红） */
+    --attack-range-rgb: 239, 68, 68;
 }
 /* style.css */
 *, *::before, *::after {
     box-sizing: border-box;
     -webkit-user-drag: none;
     user-drag: none;
+}
+
+/* Allow HTML5 drag-and-drop for card elements on desktop browsers. */
+.deployable-card,
+.deployable-card *,
+.card-base,
+.card-base * {
+    -webkit-user-drag: element;
+    user-drag: element;
 }
 html, body {
     height: 100%;
@@ -18,6 +29,10 @@ html, body {
     width: 100%;
     touch-action: manipulation;
     overscroll-behavior-x: none;
+    background:
+        radial-gradient(120% 90% at 50% -10%, rgba(120, 34, 26, 0.28) 0%, rgba(120, 34, 26, 0) 58%),
+        linear-gradient(180deg, #120b0b 0%, #0d0a0b 52%, #0a090b 100%);
+    background-color: #0b090a;
 }
 
 #app {
@@ -26,6 +41,7 @@ html, body {
     /* 使用变量，由 app.js 动态计算准确高度 */
     height: var(--app-height, 100vh); 
     width: 100vw;
+    background: transparent;
 }
 
 
@@ -219,6 +235,17 @@ html, body {
     text-transform: uppercase;
     pointer-events: none;
     z-index: 1;
+}
+
+/* 默认隐藏，仅在移动端显示滚动提示/把手 */
+.row-scroll-assist-hint,
+.row-scroll-assist-handle {
+    display: none;
+}
+
+.battle-row.row-scroll-assist-active .battle-row-track {
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 /* 手牌区：固定在底部，不参与战场伸缩 */
@@ -642,6 +669,28 @@ html, body {
 .phase-btn:hover { background: rgba(153, 27, 27, 0.95); }
 .phase-btn:active { transform: scale(0.95); }
 
+@keyframes next-phase-guide-pulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(251, 191, 36, 0.0);
+        filter: brightness(1);
+    }
+    50% {
+        transform: scale(1.08);
+        box-shadow: 0 0 20px rgba(251, 191, 36, 0.52);
+        filter: brightness(1.08);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 rgba(251, 191, 36, 0.0);
+        filter: brightness(1);
+    }
+}
+
+.next-phase-guide {
+    animation: next-phase-guide-pulse 1.8s ease-in-out infinite;
+}
+
 /* 禁用状态的视觉反馈 */
 .phase-disabled {
     opacity: 0.3;
@@ -820,6 +869,47 @@ html, body {
         right: 1px;
         border-width: 1.5px;
     }
+
+    .row-scroll-assist-hint {
+        display: block;
+        position: absolute;
+        bottom: 2px;
+        z-index: 9;
+        font-size: 10px;
+        color: rgba(226, 232, 240, 0.86);
+        background: rgba(2, 6, 23, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 999px;
+        padding: 1px 8px;
+        pointer-events: none;
+        white-space: nowrap;
+        writing-mode: horizontal-tb;
+        line-height: 1.2;
+    }
+
+    .row-scroll-assist-handle {
+        display: flex;
+        position: absolute;
+        bottom: 2px;
+        z-index: 10;
+        width: 74px;
+        height: 16px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.78);
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+        touch-action: pan-x;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .row-scroll-assist-handle .handle-bar {
+        width: 26px;
+        height: 3px;
+        border-radius: 999px;
+        background: rgba(226, 232, 240, 0.9);
+    }
+
 }
 /* ========================================= */
 /* 🔄 卡牌横置状态 (Tapped State) 🔄 */
@@ -848,6 +938,29 @@ html, body {
     overflow: visible !important;
 }
 
+@keyframes attack-range-row-glow {
+    0% {
+        box-shadow: inset 0 0 5px rgba(var(--attack-range-rgb), 0.2);
+        outline-color: rgba(var(--attack-range-rgb), 0.35);
+    }
+    50% {
+        box-shadow: inset 0 0 20px rgba(var(--attack-range-rgb), 0.5);
+        outline-color: rgba(var(--attack-range-rgb), 0.82);
+    }
+    100% {
+        box-shadow: inset 0 0 5px rgba(var(--attack-range-rgb), 0.2);
+        outline-color: rgba(var(--attack-range-rgb), 0.35);
+    }
+}
+
+.battle-row.attack-range-row-active {
+    animation: attack-range-row-glow 2s infinite ease-in-out;
+    background-color: rgba(var(--attack-range-rgb), 0.08) !important;
+    outline: 2px solid rgba(var(--attack-range-rgb), 0.62) !important;
+    outline-offset: -2px;
+    border-color: transparent !important;
+}
+
 .attack-target-lift {
     top: -3px;
     left: -2px;
@@ -858,16 +971,16 @@ html, body {
 @keyframes attack-range-breathe {
     0%, 100% {
         box-shadow:
-            0 0 0 1px rgba(34, 211, 238, 0.35),
-            0 0 0 3px rgba(8, 145, 178, 0.2),
-            0 0 10px rgba(34, 211, 238, 0.24);
+            0 0 0 1px rgba(var(--attack-range-rgb), 0.35),
+            0 0 0 3px rgba(var(--attack-range-rgb), 0.2),
+            0 0 10px rgba(var(--attack-range-rgb), 0.24);
         transform: translateY(0);
     }
     50% {
         box-shadow:
-            0 0 0 1px rgba(34, 211, 238, 0.55),
-            0 0 0 4px rgba(8, 145, 178, 0.28),
-            0 0 14px rgba(34, 211, 238, 0.34);
+            0 0 0 1px rgba(var(--attack-range-rgb), 0.55),
+            0 0 0 4px rgba(var(--attack-range-rgb), 0.28),
+            0 0 14px rgba(var(--attack-range-rgb), 0.34);
         transform: translateY(-1px);
     }
 }

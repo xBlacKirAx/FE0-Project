@@ -3,7 +3,8 @@ function createConnectionRegistry(io, EVT) {
     const socketRoomMap = new Map();
     const rooms = new Map(); // roomId -> { hostId, guestId, password }
 
-    const playerLabel = (socketId) => playerMap.get(socketId) || `(?${String(socketId || '').slice(-4)})`;
+    const sanitizePlayerName = (raw) => String(raw || '').trim().slice(0, 24);
+    const playerLabel = (socketId) => playerMap.get(socketId) || `用户${String(socketId || '').slice(-4)}`;
     const log = (socketId, msg) => {
         console.log(`[LOG ${new Date().toTimeString().slice(0, 8)}] [${playerLabel(socketId)}] ${msg}`);
     };
@@ -23,6 +24,8 @@ function createConnectionRegistry(io, EVT) {
                 roomId: '',
                 hostId: null,
                 guestId: null,
+                hostName: '',
+                guestName: '',
                 playerCount: 0,
                 ready: false,
                 gameInProgress: false,
@@ -39,6 +42,8 @@ function createConnectionRegistry(io, EVT) {
             roomId,
             hostId,
             guestId,
+            hostName: hostId ? playerLabel(hostId) : '',
+            guestName: guestId ? playerLabel(guestId) : '',
             playerCount,
             ready: playerCount === 2,
             gameInProgress: !!room.gameInProgress,
@@ -56,6 +61,8 @@ function createConnectionRegistry(io, EVT) {
                 roomId: '',
                 hostId: null,
                 guestId: null,
+                hostName: '',
+                guestName: '',
                 playerCount: 0,
                 ready: false,
                 gameInProgress: false,
@@ -88,6 +95,10 @@ function createConnectionRegistry(io, EVT) {
         if (!room) return;
         if (room.hostId === socket.id) room.hostId = null;
         if (room.guestId === socket.id) room.guestId = null;
+        room.gameInProgress = false;
+        room.firstPlayerId = null;
+        room.mulliganDoneMap = {};
+        log(socket.id, `退出房间 ${roomId}`);
 
         emitRoomStateToMember(socket.id);
 
@@ -104,7 +115,15 @@ function createConnectionRegistry(io, EVT) {
 
         const roomId = generateRoomId();
         const password = String(payload.password || '').trim();
-        rooms.set(roomId, { hostId: socket.id, guestId: null, password: password || null, lastGameStartAt: 0, gameInProgress: false });
+        rooms.set(roomId, {
+            hostId: socket.id,
+            guestId: null,
+            password: password || null,
+            lastGameStartAt: 0,
+            gameInProgress: false,
+            firstPlayerId: null,
+            mulliganDoneMap: {}
+        });
         socket.join(roomId);
         socketRoomMap.set(socket.id, roomId);
         emitRoomStateToRoom(roomId);
@@ -164,6 +183,7 @@ function createConnectionRegistry(io, EVT) {
         // 新匹配逻辑：优先加入人数为1的公开房（password 为空）
         for (const [roomId, room] of rooms.entries()) {
             if (room.password) continue;
+            if (room.gameInProgress) continue;
 
             const hostConnected = !!room.hostId && io.sockets.sockets.has(room.hostId);
             const guestConnected = !!room.guestId && io.sockets.sockets.has(room.guestId);
@@ -188,7 +208,15 @@ function createConnectionRegistry(io, EVT) {
 
         // 没有可加入的公开单人房，则创建公开房并等待下一位匹配者
         const roomId = generateRoomId();
-        rooms.set(roomId, { hostId: socket.id, guestId: null, password: null, lastGameStartAt: 0, gameInProgress: false });
+        rooms.set(roomId, {
+            hostId: socket.id,
+            guestId: null,
+            password: null,
+            lastGameStartAt: 0,
+            gameInProgress: false,
+            firstPlayerId: null,
+            mulliganDoneMap: {}
+        });
         socket.join(roomId);
         socketRoomMap.set(socket.id, roomId);
         emitRoomStateToRoom(roomId);
@@ -226,24 +254,66 @@ function createConnectionRegistry(io, EVT) {
         }
         room.lastGameStartAt = now;
         room.gameInProgress = true;
+        const firstPlayerId = Math.random() < 0.5 ? room.hostId : room.guestId;
+        room.firstPlayerId = firstPlayerId;
+        room.mulliganDoneMap = {
+            [room.hostId]: false,
+            [room.guestId]: false
+        };
 
         io.to(roomId).emit(EVT.ROOM_GAME_STARTED, {
             roomId,
             startedBy: socket.id,
+            firstPlayerId,
             ts: now
         });
         log(socket.id, `房间 ${roomId} 开局`);
         return true;
     };
 
+    const handleMulliganDecision = (socket, data = {}) => {
+        const roomId = socketRoomMap.get(socket.id);
+        if (!roomId) return false;
+        const room = rooms.get(roomId);
+        if (!room || !room.hostId || !room.guestId) return false;
+
+        const decisionDone = String(data?.state || '').trim() === 'done';
+        if (!room.mulliganDoneMap || typeof room.mulliganDoneMap !== 'object') {
+            room.mulliganDoneMap = {
+                [room.hostId]: false,
+                [room.guestId]: false
+            };
+        }
+        room.mulliganDoneMap[socket.id] = decisionDone;
+        socket.to(roomId).emit(EVT.OPPONENT_MULLIGAN_DECISION, { state: decisionDone ? 'done' : 'awaiting' });
+
+        const hostDone = !!room.mulliganDoneMap[room.hostId];
+        const guestDone = !!room.mulliganDoneMap[room.guestId];
+        io.to(roomId).emit(EVT.ROOM_MULLIGAN_STATE, {
+            roomId,
+            hostDone,
+            guestDone
+        });
+
+        if (hostDone && guestDone) {
+            io.to(roomId).emit(EVT.ROOM_MULLIGAN_DONE, {
+                roomId,
+                firstPlayerId: room.firstPlayerId || room.hostId
+            });
+        }
+        return true;
+    };
+
     const onConnect = (socket) => {
-        const label = playerMap.size === 0 ? '玩家A' : playerMap.size === 1 ? '玩家B' : `观战${playerMap.size - 1}`;
+        const label = sanitizePlayerName(socket.handshake?.auth?.playerName) || `用户${socket.id.slice(-4)}`;
         playerMap.set(socket.id, label);
         console.log(`[连接] ${label} (${socket.id.slice(-4)}) 已连接，当前在线: ${io.engine.clientsCount}`);
         socket.emit(EVT.ROOM_STATE, {
             roomId: '',
             hostId: null,
             guestId: null,
+            hostName: '',
+            guestName: '',
             playerCount: 0,
             ready: false,
             gameInProgress: false,
@@ -262,6 +332,10 @@ function createConnectionRegistry(io, EVT) {
             if (room) {
                 if (room.hostId === socketId) room.hostId = null;
                 if (room.guestId === socketId) room.guestId = null;
+                room.gameInProgress = false;
+                room.firstPlayerId = null;
+                room.mulliganDoneMap = {};
+                log(socketId, `离开房间 ${roomId}（连接断开）`);
                 if (!room.hostId && !room.guestId) {
                     rooms.delete(roomId);
                 } else {
@@ -273,16 +347,28 @@ function createConnectionRegistry(io, EVT) {
         playerMap.delete(socketId);
     };
 
+    const setPlayerName = (socket, rawName) => {
+        const next = sanitizePlayerName(rawName);
+        if (!next) return;
+        const prev = playerMap.get(socket.id);
+        playerMap.set(socket.id, next);
+        if (prev && prev !== next) {
+            log(socket.id, `更新用户名：${prev} -> ${next}`);
+        }
+    };
+
     return {
         log,
         onConnect,
         onDisconnect,
+        setPlayerName,
         createRoom,
         joinRoom,
         quickMatch,
         leaveCurrentRoom,
         relayToRoomPeers,
-        startRoomGame
+        startRoomGame,
+        handleMulliganDecision
     };
 }
 

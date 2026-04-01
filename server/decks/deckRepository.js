@@ -124,6 +124,53 @@ function hiddenPasswordExists(password) {
     return fs.existsSync(folderPath);
 }
 
+function ensureHiddenStore(password) {
+    const normalized = normalizePassword(password);
+    if (!normalized) return false;
+    ensureStore({ password: normalized });
+    return true;
+}
+
+function renameHiddenStore(oldPassword, newPassword) {
+    const source = normalizePassword(oldPassword);
+    const target = normalizePassword(newPassword);
+    if (!source || !target) {
+        return { ok: false, reason: 'invalid-password' };
+    }
+    if (source === target) {
+        ensureStore({ password: target });
+        return { ok: true, moved: false };
+    }
+
+    const sourceInfo = getStoreInfo({ password: source });
+    const targetInfo = getStoreInfo({ password: target });
+    const sourceExists = fs.existsSync(sourceInfo.folderPath);
+    if (!sourceExists) {
+        ensureStore({ password: target });
+        return { ok: true, moved: false };
+    }
+
+    if (fs.existsSync(targetInfo.folderPath)) {
+        const sourceDecks = readAll({ password: source });
+        const targetDecks = readAll({ password: target });
+        const merged = [...targetDecks];
+        const existingIds = new Set(targetDecks.map(deck => String(deck.id || '')));
+        for (const deck of sourceDecks) {
+            const id = String(deck?.id || '');
+            if (id && existingIds.has(id)) continue;
+            merged.push(deck);
+        }
+        writeAll(merged, { password: target });
+        fs.rmSync(sourceInfo.folderPath, { recursive: true, force: true });
+        return { ok: true, moved: true };
+    }
+
+    fs.mkdirSync(path.dirname(targetInfo.folderPath), { recursive: true });
+    fs.renameSync(sourceInfo.folderPath, targetInfo.folderPath);
+    ensureStore({ password: target });
+    return { ok: true, moved: true };
+}
+
 module.exports = {
     readAll,
     writeAll,
@@ -131,5 +178,7 @@ module.exports = {
     update,
     remove,
     getById,
-    hiddenPasswordExists
+    hiddenPasswordExists,
+    ensureHiddenStore,
+    renameHiddenStore
 };

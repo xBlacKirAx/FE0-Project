@@ -1,6 +1,11 @@
 // modules/uiActions.js
 
 export function createUiActions({ state, cardOps, rules }) {
+    const notify = (message, duration = 2200) => {
+        window.dispatchEvent(new CustomEvent('fe0:notice', {
+            detail: { message: String(message || ''), duration }
+        }));
+    };
     const resolveLatestCard = (card) => {
         const targetId = String(card?.instanceId || '').trim();
         if (!targetId) return card;
@@ -50,13 +55,13 @@ export function createUiActions({ state, cardOps, rules }) {
 
     const safePlayToField = (card, area) => {
         if (!rules.canPerformAction('deploy')) {
-            alert('只能在出击阶段 (DEPLOY) 部署单位！');
+            notify('只能在出击阶段部署单位。');
             return;
         }
 
         const deployCheck = rules.canDeployCard(card);
         if (!deployCheck.valid) {
-            alert(deployCheck.message);
+            notify(deployCheck.message || '当前无法出击该单位。');
             return;
         }
 

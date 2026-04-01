@@ -48,6 +48,9 @@
         ROOM_ERROR: 'room-error',
         ROOM_START_GAME: 'room-start-game',
         ROOM_GAME_STARTED: 'room-game-started',
+        ROOM_MULLIGAN_STATE: 'room-mulligan-state',
+        ROOM_MULLIGAN_DONE: 'room-mulligan-done',
+        PLAYER_SET_NAME: 'player-set-name',
         MULLIGAN_DECISION: 'mulligan-decision',
         OPPONENT_MULLIGAN_DECISION: 'opponent-mulligan-decision'
     });

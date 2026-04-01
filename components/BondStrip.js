@@ -5,6 +5,7 @@ export const BondStrip = {
             default: () => []
         },
         currentPhase: String,
+        isMyTurn: Boolean,
         hasPlacedBond: Boolean,
         isDevMode: Boolean,
         isDraggingOver: String,
@@ -33,7 +34,7 @@ export const BondStrip = {
         <div class="h-10 px-2 flex items-center gap-1 bonds-area bond-strip-scroll"
              data-area="bonds"
              :class="{
-                 'guide-bond-active': currentPhase === 'BOND' && !hasPlacedBond && !isDevMode,
+                 'guide-bond-active': isMyTurn && currentPhase === 'BOND' && !hasPlacedBond && !isDevMode,
                  'dragging-over': isDraggingOver === 'bonds'
              }"
              @dragover.prevent="setDraggingOver('bonds')"

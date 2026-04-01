@@ -136,6 +136,10 @@ export const TopControlBar = {
             type: Function,
             required: true
         },
+        highlightNextPhase: {
+            type: Boolean,
+            default: false
+        },
         roomStatusText: {
             type: String,
             default: '未加入房间'
@@ -192,7 +196,9 @@ export const TopControlBar = {
     methods: {
         handleUndoClick() {
             if (this.undoDisabled) {
-                alert('本回合已发生战斗，无法撤销。');
+                window.dispatchEvent(new CustomEvent('fe0:notice', {
+                    detail: { message: '本回合已发生战斗，无法撤销。', duration: 2200 }
+                }));
                 return;
             }
             this.onUndo();
@@ -205,7 +211,8 @@ export const TopControlBar = {
         }
     },
     template: `
-        <div class="phase-control-bar pointer-events-auto w-full px-2 sm:px-4 py-1.5 flex justify-between sm:justify-center sm:gap-12 items-center bg-black/80 backdrop-blur-md border-b border-white/10 z-[80]">
+        <div :class="showAiReplayCurrentLine ? 'z-[260]' : 'z-[80]'"
+             class="phase-control-bar pointer-events-auto w-full px-2 sm:px-4 py-1.5 flex justify-between sm:justify-center sm:gap-12 items-center bg-black/80 backdrop-blur-md border-b border-white/10">
             <div class="flex items-center gap-2 sm:gap-4 shrink-0">
                 <div v-if="showDevModeToggle" @click="onToggleDevMode()" class="flex items-center gap-1.5 cursor-pointer">
                     <div :class="isDevMode ? 'bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.8)]' : 'bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.8)]'" class="w-2 h-2 rounded-full"></div>
@@ -308,11 +315,12 @@ export const TopControlBar = {
             </div>
 
             <div class="flex items-center gap-1.5 shrink-0">
-                <span v-if="showRoomStatusText" class="hidden sm:inline text-[9px] text-cyan-300 max-w-[180px] truncate" :title="roomStatusText">{{ roomStatusText }}</span>
+                <span v-if="showRoomStatusText" class="text-[9px] text-cyan-300 max-w-[110px] sm:max-w-[180px] truncate" :title="roomStatusText">{{ roomStatusText }}</span>
                 <span v-if="showPhaseName" class="text-[9px] sm:text-[10px] font-bold text-amber-500 w-12 sm:w-16 text-center uppercase">{{ phaseName || 'BEGINNING' }}</span>
 
                 <button v-if="showNextPhaseButton"
                         @click="onNextPhase()"
+                        :class="highlightNextPhase ? 'next-phase-guide ring-2 ring-amber-300/80 shadow-[0_0_14px_rgba(251,191,36,0.55)]' : ''"
                         class="phase-btn px-2 py-1 text-[9px] sm:text-[10px] min-w-[45px]">
                     {{ nextPhaseLabel }}
                 </button>

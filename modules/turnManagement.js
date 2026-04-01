@@ -5,6 +5,9 @@ import { getNextPhase, PHASE_NAME_MAP } from './engine/phaseEngine.js';
 import { setBeginningPhaseState, clearTurnUsageState, untapArea } from './commands/turnCommands.js';
 import { emitSyncPhase, emitTurnEnd, emitSyncUntapAll } from './effects/socketEffects.js';
 
+// 结束阶段默认自动跳过；后续有在 END 阶段触发的能力时可改为 false。
+const AUTO_SKIP_END_PHASE = true;
+
 export function createTurnManager(state, cardOps) {
     const { currentPhase, hasPlacedBond, isMyTurn, socket } = state;
 
@@ -16,6 +19,12 @@ export function createTurnManager(state, cardOps) {
         const next = getNextPhase(currentPhase.value);
 
         if (next) {
+            if (AUTO_SKIP_END_PHASE && next === 'END') {
+                currentPhase.value = 'BEGINNING';
+                hasPlacedBond.value = false;
+                endTurn();
+                return;
+            }
             if (prev === 'DEPLOY' && next === 'ATTACK' && state.undoStack) {
                 state.undoStack.value.push({
                     type: 'phase-transition',
@@ -92,9 +101,8 @@ export function createTurnManager(state, cardOps) {
                 }
             }, 200);
         } else {
-            console.log('回合开始，自动抽1张卡。');
-            // 抽卡动画结束后，会自动进入BOND阶段
-            cardOps.drawCard({ isAutoDraw: false });
+            // 后攻/常规回合：由玩家手动点击牌组抽卡，再进入羁绊阶段。
+            console.log('回合开始，等待玩家手动抽卡。');
         }
     };
 

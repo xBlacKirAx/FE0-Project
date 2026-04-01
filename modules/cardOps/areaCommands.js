@@ -134,22 +134,15 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         };
     };
     const performMulliganOps = () => {
-        // 1. 获取当前手牌数量（通常是6）
         const handCount = refs.hand.value.length;
-
-        // 2. 将手牌放回卡组
         refs.deck.value.push(...refs.hand.value);
         refs.hand.value = [];
-
-        // 3. 洗牌 (如果你里面有 shuffleDeck 函数的话，调用它)
-        if (typeof shuffleDeck === 'function') {
-            shuffleDeck();
-        }
-
-        // 4. 重新抽同等数量的牌
+        shuffleInPlace(refs.deck.value);
         for (let i = 0; i < handCount; i++) {
-            // 假设 drawCard 是在这个文件里定义的抽卡函数
-            drawCard({ bypassPhaseCheck: true });
+            const card = refs.deck.value.pop();
+            if (!card) break;
+            card.isFaceDown = false;
+            refs.hand.value.push(card);
         }
     };
     const recycleGraveyardIntoDeckIfNeeded = () => {
@@ -761,7 +754,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         if (!state.isDevMode.value) {
             if (!state.isMyTurn.value) return;
             if (!bypassPhaseCheck && state.firstPlayerOpeningTurnLocked?.value) {
-                alert('先攻第一回合不能在开始阶段抽卡。');
+                console.log('先攻第一回合不能在开始阶段抽卡，自动进入羁绊阶段。');
                 state.currentPhase.value = 'BOND';
                 const phaseName = state.PHASES?.['BOND']?.name || 'BOND';
                 emitSyncPhase(socket, { phase: state.currentPhase.value, phaseName });
