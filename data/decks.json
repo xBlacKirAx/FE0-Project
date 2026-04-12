@@ -148,5 +148,69 @@
     ],
     "createdAt": "2026-03-31T19:57:48.215Z",
     "updatedAt": "2026-03-31T19:57:48.215Z"
+  },
+  {
+    "id": "deck_ddc6ab048920",
+    "name": "教学关卡组",
+    "format": "standard",
+    "notes": "",
+    "protagonistCardId": "B01-053",
+    "protagonistCharaName": "库洛姆",
+    "cards": [
+      {
+        "cardId": "B01-053",
+        "count": 2
+      },
+      {
+        "cardId": "B01-051",
+        "count": 4
+      },
+      {
+        "cardId": "B01-056",
+        "count": 4
+      },
+      {
+        "cardId": "B01-057",
+        "count": 4
+      },
+      {
+        "cardId": "B01-058",
+        "count": 4
+      },
+      {
+        "cardId": "B01-060",
+        "count": 4
+      },
+      {
+        "cardId": "B01-061",
+        "count": 4
+      },
+      {
+        "cardId": "B01-062",
+        "count": 4
+      },
+      {
+        "cardId": "B01-063",
+        "count": 4
+      },
+      {
+        "cardId": "B01-069",
+        "count": 4
+      },
+      {
+        "cardId": "B01-072",
+        "count": 4
+      },
+      {
+        "cardId": "B01-076",
+        "count": 4
+      },
+      {
+        "cardId": "B01-085",
+        "count": 4
+      }
+    ],
+    "createdAt": "2026-04-06T18:05:15.901Z",
+    "updatedAt": "2026-04-12T02:08:08.499Z"
   }
 ]

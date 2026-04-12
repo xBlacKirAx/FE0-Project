@@ -54,8 +54,11 @@ export const DeckManagerModal = {
             showPreviewFullImage: false,
             showImportPanel: false,
             showDeckContentsModal: false,
+            showViewDeckModal: false,
+            viewDeckPayload: null,
             currentView: 'manager',
             draftDeck: null,
+            editingDeckId: null,
             draftHiddenPassword: '',
             actionDeckId: '',
             activeFilterType: '',
@@ -255,6 +258,23 @@ export const DeckManagerModal = {
                 card: map.get(item.cardId) || null
             }));
         },
+        viewDeckCardDetails() {
+            const map = new Map(this.cardPool.map(card => [card.id, card]));
+            const cards = this.viewDeckPayload?.cards;
+            if (!Array.isArray(cards)) return [];
+            return cards
+                .map(item => ({
+                    cardId: String(item?.cardId || '').trim(),
+                    count: Number(item?.count) || 0,
+                    card: map.get(String(item?.cardId || '').trim()) || null
+                }))
+                .filter(item => item.cardId && item.count > 0);
+        },
+        viewDeckTotal() {
+            const cards = this.viewDeckPayload?.cards;
+            if (!Array.isArray(cards)) return 0;
+            return cards.reduce((sum, item) => sum + (Number(item?.count) || 0), 0);
+        },
         deckThemePalette() {
             const counter = new Map();
             for (const item of this.selectedDeckCardDetails) {
@@ -285,6 +305,13 @@ export const DeckManagerModal = {
         previewCardIndex() {
             if (!this.previewCard) return -1;
             return this.builderCards.findIndex(card => String(card.id) === String(this.previewCard.id));
+        },
+        builderHeaderSubtitle() {
+            if (this.editingDeckId) {
+                const name = String(this.builderDeck?.name || '').trim();
+                return name ? `修改卡组：${name}` : '修改卡组';
+            }
+            return this.selectedDeckProtagonistCharaName || '新卡组（未保存）';
         }
     },
     watch: {
@@ -292,11 +319,14 @@ export const DeckManagerModal = {
             if (next) {
                 this.showImportPanel = false;
                 this.showDeckContentsModal = false;
+                this.showViewDeckModal = false;
+                this.viewDeckPayload = null;
                 this.activeFilterType = '';
                 this.activeSortDialog = false;
                 this.activeAbilityFilterStep = 'timing';
                 this.currentView = 'manager';
                 this.draftDeck = null;
+                this.editingDeckId = null;
                 this.draftHiddenPassword = '';
                 this.actionDeckId = '';
                 this.selectedForceFilters = [];
@@ -410,6 +440,71 @@ export const DeckManagerModal = {
         isDeckBattleReady(deck) {
             return this.getDeckTotal(deck) >= 50;
         },
+        sortDeckCardsByProtagonistAndGroup(cards, protagonistCardId, protagonistCharaName) {
+            const poolById = new Map(this.cardPool.map(c => [String(c.id), c]));
+            const protId = String(protagonistCardId || '').trim();
+            const protChara = String(protagonistCharaName || '').trim();
+
+            const normalized = (Array.isArray(cards) ? cards : [])
+                .map(item => ({
+                    cardId: String(item?.cardId || '').trim(),
+                    count: Number(item?.count) || 0
+                }))
+                .filter(item => item.cardId && item.count > 0);
+
+            const cmpId = (a, b) => {
+                const idA = String(a.cardId);
+                const idB = String(b.cardId);
+                try {
+                    return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+                } catch {
+                    return idA.localeCompare(idB);
+                }
+            };
+
+            const groupKey = cardId => {
+                const c = poolById.get(cardId);
+                const cn = String(c?.charaName || '').trim();
+                if (cn) return `\u0001${cn}`;
+                const nm = String(c?.cardName || '').trim();
+                if (nm) return `\u0002${nm}`;
+                return `\u0000${cardId}`;
+            };
+
+            const list = normalized.slice();
+            const protagonistIdx = list.findIndex(x => x.cardId === protId);
+            const protagonistEntry = protagonistIdx >= 0 ? list.splice(protagonistIdx, 1)[0] : null;
+
+            const sameChara = [];
+            const rest = [];
+            for (const item of list) {
+                const c = poolById.get(item.cardId);
+                const cn = String(c?.charaName || '').trim();
+                if (protChara && cn === protChara) {
+                    sameChara.push(item);
+                } else {
+                    rest.push(item);
+                }
+            }
+            sameChara.sort(cmpId);
+
+            const byKey = new Map();
+            for (const item of rest) {
+                const k = groupKey(item.cardId);
+                if (!byKey.has(k)) byKey.set(k, []);
+                byKey.get(k).push(item);
+            }
+            const groups = [...byKey.values()];
+            for (const g of groups) {
+                g.sort(cmpId);
+            }
+            groups.sort((ga, gb) => cmpId(ga[0], gb[0]));
+
+            const out = [];
+            if (protagonistEntry) out.push(protagonistEntry);
+            out.push(...sameChara, ...groups.flat());
+            return out;
+        },
         isActiveDeck(deck) {
             if (!deck || deck.id !== this.activeDeckId) return false;
             return String(this.currentDeckPassword || '') === String(this.activeDeckPassword || '');
@@ -438,6 +533,12 @@ export const DeckManagerModal = {
                 localStorage.removeItem('fe0.selectedDeckId');
                 localStorage.removeItem('fe0.selectedDeckPassword');
             }
+        },
+        async ensureCardPoolForSort() {
+            if (this.cardPool.length) return;
+            const cardsRes = await fetch('/api/cards');
+            const cards = await this.readJsonResponse(cardsRes, '/api/cards');
+            this.cardPool = Array.isArray(cards) ? cards : [];
         },
         async bootstrap() {
             this.loading = true;
@@ -486,6 +587,7 @@ export const DeckManagerModal = {
             }
         },
         async createEmptyDeck() {
+            this.editingDeckId = null;
             this.draftDeck = {
                 name: '',
                 format: 'standard',
@@ -497,6 +599,48 @@ export const DeckManagerModal = {
             this.draftHiddenPassword = '';
             this.resetBuilderFilters();
             this.currentView = 'builder';
+        },
+        async openEditDeck(deckId) {
+            if (!deckId) return;
+            this.closeDeckActions();
+            this.loading = true;
+            try {
+                await this.ensureCardPoolForSort();
+                const endpoint = this.getDeckEndpoint(`/${deckId}`);
+                const res = await fetch(endpoint);
+                const body = await this.readJsonResponse(res, endpoint);
+                if (!res.ok) {
+                    alert(body?.message || '加载卡组失败');
+                    return;
+                }
+                const deck = body;
+                this.editingDeckId = deck.id;
+                const protId = String(deck.protagonistCardId || '').trim();
+                const protChara = String(deck.protagonistCharaName || '').trim();
+                const rawCards = Array.isArray(deck.cards)
+                    ? deck.cards
+                          .map(item => ({
+                              cardId: String(item?.cardId || '').trim(),
+                              count: Number(item?.count) || 0
+                          }))
+                          .filter(item => item.cardId && item.count > 0)
+                    : [];
+                this.draftDeck = {
+                    name: String(deck.name || '').trim(),
+                    format: String(deck.format || 'standard').trim(),
+                    notes: String(deck.notes || '').trim(),
+                    protagonistCardId: protId,
+                    protagonistCharaName: protChara,
+                    cards: this.sortDeckCardsByProtagonistAndGroup(rawCards, protId, protChara)
+                };
+                this.draftHiddenPassword = '';
+                this.resetBuilderFilters();
+                this.currentView = 'builder';
+            } catch (error) {
+                alert(error.message || '加载卡组失败');
+            } finally {
+                this.loading = false;
+            }
         },
         async promptDeckPasswordAccess() {
             const passwordInput = window.prompt('输入隐藏口令');
@@ -753,6 +897,10 @@ export const DeckManagerModal = {
             await this.persistDraftDeck({ hiddenPassword: this.draftHiddenPassword });
         },
         async saveHiddenDraftDeck() {
+            if (this.editingDeckId) {
+                alert('正在修改已有卡组，保存将写回原位置。如需新建到隐藏目录，请先返回列表再点「新建新卡组」。');
+                return;
+            }
             const passwordInput = window.prompt('输入隐藏口令');
             if (passwordInput === null) return;
             const password = passwordInput.trim();
@@ -766,36 +914,68 @@ export const DeckManagerModal = {
         async persistDraftDeck(options = {}) {
             if (!this.builderDeck || !this.selectedDeckProtagonistCardId) return;
             const hiddenPassword = String(options.hiddenPassword || '').trim();
+            const isEdit = !!this.editingDeckId;
 
-            const requestedName = window.prompt('确认卡组名称', this.buildDefaultDeckName());
-            if (requestedName === null) return;
+            let finalName;
+            if (isEdit) {
+                finalName = String(this.builderDeck.name || '').trim() || this.buildDefaultDeckName();
+            } else {
+                const defaultName = this.buildDefaultDeckName();
+                const requestedName = window.prompt('确认卡组名称', defaultName);
+                if (requestedName === null) return;
+                finalName = requestedName.trim() || defaultName;
+            }
 
             this.saving = true;
             try {
+                await this.ensureCardPoolForSort();
+                const sortedCards = this.sortDeckCardsByProtagonistAndGroup(
+                    this.builderDeck.cards,
+                    this.selectedDeckProtagonistCardId,
+                    this.selectedDeckProtagonistCharaName
+                );
                 const payload = {
                     ...this.builderDeck,
-                    name: requestedName.trim() || this.buildDefaultDeckName(),
-                    ...(hiddenPassword ? { password: hiddenPassword } : {})
+                    name: finalName,
+                    cards: sortedCards
                 };
-                const endpoint = hiddenPassword ? '/api/decks/hidden' : '/api/decks';
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const body = await this.readJsonResponse(res, endpoint);
+                let res;
+                let endpointLabel;
+                if (isEdit) {
+                    const endpoint = this.getDeckEndpoint(`/${this.editingDeckId}`);
+                    endpointLabel = endpoint;
+                    res = await fetch(endpoint, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                } else {
+                    const endpoint = hiddenPassword ? '/api/decks/hidden' : '/api/decks';
+                    endpointLabel = endpoint;
+                    res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            ...payload,
+                            ...(hiddenPassword ? { password: hiddenPassword } : {})
+                        })
+                    });
+                }
+                const body = await this.readJsonResponse(res, endpointLabel);
                 if (!res.ok) {
                     const msg = body?.validation?.errors?.join('\n') || body?.message || '保存失败';
                     alert(msg);
                     return;
                 }
-                await this.refreshDecks(false, hiddenPassword);
-                this.selectedDeckId = body.deck.id;
+                const savedDeck = body.deck;
+                await this.refreshDecks(false, isEdit ? this.currentDeckPassword : hiddenPassword);
+                this.selectedDeckId = savedDeck.id;
                 this.draftDeck = null;
+                this.editingDeckId = null;
                 this.draftHiddenPassword = '';
                 this.currentView = 'manager';
                 this.resetBuilderFilters();
-                if (!this.isDeckBattleReady(body.deck)) {
+                if (!this.isDeckBattleReady(savedDeck)) {
                     alert('卡组已保存。未满50张的卡组不能设为对战。');
                     return;
                 }
@@ -898,6 +1078,7 @@ export const DeckManagerModal = {
         returnToManagerView() {
             this.currentView = 'manager';
             this.draftDeck = null;
+            this.editingDeckId = null;
             this.draftHiddenPassword = '';
             this.closeFilterPicker();
             this.closeSortDialog();
@@ -1163,6 +1344,49 @@ export const DeckManagerModal = {
         closeDeckActions() {
             this.actionDeckId = '';
         },
+        onDeckRowDoubleClick(deck) {
+            if (!deck?.id || this.loading || this.saving) return;
+            this.selectedDeckId = deck.id;
+            this.closeDeckActions();
+            this.openEditDeck(deck.id);
+        },
+        async openViewDeck(deckId) {
+            if (!deckId) return;
+            this.closeDeckActions();
+            this.loading = true;
+            try {
+                await this.ensureCardPoolForSort();
+                const endpoint = this.getDeckEndpoint(`/${deckId}`);
+                const res = await fetch(endpoint);
+                const body = await this.readJsonResponse(res, endpoint);
+                if (!res.ok) {
+                    alert(body?.message || '加载卡组失败');
+                    return;
+                }
+                const deck = body;
+                const protId = String(deck.protagonistCardId || '').trim();
+                const protChara = String(deck.protagonistCharaName || '').trim();
+                const rawCards = Array.isArray(deck.cards) ? deck.cards : [];
+                const sortedCards = this.sortDeckCardsByProtagonistAndGroup(rawCards, protId, protChara);
+                this.viewDeckPayload = {
+                    id: deck.id,
+                    name: String(deck.name || '').trim(),
+                    format: String(deck.format || '').trim(),
+                    protagonistCardId: protId,
+                    protagonistCharaName: protChara,
+                    cards: sortedCards
+                };
+                this.showViewDeckModal = true;
+            } catch (error) {
+                alert(error.message || '加载卡组失败');
+            } finally {
+                this.loading = false;
+            }
+        },
+        closeViewDeckModal() {
+            this.showViewDeckModal = false;
+            this.viewDeckPayload = null;
+        },
         requestModalClose() {
             if (this.currentView === 'builder' && this.draftDeck) {
                 const ok = window.confirm('当前卡组未保存，是否要关闭？');
@@ -1221,9 +1445,11 @@ export const DeckManagerModal = {
 
                     <div class="flex-1 min-h-0 border border-white/10 rounded p-2 overflow-y-auto">
                         <div class="text-xs mb-2 text-cyan-300">{{ deckListTitle }}</div>
+                        <div class="text-[10px] text-gray-500 mb-2">双击卡组卡片可进入修改</div>
                         <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
                             <div v-for="deck in decks" :key="deck.id"
                                  @click="selectedDeckId = deck.id; closeDeckActions()"
+                                 @dblclick.stop="onDeckRowDoubleClick(deck)"
                                  :class="selectedDeckId === deck.id ? 'border-cyan-400 bg-cyan-900/30' : 'border-white/10 bg-black/20'"
                                  class="relative text-left p-3 border rounded min-h-[96px] cursor-pointer">
                                 <div class="flex items-start justify-between gap-2">
@@ -1234,13 +1460,15 @@ export const DeckManagerModal = {
                                         <div class="text-[10px] text-amber-300 mt-1" v-if="!isDeckBattleReady(deck)">未满50张，不能设为对战</div>
                                         <div class="text-[10px] text-emerald-300 mt-1" v-if="isActiveDeck(deck)">当前对战卡组</div>
                                     </div>
-                                    <button @click.stop="toggleDeckActions(deck.id)" class="px-2 py-1 text-[10px] rounded bg-white/5 border border-white/10 text-gray-200 shrink-0">
+                                    <button @click.stop="toggleDeckActions(deck.id)" @dblclick.stop class="px-2 py-1 text-[10px] rounded bg-white/5 border border-white/10 text-gray-200 shrink-0">
                                         更多
                                     </button>
                                 </div>
 
-                                <div v-if="actionDeckId === deck.id" class="absolute right-3 top-10 z-[5] w-32 rounded-lg border border-white/10 bg-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.45)] p-1">
+                                <div v-if="actionDeckId === deck.id" class="absolute right-3 top-10 z-[5] w-36 rounded-lg border border-white/10 bg-neutral-950 shadow-[0_8px_24px_rgba(0,0,0,0.45)] p-1">
                                     <button @click.stop="setActiveDeck(deck.id)" class="w-full text-left px-2 py-2 text-[11px] rounded hover:bg-violet-900/40">设为对战</button>
+                                    <button @click.stop="openViewDeck(deck.id)" :disabled="loading" class="w-full text-left px-2 py-2 text-[11px] rounded hover:bg-sky-900/40 disabled:opacity-40">查看卡组</button>
+                                    <button @click.stop="openEditDeck(deck.id)" :disabled="loading" class="w-full text-left px-2 py-2 text-[11px] rounded hover:bg-emerald-900/40 disabled:opacity-40">修改</button>
                                     <button @click.stop="exportDeckJson(deck.id)" class="w-full text-left px-2 py-2 text-[11px] rounded hover:bg-blue-900/40">导出</button>
                                     <button @click.stop="deleteDeck(deck.id)" class="w-full text-left px-2 py-2 text-[11px] rounded hover:bg-red-900/40 text-red-300">删除</button>
                                 </div>
@@ -1255,7 +1483,7 @@ export const DeckManagerModal = {
                         <div class="flex items-center justify-between gap-3 mb-2">
                             <div>
                                 <div class="text-sm font-bold text-emerald-300">构筑器</div>
-                                <div class="text-[10px] text-gray-400 truncate">{{ selectedDeckProtagonistCharaName || '新卡组（未保存）' }}</div>
+                                <div class="text-[10px] text-gray-400 truncate">{{ builderHeaderSubtitle }}</div>
                             </div>
                             <div class="flex items-center gap-2 shrink-0">
                                 <button v-if="isSelectingProtagonist" @click="returnToManagerView()" class="px-2 py-1 text-xs rounded border border-white/10 bg-white/5 text-gray-200">
@@ -1270,13 +1498,17 @@ export const DeckManagerModal = {
                                 <button v-if="!isSelectingProtagonist" @click="saveDraftDeck()" class="px-2 py-1 text-xs rounded border border-cyan-500/40 bg-cyan-700 text-white">
                                     保存
                                 </button>
-                                <button v-if="!isSelectingProtagonist" @click="saveHiddenDraftDeck()" class="px-2 py-1 text-xs rounded border border-violet-500/40 bg-violet-700 text-white">
+                                <button v-if="!isSelectingProtagonist" @click="saveHiddenDraftDeck()" :disabled="!!editingDeckId" :class="editingDeckId ? 'opacity-40 cursor-not-allowed' : ''" class="px-2 py-1 text-xs rounded border border-violet-500/40 bg-violet-700 text-white">
                                     设为隐藏卡组
                                 </button>
                             </div>
                         </div>
                         <div class="flex items-center justify-between gap-3 mb-2">
                             <div class="text-xs text-gray-300">当前总数：{{ selectedDeckTotal }}<span v-if="draftHiddenPassword" class="text-violet-300"> / 卡组口令：{{ draftHiddenPassword }}</span></div>
+                        </div>
+                        <div v-if="editingDeckId && draftDeck && !isSelectingProtagonist" class="flex items-center gap-2 mb-2">
+                            <label class="text-[10px] text-gray-400 shrink-0">卡组名称</label>
+                            <input v-model="draftDeck.name" type="text" class="flex-1 min-w-0 text-xs px-2 py-1.5 rounded bg-black/40 border border-white/15 text-white placeholder:text-gray-600" placeholder="输入卡组名称" />
                         </div>
                         <div v-if="isSelectingProtagonist" class="rounded-lg border border-amber-500/30 bg-amber-950/30 px-3 py-2 text-[11px] text-amber-100">
                             请先选择主人公。当前只显示 1 费卡，确认主人公后会恢复默认构筑器，并把同名角色卡排到最前面。
@@ -1414,6 +1646,39 @@ export const DeckManagerModal = {
                                 </button>
                             </div>
                             <div v-if="!selectedDeckCardDetails.length" class="text-[11px] text-gray-500">暂无卡牌</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div v-if="showViewDeckModal && viewDeckPayload" class="absolute inset-0 z-[94] flex items-center justify-center p-4">
+                    <div class="absolute inset-0 bg-black/75" @click="closeViewDeckModal()"></div>
+                    <div class="relative w-full max-w-lg max-h-[80vh] rounded-xl border border-sky-700/30 bg-[#0f1418]/95 p-4 flex flex-col gap-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="text-sm font-bold text-sky-200">查看卡组</div>
+                                <div class="text-xs font-semibold text-white truncate mt-0.5">{{ viewDeckPayload.name || '未命名' }}</div>
+                                <div class="text-[10px] text-gray-400 mt-1">
+                                    共 {{ viewDeckCardDetails.length }} 种 / {{ viewDeckTotal }} 张
+                                    <span v-if="viewDeckPayload.protagonistCharaName" class="text-cyan-300"> · 主人公：{{ viewDeckPayload.protagonistCharaName }}</span>
+                                </div>
+                            </div>
+                            <button @click="closeViewDeckModal()" class="px-2 py-1 text-xs rounded bg-sky-900/40 text-sky-100 border border-sky-700/35 shrink-0">关闭</button>
+                        </div>
+                        <div class="overflow-y-auto min-h-0">
+                            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                <div
+                                    v-for="item in viewDeckCardDetails"
+                                    :key="item.cardId"
+                                    class="relative rounded-lg border border-white/10 bg-[#1a1f24]/80 p-1">
+                                    <img v-if="item.card" :src="getCardImage(item.card)" class="w-full h-[120px] sm:h-[132px] rounded object-contain" draggable="false" />
+                                    <div v-else class="w-full h-[120px] sm:h-[132px] rounded bg-black/40"></div>
+                                    <div class="absolute top-1 right-1 min-w-5 h-5 px-1 rounded-full bg-sky-600 text-[10px] font-bold text-white flex items-center justify-center">
+                                        {{ item.count }}
+                                    </div>
+                                    <div class="mt-1 text-[10px] text-sky-100/90 truncate text-left">{{ cardTitle(item.cardId) }}</div>
+                                </div>
+                            </div>
+                            <div v-if="!viewDeckCardDetails.length" class="text-[11px] text-gray-500">暂无卡牌</div>
                         </div>
                     </div>
                 </div>

@@ -20,6 +20,83 @@ function normalizeDeckInput(input = {}) {
     };
 }
 
+function sortDeckCardEntries(cards, protagonistCardId, protagonistCharaName, cardPool) {
+    const poolById = new Map((cardPool || []).map(c => [String(c.id), c]));
+    const protId = String(protagonistCardId || '').trim();
+    const protChara = String(protagonistCharaName || '').trim();
+
+    const normalized = (Array.isArray(cards) ? cards : [])
+        .map(item => ({
+            cardId: String(item?.cardId || '').trim(),
+            count: Number(item?.count || 0)
+        }))
+        .filter(item => item.cardId && Number.isFinite(item.count) && item.count > 0);
+
+    const cmpId = (a, b) => {
+        const idA = String(a.cardId);
+        const idB = String(b.cardId);
+        try {
+            return idA.localeCompare(idB, undefined, { numeric: true, sensitivity: 'base' });
+        } catch {
+            return idA.localeCompare(idB);
+        }
+    };
+
+    const groupKey = cardId => {
+        const c = poolById.get(cardId);
+        const cn = String(c?.charaName || '').trim();
+        if (cn) return `\u0001${cn}`;
+        const nm = String(c?.cardName || '').trim();
+        if (nm) return `\u0002${nm}`;
+        return `\u0000${cardId}`;
+    };
+
+    const list = normalized.slice();
+    const protagonistIdx = list.findIndex(x => x.cardId === protId);
+    const protagonistEntry = protagonistIdx >= 0 ? list.splice(protagonistIdx, 1)[0] : null;
+
+    const sameChara = [];
+    const rest = [];
+    for (const item of list) {
+        const c = poolById.get(item.cardId);
+        const cn = String(c?.charaName || '').trim();
+        if (protChara && cn === protChara) {
+            sameChara.push(item);
+        } else {
+            rest.push(item);
+        }
+    }
+    sameChara.sort(cmpId);
+
+    const byKey = new Map();
+    for (const item of rest) {
+        const k = groupKey(item.cardId);
+        if (!byKey.has(k)) byKey.set(k, []);
+        byKey.get(k).push(item);
+    }
+    const groups = [...byKey.values()];
+    for (const g of groups) {
+        g.sort(cmpId);
+    }
+    groups.sort((ga, gb) => cmpId(ga[0], gb[0]));
+
+    const out = [];
+    if (protagonistEntry) out.push(protagonistEntry);
+    out.push(...sameChara, ...groups.flat());
+    return out;
+}
+
+function normalizeAndSortDeckBody(body, cardPool) {
+    const normalized = normalizeDeckInput(body || {});
+    normalized.cards = sortDeckCardEntries(
+        normalized.cards,
+        normalized.protagonistCardId,
+        normalized.protagonistCharaName,
+        cardPool
+    );
+    return normalized;
+}
+
 function summarizeDeck(deck, cardPoolById) {
     const summary = {
         totalCards: 0,
@@ -113,6 +190,8 @@ function expandDeckCards(rawDeck, cardPool) {
 module.exports = {
     DEFAULT_RULES,
     normalizeDeckInput,
+    sortDeckCardEntries,
+    normalizeAndSortDeckBody,
     validateDeck,
     expandDeckCards
 };

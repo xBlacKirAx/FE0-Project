@@ -1,7 +1,7 @@
 const express = require('express');
 const repository = require('./deckRepository');
 const identityStore = require('./identityStore');
-const { normalizeDeckInput, validateDeck, expandDeckCards } = require('./deckRules');
+const { validateDeck, expandDeckCards, normalizeAndSortDeckBody } = require('./deckRules');
 
 function getPasswordScope(req) {
     const password = String(req.query.password || '').trim();
@@ -103,7 +103,7 @@ function createDeckRouter({ cardPool }) {
 
     router.post('/', (req, res) => {
         const strict = req.query.strict === 'true';
-        const normalized = normalizeDeckInput(req.body || {});
+        const normalized = normalizeAndSortDeckBody(req.body, cardPool);
         const result = validateDeck(normalized, cardPool, undefined, { allowDraft: !strict });
         if (!result.valid) {
             return res.status(400).json({
@@ -123,7 +123,7 @@ function createDeckRouter({ cardPool }) {
             return res.status(400).json({ message: '隐藏口令不能为空。' });
         }
 
-        const normalized = normalizeDeckInput(req.body || {});
+        const normalized = normalizeAndSortDeckBody(req.body, cardPool);
         const result = validateDeck(normalized, cardPool, undefined, { allowDraft: !strict });
         if (!result.valid) {
             return res.status(400).json({
@@ -146,7 +146,7 @@ function createDeckRouter({ cardPool }) {
     router.put('/:id', (req, res) => {
         if (!ensureAccessForScope(req, res)) return;
         const strict = req.query.strict === 'true';
-        const normalized = normalizeDeckInput(req.body || {});
+        const normalized = normalizeAndSortDeckBody(req.body, cardPool);
         const result = validateDeck(normalized, cardPool, undefined, { allowDraft: !strict });
         if (!result.valid) {
             return res.status(400).json({
@@ -178,7 +178,7 @@ function createDeckRouter({ cardPool }) {
 
     router.post('/import/json', (req, res) => {
         const strict = req.query.strict === 'true';
-        const normalized = normalizeDeckInput(req.body || {});
+        const normalized = normalizeAndSortDeckBody(req.body, cardPool);
         const result = validateDeck(normalized, cardPool, undefined, { allowDraft: !strict });
         if (!result.valid) {
             return res.status(400).json({

@@ -9,6 +9,7 @@ const { registerBattleHandlers } = require('./server/socket/registerBattleHandle
 const { registerSyncHandlers } = require('./server/socket/registerSyncHandlers');
 const { registerTurnModeHandlers } = require('./server/socket/registerTurnModeHandlers');
 const { createConnectionRegistry } = require('./server/socket/connectionRegistry');
+const { createTutorialRegistry } = require('./server/tutorial/tutorialRegistry');
 const { createDeckRouter } = require('./server/decks/deckRoutes');
 const { createAiRouter } = require('./server/ai/aiRoutes');
 const { aiProfiles } = require('./server/ai/deckAiProfiles');
@@ -16,7 +17,7 @@ const deckRepository = require('./server/decks/deckRepository');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { maxHttpBufferSize: 5e6 });
 
 app.use(express.json({ limit: '1mb' }));
 app.use(express.static(__dirname));
@@ -47,8 +48,22 @@ app.get('/api/ai-duel-options', (req, res) => {
 app.use('/api/decks', createDeckRouter({ cardPool: cardsData }));
 app.use('/api/ai', createAiRouter({ cardPool: cardsData }));
 
-const connectionRegistry = createConnectionRegistry(io, EVT);
+const tutorialRegistry = createTutorialRegistry({ baseDir: path.join(__dirname, 'data', 'tutorials') });
+const connectionRegistry = createConnectionRegistry(io, EVT, { tutorialRegistry });
 const { log } = connectionRegistry;
+
+app.get('/api/tutorials', (req, res) => {
+    res.json({ items: tutorialRegistry.listTutorials() });
+});
+
+app.get('/api/tutorials/:tutorialId', (req, res) => {
+    const id = String(req.params.tutorialId || '').trim();
+    const tutorial = tutorialRegistry.getTutorial(id);
+    if (!tutorial) {
+        return res.status(404).json({ message: '教程不存在' });
+    }
+    return res.json(tutorial);
+});
 
 // 暂存每场战斗的攻击方数据，等防御支援到来后合并成一条日志
 const combatState = { pendingCombat: null };
@@ -81,6 +96,12 @@ io.on('connection', (socket) => {
     socket.on(EVT.ROOM_START_GAME, () => {
         connectionRegistry.startRoomGame(socket);
     });
+
+    if (EVT.ROOM_SURRENDER) {
+        socket.on(EVT.ROOM_SURRENDER, () => {
+            connectionRegistry.handleRoomSurrender(socket);
+        });
+    }
 
     socket.on(EVT.MULLIGAN_DECISION, (payload = {}) => {
         connectionRegistry.handleMulliganDecision(socket, payload);

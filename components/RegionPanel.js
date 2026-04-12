@@ -20,6 +20,10 @@ export const RegionPanel = {
         onCardClick: {
             type: Function,
             required: true
+        },
+        highlightedInstanceIds: {
+            type: Array,
+            default: () => []
         }
     },
     setup(props) {
@@ -40,6 +44,14 @@ export const RegionPanel = {
                 localFlipped: flippedIds.value.has(card.instanceId)
             }));
         });
+
+        const isBondAbilityHighlight = computed(() =>
+            props.activePanel === 'abilityBondFlipPick' || props.activePanel === 'combatTriggerBondFlipPick');
+
+        const isHighlighted = (card) => {
+            if (!card?.instanceId) return false;
+            return (props.highlightedInstanceIds || []).some((id) => String(id) === String(card.instanceId));
+        };
 
         const handleCardClick = (card) => {
             if (isJewelPanel.value) {
@@ -76,6 +88,8 @@ export const RegionPanel = {
             isJewelPanel,
             isMyJewelPanel,
             isMainCharacterJewelSelectPanel,
+            isBondAbilityHighlight,
+            isHighlighted,
             displayCards,
             handleCardClick
         };
@@ -91,6 +105,7 @@ export const RegionPanel = {
                     </span>
                     <div class="flex items-center gap-2">
                         <span v-if="isMainCharacterJewelSelectPanel" class="text-[9px] text-cyan-300 border border-cyan-500/40 px-1.5 py-0.5 rounded">请选择要拿取的宝玉</span>
+                        <span v-else-if="activePanel === 'abilityBondFlipPick' || activePanel === 'combatTriggerBondFlipPick'" class="text-[9px] text-amber-300 border border-amber-500/40 px-1.5 py-0.5 rounded">点选正面羁绊 · 底部确认翻面</span>
                         <span v-else-if="isMyJewelPanel" class="text-[9px] text-emerald-300 border border-emerald-500/40 px-1.5 py-0.5 rounded">己方宝玉 · 先翻开再查看详情</span>
                         <span v-else-if="isJewelPanel && isDevMode" class="text-[9px] text-amber-400 border border-amber-500/40 px-1.5 py-0.5 rounded">DEV · 点击翻面</span>
                         <button @click="onClose()" class="text-white p-1">✕</button>
@@ -104,7 +119,10 @@ export const RegionPanel = {
                          :class="[isJewelPanel ? ((isMyJewelPanel || isDevMode) ? 'cursor-pointer active:scale-95' : 'cursor-default') : 'cursor-pointer', 'aspect-[55/76] relative group transition-transform']">
                                 <img :src="isMainCharacterJewelSelectPanel ? 'images/card_back.jpg' : (isJewelPanel ? (card.localFlipped ? card.image : 'images/card_back.jpg') : (card.isFaceDown ? 'images/card_back.jpg' : card.image))"
                              class="w-full h-full object-cover rounded shadow-md transition-all"
-                                :class="{ 'opacity-50 grayscale': !isJewelPanel && card.isFaceDown }">
+                                :class="{
+                                    'opacity-50 grayscale': !isJewelPanel && card.isFaceDown,
+                                    'ring-2 ring-amber-400 ring-offset-2 ring-offset-neutral-900 scale-[1.02]': isBondAbilityHighlight && isHighlighted(card)
+                                }">
 
                         <div v-if="!isJewelPanel && card.isFaceDown" class="absolute inset-0 flex items-center justify-center pointer-events-none">
                             <div class="bg-black/60 px-2 py-1 rounded text-[10px] text-amber-500 border border-amber-500/30">已消耗</div>

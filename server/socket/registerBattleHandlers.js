@@ -29,6 +29,10 @@ function registerBattleHandlers({ socket, EVT, log, combatState, relayToRoomPeer
         relayToRoomPeers(socket, EVT.OPPONENT_DEFENSE_SUPPORT, data);
     });
 
+    socket.on(EVT.SYNC_COMBAT_SUPPORT_EMBLEM_CHOICE, (data) => {
+        relayToRoomPeers(socket, EVT.OPPONENT_COMBAT_SUPPORT_EMBLEM_CHOICE, data);
+    });
+
     socket.on(EVT.SYNC_COMBAT_DECISION, (data) => {
         if (combatState.pendingCombat && data?.decisionType === 'critical' && data?.useSkill) {
                 const criticalPower = (combatState.pendingCombat.atkBase + combatState.pendingCombat.atkSupport) * 2;

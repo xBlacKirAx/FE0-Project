@@ -30,15 +30,17 @@
 
         <top-control-bar :is-dev-mode="isDevMode" :is-my-turn="isMyTurn" :show-dev-mode-toggle="!showAiReplayPanel && !(isCompactMobile && roomScene === 'in-game')"
             :on-toggle-dev-mode="toggleDevMode" :on-reset-game="resetByControlBar"
-            :show-reset-button="topBarUi.showResetButton && !showAiReplayPanel" :on-open-deck-manager="openDeckManager"
+            :show-reset-button="topBarUi.showResetButton && !showAiReplayPanel"
+            :show-surrender-button="showSurrenderButton && !showAiReplayPanel" :on-surrender="requestRoomSurrender"
+            :on-open-deck-manager="openDeckManager"
             :show-deck-manager-button="!showAiReplayPanel && (roomScene === 'waiting' || roomScene === 'ready')"
             :on-run-ai-duel="runAiDuelFromControlBar" :on-open-ai-replay="openAiReplayFromControlBar"
             :on-toggle-ai-replay-panel-hidden="toggleAiReplayPanelHiddenFromControlBar"
             :on-ai-replay-prev="stepAiReplayPrev" :on-ai-replay-next="stepAiReplayNext"
-            :on-exit-ai-replay-mode="closeAiReplayPanel" :show-ai-duel-button="isDevMode && !showAiReplayPanel"
-            :show-ai-replay-button="isDevMode && !showAiReplayPanel"
-            :show-ai-replay-panel-toggle="isDevMode && showAiReplayPanel"
-            :show-ai-replay-exit-button="isDevMode && showAiReplayPanel" :ai-replay-panel-hidden="isAiReplayPanelHidden"
+            :on-exit-ai-replay-mode="closeAiReplayPanel"             :show-ai-duel-button="isDevMode && !showAiReplayPanel && roomMode !== 'tutorial'"
+            :show-ai-replay-button="isDevMode && !showAiReplayPanel && roomMode !== 'tutorial'"
+            :show-ai-replay-panel-toggle="isDevMode && showAiReplayPanel && roomMode !== 'tutorial'"
+            :show-ai-replay-exit-button="isDevMode && showAiReplayPanel && roomMode !== 'tutorial'" :ai-replay-panel-hidden="isAiReplayPanelHidden"
             :show-ai-replay-step-buttons="showAiReplayStepButtons" :can-ai-replay-prev="canStepAiReplayPrev"
             :can-ai-replay-next="canStepAiReplayNext" :show-ai-replay-current-line="showAiReplayStepButtons"
             :ai-replay-current-line="currentAiReplayEventLine" :ai-duel-pending="isAiDuelPending"
@@ -51,17 +53,42 @@
             :highlight-next-phase="highlightNextPhase"
             :next-phase-label="nextPhaseLabel" :on-next-phase="nextPhase" :room-status-text="roomStatusText"
             :show-room-status-text="!showAiReplayPanel && !(isCompactMobile && roomScene === 'in-game')"
-            :show-create-room-button="topBarUi.showCreateRoomButton && !showAiReplayPanel" :on-create-room="createRoom"
-            :show-join-room-button="topBarUi.showJoinRoomButton && !showAiReplayPanel" :on-join-room="joinRoom"
+            :show-create-room-button="topBarUi.showCreateRoomButton && !showAiReplayPanel" :on-create-room="openRoomCreateModal"
+            :show-join-room-button="topBarUi.showJoinRoomButton && !showAiReplayPanel" :on-join-room="openRoomJoinModal"
             :show-quick-match-button="topBarUi.showQuickMatchButton && !showAiReplayPanel" :on-quick-match="quickMatch"
             :show-leave-room-button="topBarUi.showLeaveRoomButton && !showAiReplayPanel" :on-leave-room="leaveRoom"
             :show-start-room-button="topBarUi.showStartRoomButton && !showAiReplayPanel"
-            :room-can-start="canStartRoomGame" :on-start-room-game="startRoomGame">
+            :room-can-start="canStartRoomGame" :on-start-room-game="startRoomGame"
+            :show-export-tutorial-snapshot-button="isDevMode && showBattleUi && !showAiReplayPanel && roomMode !== 'tutorial'"
+            :on-export-tutorial-snapshot="exportTutorialSnapshotFromDev">
         </top-control-bar>
         <div
             v-if="roomFlowNotice"
             class="fixed left-1/2 -translate-x-1/2 top-[44px] sm:top-[48px] z-[235] px-3 py-1.5 rounded-xl border border-amber-400/35 bg-black/75 text-amber-100 text-[11px] sm:text-xs shadow-[0_8px_24px_rgba(0,0,0,0.35)]">
             {{ roomFlowNotice }}
+        </div>
+        <div
+            v-if="tutorialPanelOpen && tutorialCurrentStep"
+            class="fixed left-1/2 -translate-x-1/2 top-[78px] sm:top-[84px] z-[236] w-[92vw] max-w-2xl rounded-2xl border border-sky-400/35 bg-black/85 backdrop-blur-sm shadow-[0_16px_42px_rgba(0,0,0,0.45)]">
+            <div class="px-4 py-2 border-b border-sky-500/25 flex items-center justify-between">
+                <div class="text-sm text-sky-100 font-semibold">{{ tutorialTitle }}</div>
+                <button
+                    v-if="!tutorialCurrentStep?.nextOnly || tutorialCurrentStep?.closeOnly"
+                    @click="closeTutorialPanel()"
+                    class="text-xs px-2 py-1 rounded border border-slate-500/40 bg-slate-800/65 text-slate-200">
+                    关闭
+                </button>
+            </div>
+            <div class="px-4 py-3 text-xs sm:text-sm text-slate-100 whitespace-pre-wrap max-h-[38vh] overflow-auto">
+                {{ tutorialCurrentStep.text || '' }}
+            </div>
+            <div v-if="!tutorialCurrentStep?.closeOnly" class="px-4 py-2 border-t border-sky-500/25 flex justify-end">
+                <button
+                    @click="nextTutorialStep()"
+                    class="text-xs px-3 py-1.5 rounded border border-sky-400/45 bg-sky-900/45 text-sky-100">
+                    下一步
+                </button>
+            </div>
         </div>
 
         <div v-if="showBattleUi" class="battle-container">
@@ -83,7 +110,7 @@
 
             <battle-row :cards="fieldFront" row-class="row-my-front" area="front" area-label="Front" :is-enemy="false"
                 :hovered-attack-target-id="hoveredAttackTargetId"
-                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode && !highlightNextPhase"
+                :is-guide-active="deployZoneGuideActive"
                 :is-dragging-over="isDraggingOver === 'front'" :set-dragging-over="setDraggingOver"
                 :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver" :on-drop-area="onDrop"
                 :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick" :on-drag-start="onDragStart"
@@ -92,7 +119,7 @@
 
             <battle-row :cards="fieldRear" row-class="row-my-rear" area="rear" area-label="Rear" :is-enemy="false"
                 :hovered-attack-target-id="hoveredAttackTargetId"
-                :is-guide-active="currentPhase === 'DEPLOY' && !isDevMode && !highlightNextPhase" :is-dragging-over="isDraggingOver === 'rear'"
+                :is-guide-active="deployZoneGuideActive" :is-dragging-over="isDraggingOver === 'rear'"
                 :set-dragging-over="setDraggingOver" :clear-dragging-over="clearDraggingOver" :on-drag-over="onDragOver"
                 :on-drop-area="onDrop" :on-attack-drop="onAttackDrop" :on-card-click="handleMinifiedClick"
                 :on-drag-start="onDragStart" :on-touch-start="onTouchStart" :on-touch-move="onTouchMove"
@@ -230,7 +257,7 @@
         </div>
         <div v-if="showBattleUi" class="hand-container-fixed">
             <bond-strip :bonds="bonds" :current-phase="currentPhase" :is-my-turn="isMyTurn" :has-placed-bond="hasPlacedBond"
-                :is-dev-mode="isDevMode" :is-dragging-over="isDraggingOver" :get-card-faction-info="getCardFactionInfo"
+                :is-dev-mode="isDevMode && roomMode !== 'tutorial'" :is-dragging-over="isDraggingOver" :get-card-faction-info="getCardFactionInfo"
                 :set-dragging-over="setDraggingOver" :on-drop="onDrop" :on-open-panel="openBondsPanel"
                 :on-select-card="selectCard">
             </bond-strip>
@@ -262,13 +289,29 @@
             :combat-decision="combatDecision" :cost-cards="combatCostCandidates"
             :selected-cost-card="selectedCombatCostCard" :selected-cost-card-name="selectedCombatCostCardName"
             :is-replay-mode="showAiReplayPanel" :is-my-attacker="isMyCombatAttacker"
-            :on-open-cost-picker="openCombatCostPicker" :on-combat-decision="handleCombatDecision">
+            :combat-aux-prompt="combatAuxPrompt" :support-emblem-attacker-label="supportEmblemAttackerLabel"
+            :support-emblem-defender-label="supportEmblemDefenderLabel"
+            :on-open-cost-picker="openCombatCostPicker" :on-combat-decision="handleCombatDecision"
+            :on-support-emblem-choice="handleSupportEmblemChoice">
         </combat-overlay>
 
         <region-panel v-if="showBattleUi" :active-panel="activePanel" :panel-title="resolvedPanelTitle" :panel-cards="resolvedPanelCards"
             :is-dev-mode="isDevMode" :is-opponent-panel="isOpponentPanel" :on-close="closeActivePanel"
+            :highlighted-instance-ids="abilityBondFlipSelectedIds"
             :on-card-click="handleRegionPanelCardClick">
         </region-panel>
+
+        <div v-if="showBattleUi && (activePanel === 'abilityBondFlipPick' || activePanel === 'combatTriggerBondFlipPick')"
+            class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[160] flex flex-wrap items-center justify-center gap-3 px-4">
+            <button type="button" @click="confirmBondFlipCostPanel"
+                class="rounded-full bg-amber-500 hover:bg-amber-400 text-black font-black px-6 py-2.5 text-sm shadow-lg">
+                确认翻面（{{ abilityBondFlipSelectedIds.length }} / {{ pendingBondFlipCostNeeded }}）
+            </button>
+            <button type="button" @click="closeActivePanel"
+                class="rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold px-5 py-2.5 text-sm">
+                取消（不发动）
+            </button>
+        </div>
 
         <card-detail-modal v-if="showBattleUi" :selected-card="selectedCard" :primary-action-label="selectedCardAbilityPrimaryLabel"
             :on-primary-action="onSelectedCardAbilityPrimary"
@@ -285,6 +328,8 @@
             :untap-card="untapCard" :toggle-bond-face="toggleBondFace" :move-to="moveTo"
             :move-field-unit="moveFieldUnit" :can-perform-class-change="canPerformClassChange"
             :perform-class-change="performClassChange" :place-card-to-top-of-deck="placeCardToTopOfDeck"
+            :promote-main-character-dev="promoteMainCharacterDev"
+            :is-card-on-front-rear-battlefield="isCardOnFrontRearBattlefield"
             :on-close="closeSelectedCard" :on-open-full-image="openFullImage">
         </card-detail-modal>
 
@@ -344,6 +389,122 @@
             </div>
         </div>
 
+        <!-- 建房 -->
+        <div
+            v-if="showRoomCreateModal"
+            class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm"
+            @click.self="closeRoomCreateModal">
+            <div class="bg-slate-900 border border-indigo-500/35 rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
+                <h2 class="text-lg font-bold p-4 border-b border-sky-500/20 text-indigo-200 flex-shrink-0">建房</h2>
+                <div class="p-4 flex flex-col gap-3 overflow-y-auto">
+                    <div>
+                        <label class="text-xs text-slate-400">房间口令（可选）</label>
+                        <input
+                            v-model="createRoomPasswordInput"
+                            type="password"
+                            autocomplete="off"
+                            placeholder="留空则进入匹配队列"
+                            class="w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+                            @keydown.enter.prevent="submitCreateRoom">
+                    </div>
+                    <p class="text-[10px] text-slate-500 leading-relaxed">
+                        不填口令时会加入匹配；填写口令则创建私密房并仅允许持相同口令者加入。
+                    </p>
+                </div>
+                <div class="p-4 flex justify-end gap-2 border-t border-sky-500/20 flex-shrink-0">
+                    <button type="button" @click="closeRoomCreateModal" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
+                    <button
+                        type="button"
+                        @click="submitCreateRoom"
+                        class="px-5 py-2 rounded-lg border border-indigo-400/40 bg-indigo-800/90 hover:bg-indigo-700 text-white text-sm font-bold">
+                        创建 / 匹配
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 加入房间 -->
+        <div
+            v-if="showRoomJoinModal"
+            class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm"
+            @click.self="closeRoomJoinModal">
+            <div class="bg-slate-900 border border-sky-500/30 rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+                <h2 class="text-lg font-bold p-4 border-b border-sky-500/20 text-sky-200 flex-shrink-0">加入房间</h2>
+                <div class="p-4 flex flex-col gap-3 overflow-y-auto">
+                    <div class="flex gap-2">
+                        <button
+                            type="button"
+                            @click="joinRoomMode = 'normal'"
+                            :class="joinRoomMode === 'normal' ? 'bg-sky-800/90 border-sky-400/50 text-white' : 'bg-slate-800/60 border-slate-600 text-slate-400'"
+                            class="flex-1 py-2 rounded-lg border text-xs font-semibold">
+                            普通房
+                        </button>
+                        <button
+                            type="button"
+                            @click="joinRoomMode = 'tutorial'"
+                            :class="joinRoomMode === 'tutorial' ? 'bg-emerald-900/80 border-emerald-400/50 text-emerald-100' : 'bg-slate-800/60 border-slate-600 text-slate-400'"
+                            class="flex-1 py-2 rounded-lg border text-xs font-semibold">
+                            教学关
+                        </button>
+                    </div>
+                    <template v-if="joinRoomMode === 'normal'">
+                        <div>
+                            <label class="text-xs text-slate-400">房间号（6 位）</label>
+                            <input
+                                v-model="joinRoomIdInput"
+                                type="text"
+                                inputmode="numeric"
+                                maxlength="8"
+                                autocomplete="off"
+                                placeholder="例如 123456"
+                                class="w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-sm text-slate-100 font-mono placeholder:text-slate-500"
+                                @keydown.enter.prevent="submitJoinRoom">
+                        </div>
+                        <div>
+                            <label class="text-xs text-slate-400">口令（私密房）</label>
+                            <input
+                                v-model="joinRoomPasswordInput"
+                                type="password"
+                                autocomplete="off"
+                                placeholder="公开房可留空"
+                                class="w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+                                @keydown.enter.prevent="submitJoinRoom">
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div>
+                            <label class="text-xs text-slate-400">教学关</label>
+                            <select
+                                v-if="roomTutorialList.length"
+                                v-model="joinTutorialIdInput"
+                                class="w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-sm text-slate-100">
+                                <option v-for="t in roomTutorialList" :key="t.id" :value="t.id">
+                                    {{ t.title || t.id }}
+                                </option>
+                            </select>
+                            <input
+                                v-else
+                                v-model="joinTutorialIdInput"
+                                type="text"
+                                autocomplete="off"
+                                placeholder="例如 basics-intro"
+                                class="w-full mt-1 bg-slate-800 border border-slate-600 rounded-lg px-2 py-2 text-sm text-slate-100 placeholder:text-slate-500"
+                                @keydown.enter.prevent="submitJoinRoom">
+                        </div>
+                    </template>
+                </div>
+                <div class="p-4 flex justify-end gap-2 border-t border-sky-500/20 flex-shrink-0">
+                    <button type="button" @click="closeRoomJoinModal" class="px-5 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm">关闭</button>
+                    <button
+                        type="button"
+                        @click="submitJoinRoom"
+                        class="px-5 py-2 rounded-lg border border-sky-400/40 bg-sky-700/90 hover:bg-sky-600 text-white text-sm font-bold">
+                        加入房间
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- AI Duel Setup Modal -->
         <div v-if="showAiDuelSetup" class="fixed inset-0 bg-black/60 z-[90] flex items-center justify-center p-4 backdrop-blur-sm" @click.self="showAiDuelSetup = false">
             <div class="bg-slate-900 border border-sky-500/30 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
@@ -398,8 +559,11 @@
         </div>
 
         <ai-replay-panel :visible="showAiReplayPanelVisible" :compact="isCompactMobile" :loading="isAiReplayLoading"
-            :replay-log="aiReplayLog" :selected-game-index="aiReplayGameIndex" :cursor="aiReplayCursor"
-            :on-close="closeAiReplayPanel" :on-load-latest="loadLatestAiReplayLog" :on-select-game="selectAiReplayGame"
+            :replay-log="aiReplayLog" :log-list="aiReplayLogList" :selected-log-id="aiReplaySelectedLogId"
+            :selected-game-index="aiReplayGameIndex" :cursor="aiReplayCursor"
+            :on-close="closeAiReplayPanel" :on-load-latest="loadLatestAiReplayLog" :on-select-log="selectAiReplayLogFile"
+            :on-import-local-replay="importLocalReplayFile"
+            :on-select-game="selectAiReplayGame"
             :on-step-prev="stepAiReplayPrev" :on-step-next="stepAiReplayNext" :on-jump-to="jumpAiReplayTo">
         </ai-replay-panel>
 

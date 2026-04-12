@@ -9,7 +9,9 @@ export function normalizeRoomPayload(payload = {}) {
         queueing: !!payload.queueing,
         ready: !!payload.ready,
         gameInProgress: !!payload.gameInProgress,
-        isPrivate: !!payload.isPrivate
+        isPrivate: !!payload.isPrivate,
+        roomMode: String(payload.roomMode || 'normal') === 'tutorial' ? 'tutorial' : 'normal',
+        tutorialId: String(payload.tutorialId || '')
     };
 }
 
@@ -23,6 +25,9 @@ export function deriveRoomRole({ roomId, hostId, guestId, myId }) {
 export function deriveRoomStatusText(roomState) {
     if (roomState.queueing) return '匹配中...';
     if (!roomState.roomId) return '未加入房间';
+    if (roomState.roomMode === 'tutorial') {
+        return roomState.tutorialId ? `教学关 ${roomState.tutorialId}` : '教学关';
+    }
     return `房间 ${roomState.roomId}`;
 }
 
@@ -59,7 +64,7 @@ export function deriveTopBarUi({ roomScene, roomGameInProgress, showNextPhaseBut
         showResetButton: battleVisible && !compactBattleUi,
         showDeckManagerButton: !compactBattleUi,
         showCostCounter: battleVisible,
-        showTurnOwner: battleVisible,
+        showTurnOwner: battleVisible && !compactBattleUi,
         showPhaseName: battleVisible,
         showNextPhaseButton: battleVisible && showNextPhaseButton,
         showCreateRoomButton,

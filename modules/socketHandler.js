@@ -11,12 +11,13 @@ export function createSocketHandler(state, cardOps) {
     }
 
     const {
-        beginCombatResolution,
         applyCombatDecision,
         getMySyncData,
         resetGame,
         handleIncomingSupportInteractionRequest,
-        handleIncomingSupportInteractionResolve
+        handleIncomingSupportInteractionResolve,
+        tryEnterSupportEmblemPhase,
+        mergeRemoteSupportEmblemChoice
     } = cardOps;
     const areaStore = createOpponentAreaStore(state);
 
@@ -34,10 +35,11 @@ export function createSocketHandler(state, cardOps) {
             state,
             socket,
             EVT,
-            beginCombatResolution,
             applyCombatDecision,
             handleIncomingSupportInteractionRequest,
-            handleIncomingSupportInteractionResolve
+            handleIncomingSupportInteractionResolve,
+            tryEnterSupportEmblemPhase,
+            mergeRemoteSupportEmblemChoice
         });
     };
 

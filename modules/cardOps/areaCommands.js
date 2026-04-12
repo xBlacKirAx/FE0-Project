@@ -9,8 +9,17 @@ import {
 } from '../effects/cardSocketEffects.js';
 import { emitSyncPhase } from '../effects/socketEffects.js';
 import { checkAllSpecialDeployConditions, getActivatableAbilities } from '../engine/abilityEngine.js';
+import { notifyPlayModeRoomOutcome } from '../playModeRoomOutcome.js';
+import { flushRoomReplayAbilityStep } from '../roomReplayTimeline.js';
 
 export function createAreaCommands({ state, socket, refs, rules }) {
+    const getClassChangeIdentity = (card) => {
+        const chara = String(card?.charaName || '').trim();
+        if (chara) return `chara:${chara}`;
+        const full = String(card?.cardName || '').trim();
+        if (!full) return '';
+        return `card:${full}`;
+    };
     const {
         hand,
         fieldFront,
@@ -82,6 +91,16 @@ export function createAreaCommands({ state, socket, refs, rules }) {
             const j = Math.floor(Math.random() * (i + 1));
             [arr[i], arr[j]] = [arr[j], arr[i]];
         }
+    };
+
+    const cloneSnapshotCards = (cards = []) => {
+        if (!Array.isArray(cards)) return [];
+        return cards.map((card, index) => ({
+            ...card,
+            instanceId: card?.instanceId || `${Date.now()}-${index}-${Math.random()}`,
+            isFaceDown: !!card?.isFaceDown,
+            isTapped: !!card?.isTapped
+        }));
     };
 
     const getSelectedDeckId = () => {
@@ -164,13 +183,16 @@ export function createAreaCommands({ state, socket, refs, rules }) {
 
         recycledCardIds.push(...recycleGraveyardIntoDeckIfNeeded());
         if (deck.value.length === 0) {
-            alert('💀 败北... 你的牌组和退避区都没有卡了，你无法抽卡。');
+            notifyPlayModeRoomOutcome({
+                message: '💀 败北... 你的牌组和退避区都没有卡了，你无法抽卡。',
+                kind: 'loss-deck-out'
+            });
             return { drawnCard: null, recycledCardIds: [] };
         }
 
         const drawnCard = deck.value.pop();
 
-        // 若本次操作把卡组抽空，立即把弃牌区洗回卡组。
+        // 若本次操作把卡组抽空，立即把退避区洗回卡组。
         recycledCardIds.push(...recycleGraveyardIntoDeckIfNeeded());
 
         return { drawnCard, recycledCardIds };
@@ -231,8 +253,9 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         // 当手牌中的无转职费用同名卡尝试出击时，按普通出击费用执行“升级”（叠放到同名卡上方）。
         const isDeployFromHand = fromAreaName === 'hand' && (toAreaName === 'front' || toAreaName === 'rear');
         if (isDeployFromHand) {
+            const deployIdentity = getClassChangeIdentity(card);
             const sameNameOnField = [...fieldFront.value, ...fieldRear.value]
-                .find(c => c.instanceId !== card.instanceId && c.cardName && card.cardName && c.cardName === card.cardName);
+                .find(c => c.instanceId !== card.instanceId && deployIdentity && getClassChangeIdentity(c) === deployIdentity);
             if (sameNameOnField) {
                 const isNoPromoteCost = !card.promoteCost || card.promoteCost === 'N/A';
                 if (isNoPromoteCost) {
@@ -415,20 +438,65 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         });
     };
 
-    const consumeAbilityCost = (card, segment) => {
+    const parseAbilityFlipNeed = (segment) => {
+        const raw = String(segment?.costRaw || '').replace(/[\[\]]/g, '');
+        const m = raw.match(/翻面(\d+)/);
+        return m ? parseInt(m[1], 10) || 0 : 0;
+    };
+
+    const parseGraveRecoverPickSpec = (effectText) => {
+        const t = effectText || '';
+        if (!t.includes('从自己的退避区中选择')) return null;
+        const m = t.match(/从自己的退避区中选择(?:至多(\d+)张)?1?张?「([^」]+)」以外.*?加入手牌/);
+        if (!m) return null;
+        return {
+            limit: Math.max(1, parseInt(m[1] || '1', 10) || 1),
+            except: m[2],
+            uniqueByName: t.includes('单位名不同')
+        };
+    };
+
+    const findMyBattlefieldCardByInstanceId = (instanceId) => {
+        const id = String(instanceId || '');
+        return [...fieldFront.value, ...fieldRear.value].find(c => String(c.instanceId) === id) || null;
+    };
+
+    const recoverGraveCardToHandByPick = (instanceId, spec) => {
+        if (!spec) return false;
+        const idx = graveyard.value.findIndex(c => String(c.instanceId) === String(instanceId));
+        if (idx === -1) return false;
+        const picked = graveyard.value[idx];
+        if ((picked.charaName || '') === spec.except) return false;
+        graveyard.value.splice(idx, 1);
+        hand.value.push(picked);
+        emitSyncCardMove(socket, { card: picked, from: 'graveyard', to: 'hand' });
+        return true;
+    };
+
+    const consumeAbilityCost = (card, segment, costOpts = {}) => {
         const raw = (segment?.costRaw || '').replace(/[\[\]]/g, '').trim();
-        if (!raw) return true;
+        const bondInstanceIds = costOpts.bondInstanceIds;
 
         const flipMatch = raw.match(/翻面(\d+)/);
         if (flipMatch) {
             const need = parseInt(flipMatch[1], 10) || 0;
-            const faceUp = bonds.value.filter(b => !b.isFaceDown);
-            if (faceUp.length < need) return false;
-            for (let i = 0; i < need; i++) {
-                faceUp[i].isFaceDown = true;
-                emitSyncBondFlip(socket, { instanceId: faceUp[i].instanceId, isFaceDown: true });
+            if (need > 0) {
+                if (!Array.isArray(bondInstanceIds) || bondInstanceIds.length !== need) return false;
+                const idSet = new Set(bondInstanceIds.map(id => String(id)));
+                if (idSet.size !== need) return false;
+                for (const bid of bondInstanceIds) {
+                    const b = bonds.value.find(x => String(x.instanceId) === String(bid));
+                    if (!b || b.isFaceDown) return false;
+                }
+                for (const bid of bondInstanceIds) {
+                    const b = bonds.value.find(x => String(x.instanceId) === String(bid));
+                    b.isFaceDown = true;
+                    emitSyncBondFlip(socket, { instanceId: b.instanceId, isFaceDown: true });
+                }
             }
         }
+
+        if (!raw) return true;
 
         if (raw.includes('横置') && !raw.includes('其他我方单位')) {
             if (card.isTapped) return false;
@@ -531,7 +599,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         return chosen.length;
     };
 
-    const applyUnitAbilityEffect = (card, segment) => {
+    const applyUnitAbilityEffect = (card, segment, effectFlags = {}) => {
         const txt = segment.effectText || '';
 
         const allAlliesBuffMatch = txt.match(/所有我方单位的战斗力\+(\d+)/);
@@ -586,12 +654,14 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         if (txt.includes('抽2张卡')) drawCards(2);
         if (txt.includes('抽卡3张') || txt.includes('抽3张卡')) drawCards(3);
 
-        const graveExceptMatch = txt.match(/从自己的退避区中选择(?:至多(\d+)张)?1?张?「([^」]+)」以外.*?加入手牌/);
-        if (graveExceptMatch) {
-            const limit = parseInt(graveExceptMatch[1] || '1', 10) || 1;
-            const except = graveExceptMatch[2];
-            const uniqueByName = txt.includes('单位名不同');
-            recoverFromGraveToHand(candidate => (candidate.charaName || '') !== except, limit, uniqueByName);
+        if (!effectFlags.skipGraveRecover) {
+            const graveExceptMatch = txt.match(/从自己的退避区中选择(?:至多(\d+)张)?1?张?「([^」]+)」以外.*?加入手牌/);
+            if (graveExceptMatch) {
+                const limit = parseInt(graveExceptMatch[1] || '1', 10) || 1;
+                const except = graveExceptMatch[2];
+                const uniqueByName = txt.includes('单位名不同');
+                recoverFromGraveToHand(candidate => (candidate.charaName || '') !== except, limit, uniqueByName);
+            }
         }
 
         if (txt.includes('选择自己的1张手牌，放置到羁绊区')) {
@@ -623,6 +693,59 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         card._abilityUsedThisTurn[segment.title] = true;
 
         handleUniquenessCheck();
+
+        const abLine = `【起】『${segment.title}』${segment.costRaw || ''} ${String(segment.effectText || '').slice(0, 160)}`.trim();
+        flushRoomReplayAbilityStep(state, abLine);
+    };
+
+    const cancelPendingUnitAbility = () => {
+        if (state.pendingUnitAbility) state.pendingUnitAbility.value = null;
+    };
+
+    const executePendingUnitAbilityCompletionIfReady = () => {
+        const p = state.pendingUnitAbility?.value;
+        if (!p) return false;
+        const card = findMyBattlefieldCardByInstanceId(p.sourceCardInstanceId);
+        if (!card) {
+            cancelPendingUnitAbility();
+            return false;
+        }
+
+        const bondIds = p.flipNeeded > 0 ? (p.bondIdsSelected || []) : [];
+        if (p.flipNeeded > 0 && bondIds.length !== p.flipNeeded) return false;
+        if (p.wantsGravePick && !p.gravePickInstanceId) return false;
+
+        if (!consumeAbilityCost(card, p.segment, { bondInstanceIds: bondIds })) return false;
+
+        if (p.wantsGravePick && !recoverGraveCardToHandByPick(p.gravePickInstanceId, p.graveSpec)) return false;
+
+        applyUnitAbilityEffect(card, p.segment, { skipGraveRecover: true });
+        cancelPendingUnitAbility();
+        return true;
+    };
+
+    const submitPendingUnitAbilityBondSelection = (bondIds) => {
+        const p = state.pendingUnitAbility?.value;
+        if (!p) return false;
+        if (p.flipNeeded <= 0) return false;
+        if (!Array.isArray(bondIds) || bondIds.length !== p.flipNeeded) return false;
+        const idSet = new Set(bondIds.map(id => String(id)));
+        if (idSet.size !== p.flipNeeded) return false;
+        for (const bid of bondIds) {
+            const b = bonds.value.find(x => String(x.instanceId) === String(bid));
+            if (!b || b.isFaceDown) return false;
+        }
+        p.bondIdsSelected = bondIds;
+        if (p.wantsGravePick) return 'grave';
+        return executePendingUnitAbilityCompletionIfReady() ? 'done' : false;
+    };
+
+    const submitPendingUnitAbilityGraveSelection = (graveCardInstanceId) => {
+        const p = state.pendingUnitAbility?.value;
+        if (!p || !p.wantsGravePick) return false;
+        if (p.flipNeeded > 0 && (!Array.isArray(p.bondIdsSelected) || p.bondIdsSelected.length !== p.flipNeeded)) return false;
+        p.gravePickInstanceId = graveCardInstanceId;
+        return executePendingUnitAbilityCompletionIfReady() ? 'done' : false;
     };
 
     const activateUnitAbility = (card, preferredTitle = null) => {
@@ -652,7 +775,27 @@ export function createAreaCommands({ state, socket, refs, rules }) {
             effectText: candidate.effectText
         };
 
-        const okCost = consumeAbilityCost(card, segment);
+        const flipNeed = parseAbilityFlipNeed(segment);
+        const graveSpec = parseGraveRecoverPickSpec(segment.effectText || '');
+        const wantsGravePick = !!graveSpec;
+
+        if (flipNeed > 0 || wantsGravePick) {
+            if (state.pendingUnitAbility) {
+                state.pendingUnitAbility.value = {
+                    sourceCardInstanceId: card.instanceId,
+                    abilityTitle: candidate.title,
+                    segment,
+                    flipNeeded: flipNeed,
+                    wantsGravePick,
+                    graveSpec,
+                    bondIdsSelected: null,
+                    gravePickInstanceId: null
+                };
+            }
+            return 'pending';
+        }
+
+        const okCost = consumeAbilityCost(card, segment, { bondInstanceIds: [] });
         if (!okCost) {
             return false;
         }
@@ -945,7 +1088,7 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         const idx = currentArea.findIndex(c => c.instanceId === last.card.instanceId);
         if (idx > -1) {
             const card = currentArea.splice(idx, 1)[0];
-            const fromLabel = { hand: '手牌', front: '前排', rear: '后排', bonds: '羁绊区', jewels: '宝玉区', graveyard: '弃牌区', boundless: '无限区', deck: '牌组' };
+            const fromLabel = { hand: '手牌', front: '前排', rear: '后排', bonds: '羁绊区', jewels: '宝玉区', graveyard: '退避区', boundless: '无限区', deck: '牌组' };
             console.log(`[撤销] 撤回：${card?.cardName || '卡牌'} [${fromLabel[last.to] || last.to} → ${fromLabel[last.from] || last.from}]`);
             getAreaArray(last.from).push(card);
             emitSyncCardMove(socket, { card, to: last.from, from: last.to });
@@ -972,6 +1115,154 @@ export function createAreaCommands({ state, socket, refs, rules }) {
             bondsCount: state.bonds.value.length,
             pendingSupportRequest
         };
+    };
+
+    const snapshotCardsToJson = (cards = []) => {
+        if (!Array.isArray(cards)) return [];
+        return cards.map((card) => {
+            if (!card || typeof card !== 'object') return null;
+            try {
+                return JSON.parse(JSON.stringify(card));
+            } catch {
+                return null;
+            }
+        }).filter(Boolean);
+    };
+
+    const exportTutorialSnapshot = () => ({
+        my: {
+            front: snapshotCardsToJson(fieldFront.value),
+            rear: snapshotCardsToJson(fieldRear.value),
+            hand: snapshotCardsToJson(hand.value),
+            bonds: snapshotCardsToJson(bonds.value),
+            jewels: snapshotCardsToJson(jewels.value),
+            graveyard: snapshotCardsToJson(graveyard.value),
+            deck: snapshotCardsToJson(deck.value),
+            boundless: snapshotCardsToJson(boundless.value)
+        },
+        opponent: {
+            front: snapshotCardsToJson(state.opponentFront.value),
+            rear: snapshotCardsToJson(state.opponentRear.value),
+            hand: snapshotCardsToJson(state.oppHand.value),
+            bonds: snapshotCardsToJson(state.oppBonds.value),
+            jewels: snapshotCardsToJson(state.oppJewels.value),
+            graveyard: snapshotCardsToJson(state.oppGraveyard.value),
+            deck: snapshotCardsToJson(state.oppDeck.value),
+            boundless: snapshotCardsToJson(state.oppBoundless.value)
+        },
+        turn: {
+            phase: String(state.currentPhase?.value || 'BEGINNING'),
+            isMyTurn: state.isMyTurn?.value !== false,
+            isDevMode: !!state.isDevMode?.value
+        }
+    });
+
+    const applyTutorialSnapshot = (snapshot = {}) => {
+        const my = snapshot?.my || {};
+        const opp = snapshot?.opponent || {};
+        const turn = snapshot?.turn || {};
+
+        hand.value = cloneSnapshotCards(my.hand);
+        fieldFront.value = cloneSnapshotCards(my.front);
+        fieldRear.value = cloneSnapshotCards(my.rear);
+        bonds.value = cloneSnapshotCards(my.bonds);
+        jewels.value = cloneSnapshotCards(my.jewels);
+        graveyard.value = cloneSnapshotCards(my.graveyard);
+        boundless.value = cloneSnapshotCards(my.boundless);
+        deck.value = cloneSnapshotCards(my.deck);
+
+        state.opponentFront.value = cloneSnapshotCards(opp.front);
+        state.opponentRear.value = cloneSnapshotCards(opp.rear);
+        state.oppHand.value = cloneSnapshotCards(opp.hand);
+        state.oppBonds.value = cloneSnapshotCards(opp.bonds);
+        state.oppJewels.value = cloneSnapshotCards(opp.jewels);
+        state.oppGraveyard.value = cloneSnapshotCards(opp.graveyard);
+        state.oppBoundless.value = cloneSnapshotCards(opp.boundless);
+        state.oppDeck.value = cloneSnapshotCards(opp.deck);
+
+        if (state.oppStats) {
+            state.oppStats.value = {
+                hand: state.oppHand.value.length,
+                bonds: state.oppBonds.value.length,
+                active: 0
+            };
+        }
+
+        state.currentPhase.value = String(turn.phase || 'BEGINNING');
+        state.isMyTurn.value = turn.isMyTurn !== false;
+        state.isDevMode.value = !!turn.isDevMode;
+        state.hasPlacedBond.value = false;
+        state.usedBondsThisTurn.value = 0;
+        state.hasBattledThisTurn.value = false;
+        if (undoStack) undoStack.value = [];
+        if (state.mulliganState) state.mulliganState.value = 'done';
+        if (state.opponentMulliganState) state.opponentMulliganState.value = 'done';
+        if (state.hasMulliganed) state.hasMulliganed.value = true;
+    };
+
+    const findUnitTopOnBattlefield = (card) => {
+        const id = String(card?.instanceId || '').trim();
+        if (!id) return null;
+
+        const search = (frontArr, rearArr) => {
+            for (const arr of [frontArr, rearArr]) {
+                for (const top of arr) {
+                    if (String(top?.instanceId || '').trim() === id) return top;
+                    for (const sc of top._stackedCards || []) {
+                        if (String(sc?.instanceId || '').trim() === id) return top;
+                    }
+                }
+            }
+            return null;
+        };
+
+        const myTop = search(fieldFront.value, fieldRear.value);
+        if (myTop) return { side: 'my', top: myTop };
+
+        const oppTop = search(state.opponentFront.value, state.opponentRear.value);
+        if (oppTop) return { side: 'opp', top: oppTop };
+
+        return null;
+    };
+
+    const clearMainCharacterOnSide = (frontArr, rearArr) => {
+        const clearUnit = (c) => {
+            if (!c) return;
+            c.isMainCharacter = false;
+            (c._stackedCards || []).forEach((sub) => {
+                if (sub) sub.isMainCharacter = false;
+            });
+        };
+        frontArr.forEach(clearUnit);
+        rearArr.forEach(clearUnit);
+    };
+
+    /** 开发者：将战场前/后排某一单位设为本侧主人公（仅该侧前排+后排保留一个 MC） */
+    const promoteMainCharacterDev = (card) => {
+        if (!state.isDevMode.value) {
+            console.warn('【DEV】此功能仅限开发者模式');
+            return;
+        }
+        if (!card) return;
+
+        const found = findUnitTopOnBattlefield(card);
+        if (!found) {
+            console.warn('【DEV】未在战场前/后排找到该单位');
+            return;
+        }
+
+        const { side, top } = found;
+        if (side === 'my') {
+            clearMainCharacterOnSide(fieldFront.value, fieldRear.value);
+            top.isMainCharacter = true;
+            emitFullStateSync(socket, getMySyncData());
+            console.log(`【DEV】已设主人公（我方）: ${top.cardName || top.id}`);
+            return;
+        }
+
+        clearMainCharacterOnSide(state.opponentFront.value, state.opponentRear.value);
+        top.isMainCharacter = true;
+        console.log(`【DEV】已设主人公（对方战场·仅本地视图）: ${top.cardName || top.id}`);
     };
 
     // 开发者模式：将指定卡牌放到牌组最上方
@@ -1096,7 +1387,14 @@ export function createAreaCommands({ state, socket, refs, rules }) {
         placeCardToTopOfDeck,
         getActivatableUnitAbilities,
         activateUnitAbility,
+        cancelPendingUnitAbility,
+        submitPendingUnitAbilityBondSelection,
+        submitPendingUnitAbilityGraveSelection,
         getMySyncData,
+        applyTutorialSnapshot,
+        exportTutorialSnapshot,
+        promoteMainCharacterDev,
+        isCardOnFrontRearBattlefield: (card) => !!findUnitTopOnBattlefield(card),
         resetGame
     };
 }

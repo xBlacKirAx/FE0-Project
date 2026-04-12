@@ -172,6 +172,14 @@ function main() {
         'resolveSupportEffectResult',
         'isSupportFailed'
     ]);
+    const supportEmblem = loadEsModuleFunctions('modules/engine/supportEmblemPhase.js', [
+        'applyAutoSupportEmblemAtSupportFlip',
+        'deserializeSupportEffectResult',
+        'initialSupportEmblemAnswers',
+        'requiresEmblemActivationChoice',
+        'resetSupportEmblemCombatFields',
+        'serializeSupportEffectResult'
+    ]);
 
     const createCombatCommands = loadCreateCombatCommands({
         isAttackerFromMyField: () => true,
@@ -180,11 +188,24 @@ function main() {
         getInitialCombatDecisionContext: () => ({ stage: 'auto-miss', promptOwner: null, criticalPower: 0 }),
         resolveSupportEffectResult: support.resolveSupportEffectResult,
         isSupportFailed: support.isSupportFailed,
+        getSupportEffectDisplayLabel: () => '支援纹章',
+        applyAutoSupportEmblemAtSupportFlip: supportEmblem.applyAutoSupportEmblemAtSupportFlip,
+        deserializeSupportEffectResult: supportEmblem.deserializeSupportEffectResult,
+        initialSupportEmblemAnswers: supportEmblem.initialSupportEmblemAnswers,
+        requiresEmblemActivationChoice: supportEmblem.requiresEmblemActivationChoice,
+        resetSupportEmblemCombatFields: supportEmblem.resetSupportEmblemCombatFields,
+        serializeSupportEffectResult: supportEmblem.serializeSupportEffectResult,
+        isTutorialSoloRoom: () => false,
+        scheduleTutorialSoloDefenseSupport: () => {},
+        notifyPlayModeRoomOutcome: () => {},
+        flushRoomReplayAbilityStep: () => {},
         emitSyncAttack: () => {},
         emitSyncCardMove: () => {},
         emitPlayerDraw: () => {},
         emitSyncCardUntap: () => {},
+        emitSyncBondFlip: () => {},
         emitSyncCombatDecision: () => {},
+        emitSyncCombatSupportEmblemChoice: () => {},
         emitSyncSupportInteractionRequest: () => {},
         emitSyncSupportInteractionResolve: () => {},
         computePassivePowerBonus: () => ({ totalDelta: 0, breakdown: [] }),
@@ -206,6 +227,9 @@ function main() {
     const registerBattleListeners = loadRegisterBattleListeners({
         resolveSupportEffectResult: support.resolveSupportEffectResult,
         isSupportFailed: support.isSupportFailed,
+        applyAutoSupportEmblemAtSupportFlip: supportEmblem.applyAutoSupportEmblemAtSupportFlip,
+        resetSupportEmblemCombatFields: supportEmblem.resetSupportEmblemCombatFields,
+        serializeSupportEffectResult: supportEmblem.serializeSupportEffectResult,
         emitPlayerDraw: () => {},
         emitSyncCardMove: () => {},
         computePassivePowerBonus: () => ({ totalDelta: 0, breakdown: [] }),

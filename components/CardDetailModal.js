@@ -1,3 +1,5 @@
+import { getUnitAbilityDisplayText, getSupportAbilityDisplayText } from '../modules/cardAbilityDisplay.js';
+
 export const CardDetailModal = {
     props: {
         selectedCard: Object,
@@ -109,6 +111,14 @@ export const CardDetailModal = {
             type: Function,
             required: true
         },
+        promoteMainCharacterDev: {
+            type: Function,
+            default: null
+        },
+        isCardOnFrontRearBattlefield: {
+            type: Function,
+            default: null
+        },
         onClose: {
             type: Function,
             required: true
@@ -141,37 +151,10 @@ export const CardDetailModal = {
             return '射程规则未定义';
         },
         getAbilityText(card) {
-            if (!card) return '';
-            if (typeof card.ability === 'string') return card.ability;
-            const direct = String(card.ability?.text || '').trim();
-            if (direct) return direct;
-
-            const entries = Array.isArray(card.ability?.entries) ? card.ability.entries : [];
-            if (!entries.length) return '';
-
-            return entries
-                .map((entry) => {
-                    const title = String(entry?.title || '').trim();
-                    const type = String(entry?.type || '').trim();
-                    const effect = String(entry?.effectText || entry?.rawText || '').trim();
-                    const head = `${title ? `『${title}』` : ''}${type}`.trim();
-                    return `${head}${head && effect ? ' ' : ''}${effect}`.trim();
-                })
-                .filter(Boolean)
-                .join('\n');
+            return getUnitAbilityDisplayText(card);
         },
         getSupportText(card) {
-            if (!card) return '';
-            if (typeof card.supportAbility === 'string') return card.supportAbility;
-            const direct = String(card.supportAbility?.text || '').trim();
-            if (direct) return direct;
-
-            const effectName = String(card.supportAbility?.effectName || '').trim();
-            const effectText = String(card.supportAbility?.effectText || '').trim();
-            if (effectName || effectText) {
-                return `${effectName ? `『${effectName}』` : ''}${effectText ? (effectName ? ' ' : '') + effectText : ''}`.trim();
-            }
-            return '';
+            return getSupportAbilityDisplayText(card);
         },
         handlePrimaryAction() {
             if (!this.onPrimaryAction || !this.selectedCard) return;
@@ -236,7 +219,7 @@ export const CardDetailModal = {
                 </div>
                 <div class="px-4 py-2 bg-black/40 border-y border-white/5 space-y-2">
                     <div class="border-b border-white/5 pb-2">
-                        <div class="text-[9px] text-blue-400 font-bold mb-1 uppercase">Unit Ability / 单元能力</div>
+                        <div class="text-[9px] text-blue-400 font-bold mb-1">单位能力</div>
                         <div class="max-h-24 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-300 pr-1"
                              style="white-space: pre-wrap;"
                              v-html="formattedAbility(getAbilityText(selectedCard))">
@@ -244,7 +227,7 @@ export const CardDetailModal = {
                     </div>
 
                     <div>
-                        <div class="text-[9px] text-yellow-500 font-bold mb-1 uppercase">Support Ability / 支援能力</div>
+                        <div class="text-[9px] text-yellow-500 font-bold mb-1">支援能力</div>
                         <div class="max-h-20 overflow-y-auto custom-scrollbar text-[11px] leading-relaxed text-gray-400 pr-1 italic"
                              style="white-space: pre-wrap;"
                              v-html="formattedSupport(getSupportText(selectedCard))">
@@ -252,6 +235,13 @@ export const CardDetailModal = {
                     </div>
                 </div>
                 <div class="p-4 bg-gray-800/20 space-y-2">
+                    <button
+                        v-if="isDevMode && promoteMainCharacterDev && isCardOnFrontRearBattlefield && isCardOnFrontRearBattlefield(selectedCard)"
+                        type="button"
+                        @click="() => { promoteMainCharacterDev(selectedCard); onClose(); }"
+                        class="w-full py-2.5 mb-1 bg-amber-900/90 hover:bg-amber-800 border border-amber-500/50 text-amber-100 text-[10px] font-bold rounded shadow-[0_0_12px_rgba(245,158,11,0.25)]">
+                        【DEV】设为主人公（本侧战场单位）
+                    </button>
                     <div v-if="onNavigatePrev || onNavigateNext" class="flex items-center justify-between text-[10px] text-gray-400">
                         <button @click="onNavigatePrev && onNavigatePrev()" :disabled="!onNavigatePrev" class="px-2 py-1 rounded bg-white/5 disabled:opacity-30">上一张</button>
                         <div>左右滑动可切换</div>
@@ -344,7 +334,7 @@ export const CardDetailModal = {
                             {{ selectedCard.isFaceDown ? '翻开 (起立)' : '翻面 (横置/消耗)' }}
                         </button>
                         <template v-if="isDevMode">
-                            <button @click="moveTo(selectedCard, 'graveyard')" class="py-1.5 bg-gray-800 text-[9px] rounded border border-white/10">送入弃牌区</button>
+                            <button @click="moveTo(selectedCard, 'graveyard')" class="py-1.5 bg-gray-800 text-[9px] rounded border border-white/10">送入退避区</button>
                             <button @click="moveTo(selectedCard, 'jewels')" class="py-1.5 bg-purple-900/40 text-[9px] rounded border border-purple-500/50">转为宝玉</button>
                             <button @click="moveTo(selectedCard, 'boundless')" class="py-1.5 bg-blue-900/40 text-[9px] rounded border border-blue-500/50">送入无限区</button>
                             <button @click="moveTo(selectedCard, 'hand')" class="py-1.5 bg-green-900/40 text-[9px] rounded border border-green-500/50">回手牌</button>

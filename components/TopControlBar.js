@@ -176,6 +176,14 @@ export const TopControlBar = {
             type: Function,
             required: true
         },
+        showSurrenderButton: {
+            type: Boolean,
+            default: false
+        },
+        onSurrender: {
+            type: Function,
+            default: () => {}
+        },
         showLeaveRoomButton: {
             type: Boolean,
             default: false
@@ -191,6 +199,14 @@ export const TopControlBar = {
         onStartRoomGame: {
             type: Function,
             required: true
+        },
+        showExportTutorialSnapshotButton: {
+            type: Boolean,
+            default: false
+        },
+        onExportTutorialSnapshot: {
+            type: Function,
+            default: () => {}
         }
     },
     methods: {
@@ -223,6 +239,14 @@ export const TopControlBar = {
 
                 <button v-if="showResetButton" @click="onResetGame()" class="bg-red-900/80 hover:bg-red-700 text-white text-[9px] px-1.5 py-1 rounded border border-red-500/50 uppercase">
                     重置
+                </button>
+
+                <button
+                    v-if="showSurrenderButton"
+                    type="button"
+                    @click="onSurrender()"
+                    class="bg-orange-950/90 hover:bg-orange-800 text-orange-100 text-[9px] px-1.5 py-1 rounded border border-orange-500/45">
+                    投降
                 </button>
 
                 <button v-if="showDeckManagerButton" @click="onOpenDeckManager()" class="bg-cyan-900/80 hover:bg-cyan-700 text-white text-[9px] px-1.5 py-1 rounded border border-cyan-500/50 uppercase">
@@ -282,6 +306,15 @@ export const TopControlBar = {
                     :class="roomCanStart ? 'bg-emerald-900/80 hover:bg-emerald-700 border-emerald-500/50 text-white' : 'bg-emerald-900/30 border-emerald-900/60 text-emerald-300/50 cursor-not-allowed'"
                     class="text-[9px] px-1.5 py-1 rounded border uppercase">
                     开局
+                </button>
+
+                <button
+                    v-if="showExportTutorialSnapshotButton"
+                    type="button"
+                    @click="onExportTutorialSnapshot()"
+                    class="bg-amber-900/80 hover:bg-amber-700 border-amber-500/50 text-white text-[9px] px-1.5 py-1 rounded border uppercase"
+                    title="导出当前局面为教学关 snapshot JSON">
+                    导出快照
                 </button>
             </div>
 

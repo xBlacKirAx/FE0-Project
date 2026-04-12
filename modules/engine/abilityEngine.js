@@ -114,6 +114,24 @@ export function evaluatePassive(segment, ctx) {
     const myAll = [...(ctx.myFront || []), ...(ctx.myRear || [])];
     const oppAll = [...(ctx.oppFront || []), ...(ctx.oppRear || [])];
 
+    const passiveFieldGates = () => {
+        const needPresence = txt.match(/仅限我方战场上存在「([^」]+)」时才能发动/);
+        if (needPresence) {
+            const name = needPresence[1];
+            if (!myAll.some(c => (c.charaName || '') === name)) {
+                return { ok: false, note: `需我方场上存在「${name}」` };
+            }
+        }
+        const invalidWithout = txt.match(/这个能力在自己战场上不存在「([^」]+)」时无效/);
+        if (invalidWithout) {
+            const name = invalidWithout[1];
+            if (!myAll.some(c => (c.charaName || '') === name)) {
+                return { ok: false, note: `需我方场上存在「${name}」` };
+            }
+        }
+        return { ok: true, note: '' };
+    };
+
     // ── 模式1：「这名单位攻击<X>属性单位的期间，战斗力+N」
     // 仅在战斗中有效
     const attackTraitMatch = txt.match(/攻击<([^>]+)>属性单位的期间.*?战斗力\+(\d+)/);
@@ -199,14 +217,55 @@ export function evaluatePassive(segment, ctx) {
         return { powerDelta: 0, matched: true, note: `被「${reqChara}」支援+${delta}（支援方不符）` };
     }
 
-    // ── 模式7：「自己的回合中，战斗力+N」（或同效变体）
-    const myTurnMatch = txt.match(/自己的回合.*?战斗力\+(\d+)/);
-    if (myTurnMatch) {
-        const delta = parseInt(myTurnMatch[1], 10) || 0;
-        if (ctx.isMyTurn) {
-            return { powerDelta: delta, matched: true, note: `我方回合+${delta}（生效）` };
+    // ── 模式7：「自己的回合中，自己的手牌数量比对手多…战斗力+N」（须在泛化“我方回合”之前匹配，避免误加成）
+    const myTurnHandMoreThanOppMatch = txt.match(/自己的回合.*?自己的手牌数量比对手多.*?战斗力\+(\d+)/);
+    if (myTurnHandMoreThanOppMatch) {
+        const delta = parseInt(myTurnHandMoreThanOppMatch[1], 10) || 0;
+        const g = passiveFieldGates();
+        if (!g.ok) return { powerDelta: 0, matched: true, note: g.note };
+        if (ctx.isMyTurn && (ctx.myHandCount || 0) > (ctx.oppHandCount || 0)) {
+            return { powerDelta: delta, matched: true, note: `我方回合且手牌多于对手+${delta}` };
         }
-        return { powerDelta: 0, matched: true, note: `我方回合+${delta}（非我方回合）` };
+        return { powerDelta: 0, matched: true, note: `我方回合且手牌多于对手+${delta}（未生效）` };
+    }
+
+    // ── 模式7a2：「自己的回合中，自己的手牌在N张以上…战斗力+N」
+    const myTurnHandAtLeastMatch = txt.match(/自己的回合.*?自己的手牌在(\d+)张以上.*?战斗力\+(\d+)/);
+    if (myTurnHandAtLeastMatch) {
+        const minHand = parseInt(myTurnHandAtLeastMatch[1], 10);
+        const delta = parseInt(myTurnHandAtLeastMatch[2], 10) || 0;
+        const g = passiveFieldGates();
+        if (!g.ok) return { powerDelta: 0, matched: true, note: g.note };
+        if (ctx.isMyTurn && (ctx.myHandCount || 0) >= minHand) {
+            return { powerDelta: delta, matched: true, note: `我方回合手牌≥${minHand}+${delta}` };
+        }
+        return { powerDelta: 0, matched: true, note: `我方回合手牌≥${minHand}+${delta}（未生效）` };
+    }
+
+    // ── 模式7a3：「自己的回合中，自己的手牌在N张以下…战斗力+N」
+    const myTurnHandAtMostMatch = txt.match(/自己的回合.*?自己的手牌在(\d+)张以下.*?战斗力\+(\d+)/);
+    if (myTurnHandAtMostMatch) {
+        const maxHand = parseInt(myTurnHandAtMostMatch[1], 10);
+        const delta = parseInt(myTurnHandAtMostMatch[2], 10) || 0;
+        const g = passiveFieldGates();
+        if (!g.ok) return { powerDelta: 0, matched: true, note: g.note };
+        if (ctx.isMyTurn && (ctx.myHandCount || 0) <= maxHand) {
+            return { powerDelta: delta, matched: true, note: `我方回合手牌≤${maxHand}+${delta}` };
+        }
+        return { powerDelta: 0, matched: true, note: `我方回合手牌≤${maxHand}+${delta}（未生效）` };
+    }
+
+    // ── 模式7a4：「自己的回合中，对手的手牌在N张以下…战斗力+N」
+    const myTurnOppHandAtMostMatch = txt.match(/自己的回合.*?对手的手牌在(\d+)张以下.*?战斗力\+(\d+)/);
+    if (myTurnOppHandAtMostMatch) {
+        const maxHand = parseInt(myTurnOppHandAtMostMatch[1], 10);
+        const delta = parseInt(myTurnOppHandAtMostMatch[2], 10) || 0;
+        const g = passiveFieldGates();
+        if (!g.ok) return { powerDelta: 0, matched: true, note: g.note };
+        if (ctx.isMyTurn && (ctx.oppHandCount || 0) <= maxHand) {
+            return { powerDelta: delta, matched: true, note: `我方回合对手手牌≤${maxHand}+${delta}` };
+        }
+        return { powerDelta: 0, matched: true, note: `我方回合对手手牌≤${maxHand}+${delta}（未生效）` };
     }
 
     // ── 模式7b：「自己的回合中，我方战场上存在「X」时，战斗力+N」
@@ -221,6 +280,16 @@ export function evaluatePassive(segment, ctx) {
         return { powerDelta: 0, matched: true, note: `我方回合且存在${reqName}+${delta}（未生效）` };
     }
 
+    // ── 模式7c：仅「自己的回合中，这名单位的战斗力+N」（不含其它条件的纯加值）
+    const myTurnBareMatch = txt.match(/自己的回合中，这名单位的战斗力\+(\d+)/);
+    if (myTurnBareMatch) {
+        const delta = parseInt(myTurnBareMatch[1], 10) || 0;
+        if (ctx.isMyTurn) {
+            return { powerDelta: delta, matched: true, note: `我方回合+${delta}（生效）` };
+        }
+        return { powerDelta: 0, matched: true, note: `我方回合+${delta}（非我方回合）` };
+    }
+
     // ── 模式8：「对手没有手牌时，战斗力+N」
     const oppNoHandMatch = txt.match(/对手没有手牌.*?战斗力\+(\d+)/);
     if (oppNoHandMatch) {
@@ -231,10 +300,12 @@ export function evaluatePassive(segment, ctx) {
         return { powerDelta: 0, matched: true, note: `对手无手牌+${delta}（未生效）` };
     }
 
-    // ── 模式9：「自己的手牌比对手多时，战斗力+N」
-    const moreHandMatch = txt.match(/自己的手牌.*?比对手.*?战斗力\+(\d+)/);
+    // ── 模式9：「自己的手牌（数量）比对手多时，战斗力+N」（含无「自己的回合」限制的版本，如深层冻结）
+    const moreHandMatch = txt.match(/自己的手牌(?:数量)?比对手多.*?战斗力\+(\d+)/);
     if (moreHandMatch) {
         const delta = parseInt(moreHandMatch[1], 10) || 0;
+        const g = passiveFieldGates();
+        if (!g.ok) return { powerDelta: 0, matched: true, note: g.note };
         if ((ctx.myHandCount || 0) > (ctx.oppHandCount || 0)) {
             return { powerDelta: delta, matched: true, note: `手牌比对手多+${delta}（生效）` };
         }
@@ -628,7 +699,9 @@ export function buildPassiveContext(state, unit, attackerOverride, defenderOverr
         defender: defenderOverride ?? state.defender?.value ?? null,
         supportCard: supportCardOverride ?? state.mySupportCard?.value ?? null,
         myJewels: (state.jewels?.value || []).length,
-        oppJewels: (state.oppJewels?.value || state.oppStats?.value?.jewels || 0),
+        oppJewels: Array.isArray(state.oppJewels?.value)
+            ? state.oppJewels.value.length
+            : (Number(state.oppStats?.value?.jewels) || 0),
         myHandCount: (state.hand?.value || []).length,
         oppHandCount: (state.oppStats?.value?.hand || 0),
         myBondCount: (state.bonds?.value || []).length,

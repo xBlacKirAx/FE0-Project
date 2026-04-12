@@ -8,6 +8,12 @@ import { createSocketHandler } from './modules/socketHandler.js';
 import { createPanelViewModels } from './modules/viewModels.js';
 import { formatAbility, formatSupport } from './modules/formatters.js';
 import { createUiActions } from './modules/uiActions.js';
+import { createTutorialEngine } from './modules/tutorial/tutorialEngine.js';
+import {
+    deserializeSupportEffectResult,
+    requiresEmblemActivationChoice
+} from './modules/engine/supportEmblemPhase.js';
+import { getSupportEffectDisplayLabel } from './modules/engine/supportSideEffectConfirm.js';
 import {
     normalizeRoomPayload,
     deriveRoomRole,
@@ -29,6 +35,16 @@ import { OppDeckPanel } from './components/OppDeckPanel.js';
 import { TopControlBar } from './components/TopControlBar.js';
 import { DeckManagerModal } from './components/DeckManagerModal.js';
 import { AiReplayPanel } from './components/AiReplayPanel.js';
+import { getUnitAbilityDisplayText, getSupportAbilityDisplayText } from './modules/cardAbilityDisplay.js';
+import {
+    startMatchReplaySession,
+    clearMatchReplaySession,
+    buildMatchReplayPayload,
+    installMatchReplaySocketWrapper,
+    isMatchReplaySessionActive,
+    canExportRoomReplay
+} from './modules/matchReplayRecorder.js';
+import { setPlayModeRoomOutcomeHandler } from './modules/playModeRoomOutcome.js';
 
 const { createApp, computed, onMounted, watch, ref } = Vue;
 
@@ -113,6 +129,7 @@ createApp({
         const dragDrop = createDragDropHandler(state, cardOps, rules)
         const turnMgr = createTurnManager(state, cardOps);
         const socketHandler = createSocketHandler(state, cardOps);
+        const tutorialEngine = createTutorialEngine(state, cardOps);
         const EVT = globalThis.SOCKET_EVENTS || {};
 
         const isMyCard = (card) => !!cardOps.getArea(card);
@@ -153,7 +170,8 @@ createApp({
             );
         });
         const highlightNextPhase = computed(() => {
-            if (!showNextPhaseButton.value || state.isDevMode.value || !state.isMyTurn.value) return false;
+            if (!showNextPhaseButton.value || !state.isMyTurn.value) return false;
+            if (state.isDevMode.value && state.roomMode.value !== 'tutorial') return false;
             if (state.currentPhase.value === 'DEPLOY') {
                 return remainingCost.value <= 0 || !hasDeployableOrClassChangeCard.value;
             }
@@ -163,11 +181,18 @@ createApp({
             }
             return false;
         });
+        const deployZoneGuideActive = computed(() => {
+            if (state.currentPhase.value !== 'DEPLOY') return false;
+            if (highlightNextPhase.value) return false;
+            if (state.isDevMode.value && state.roomMode.value !== 'tutorial') return false;
+            return true;
+        });
         const isMyCombatAttacker = computed(() => ['fieldFront', 'fieldRear'].some(area =>
             state[area].value.some(card => card.instanceId === state.attacker.value?.instanceId)
         ));
         const selectedCombatCostCardId = ref(null);
         const selectedCombatCostCardName = ref('');
+        const abilityBondFlipSelectedIds = ref([]);
         const showDeckManager = ref(false);
         const isAiDuelPending = ref(false);
         const showAiDuelSetup = ref(false);
@@ -182,6 +207,8 @@ createApp({
         const isAiReplayPanelHidden = ref(false);
         const isAiReplayLoading = ref(false);
         const aiReplayLog = ref(null);
+        const aiReplayLogList = ref([]);
+        const aiReplaySelectedLogId = ref('');
         const aiReplayGameIndex = ref(0);
         const aiReplayCursor = ref(0);
         const replayCardCatalog = ref(new Map());
@@ -219,6 +246,14 @@ createApp({
             top: `${aiReplayNavigatorPosition.value.y}px`
         }));
         const cachedRoomPassword = ref('');
+        const createRoomPasswordInput = ref('');
+        const joinRoomMode = ref('normal');
+        const joinRoomIdInput = ref('');
+        const joinRoomPasswordInput = ref('');
+        const joinTutorialIdInput = ref('');
+        const roomTutorialList = ref([]);
+        const showRoomCreateModal = ref(false);
+        const showRoomJoinModal = ref(false);
         const startRoomButtonConsumed = ref(false);
         const isHandlingRoomGameStart = ref(false);
         const lastHandledRoomGameStartTs = ref(0);
@@ -242,7 +277,7 @@ createApp({
             && state.isMyTurn.value
             && state.currentPhase.value === 'BEGINNING'
             && !state.firstPlayerOpeningTurnLocked.value
-            && !state.isDevMode.value
+            && (!state.isDevMode.value || state.roomMode.value === 'tutorial')
         );
         const topBarUi = computed(() => deriveTopBarUi({
             roomScene: roomScene.value,
@@ -251,6 +286,12 @@ createApp({
             startRoomButtonConsumed: startRoomButtonConsumed.value,
             isCompactMobile: isCompactMobile.value
         }));
+        const showSurrenderButton = computed(() =>
+            showBattleUi.value
+            && !state.isDevMode.value
+            && state.roomMode.value !== 'tutorial'
+            && state.roomGameInProgress.value
+        );
         const playerDisplayName = ref('');
         const playerDisplayNameInput = ref('');
         const isEditingPlayerDisplayName = ref(false);
@@ -562,33 +603,8 @@ createApp({
         const closeEntryPreviewCardDetail = () => {
             entryPreviewSelectedCard.value = null;
         };
-        const getEntryCardAbilityText = (card) => {
-            if (!card) return '';
-            if (typeof card.ability === 'string') return card.ability;
-            const direct = String(card.ability?.text || '').trim();
-            if (direct) return direct;
-            const entries = Array.isArray(card.ability?.entries) ? card.ability.entries : [];
-            if (!entries.length) return '';
-            return entries
-                .map((entry) => {
-                    const title = String(entry?.title || '').trim();
-                    const type = String(entry?.type || '').trim();
-                    const effect = String(entry?.effectText || entry?.rawText || '').trim();
-                    const head = `${title ? `『${title}』` : ''}${type}`.trim();
-                    return `${head}${head && effect ? ' ' : ''}${effect}`.trim();
-                })
-                .filter(Boolean)
-                .join('\n');
-        };
-        const getEntryCardSupportText = (card) => {
-            if (!card) return '';
-            if (typeof card.supportAbility === 'string') return card.supportAbility;
-            const direct = String(card.supportAbility?.text || '').trim();
-            if (direct) return direct;
-            const effectName = String(card.supportAbility?.effectName || '').trim();
-            const effectText = String(card.supportAbility?.effectText || '').trim();
-            return `${effectName ? `『${effectName}』` : ''}${effectText ? (effectName ? ' ' : '') + effectText : ''}`.trim();
-        };
+        const getEntryCardAbilityText = (card) => getUnitAbilityDisplayText(card);
+        const getEntryCardSupportText = (card) => getSupportAbilityDisplayText(card);
 
         const isLocalDecisionActor = computed(() => {
             const owner = state.combatDecision.value?.promptOwner;
@@ -655,6 +671,20 @@ createApp({
             if (state.activePanel.value === 'supportMoveAttackerPostBattleCandidates') {
                 return '援护之纹章：点击攻击单位执行移动';
             }
+            if (state.activePanel.value === 'abilityBondFlipPick') {
+                const n = state.pendingUnitAbility?.value?.flipNeeded || 0;
+                return `能力费用：请选择 ${n} 张正面羁绊翻面`;
+            }
+            if (state.activePanel.value === 'combatTriggerBondFlipPick') {
+                const n = state.pendingCombatTriggerPayment?.value?.flipNeeded || 0;
+                return `【自】费用：请选择 ${n} 张正面羁绊翻面`;
+            }
+            if (state.activePanel.value === 'abilityGraveRecoverPick') {
+                return '能力效果：从退避区选择 1 张符合条件的卡加入手牌';
+            }
+            if (state.activePanel.value === 'combatTriggerGravePick') {
+                return '【自】效果：从退避区选择 1 张卡加入手牌';
+            }
             return activePanelTitle.value;
         });
 
@@ -706,6 +736,21 @@ createApp({
                 if (!attackerId) return [];
                 return [...state.fieldFront.value, ...state.fieldRear.value].filter(card => String(card.instanceId) === String(attackerId));
             }
+            if (state.activePanel.value === 'abilityBondFlipPick' || state.activePanel.value === 'combatTriggerBondFlipPick') {
+                return (state.bonds.value || []).filter((b) => !b.isFaceDown);
+            }
+            if (state.activePanel.value === 'combatTriggerGravePick') {
+                const p = state.pendingCombatTriggerPayment?.value;
+                if (!p || p.mode !== 'grave-effect') return state.graveyard.value || [];
+                const maxC = p.maxCost;
+                if (maxC === null || maxC === undefined) return [...(state.graveyard.value || [])];
+                return (state.graveyard.value || []).filter((c) => (parseInt(c.cost, 10) || 0) <= maxC);
+            }
+            if (state.activePanel.value === 'abilityGraveRecoverPick') {
+                const spec = state.pendingUnitAbility?.value?.graveSpec;
+                if (!spec) return state.graveyard.value || [];
+                return (state.graveyard.value || []).filter((c) => (c.charaName || '') !== spec.except);
+            }
             return activePanelCards.value;
         });
 
@@ -717,7 +762,70 @@ createApp({
         });
 
         const closeActivePanel = () => {
+            if (state.activePanel.value === 'abilityBondFlipPick' || state.activePanel.value === 'abilityGraveRecoverPick') {
+                cardOps.cancelPendingUnitAbility?.();
+                abilityBondFlipSelectedIds.value = [];
+            }
+            if (state.activePanel.value === 'combatTriggerBondFlipPick' || state.activePanel.value === 'combatTriggerGravePick') {
+                cardOps.cancelCombatTriggerPayment?.();
+                abilityBondFlipSelectedIds.value = [];
+            }
             state.activePanel.value = null;
+        };
+
+        const pendingBondFlipCostNeeded = computed(() => {
+            if (state.activePanel.value === 'combatTriggerBondFlipPick') {
+                return state.pendingCombatTriggerPayment?.value?.flipNeeded || 0;
+            }
+            return state.pendingUnitAbility?.value?.flipNeeded || 0;
+        });
+
+        const confirmAbilityBondFlipSelection = () => {
+            const need = pendingBondFlipCostNeeded.value;
+            const picked = abilityBondFlipSelectedIds.value || [];
+            if (need > 0 && picked.length !== need) {
+                showRoomFlowNotice(`请选择 ${need} 张正面朝上的羁绊卡作为费用。`, 2600);
+                return;
+            }
+            const r = cardOps.submitPendingUnitAbilityBondSelection?.(picked);
+            if (r === 'grave') {
+                abilityBondFlipSelectedIds.value = [];
+                state.activePanel.value = 'abilityGraveRecoverPick';
+                return;
+            }
+            if (r === 'done') {
+                abilityBondFlipSelectedIds.value = [];
+                closeActivePanel();
+                return;
+            }
+            showRoomFlowNotice('能力结算失败，请重试或取消。', 2600);
+        };
+
+        const confirmCombatTriggerBondFlipSelection = () => {
+            const need = pendingBondFlipCostNeeded.value;
+            const picked = abilityBondFlipSelectedIds.value || [];
+            if (need > 0 && picked.length !== need) {
+                showRoomFlowNotice(`请选择 ${need} 张正面朝上的羁绊卡作为【自】费用。`, 2600);
+                return;
+            }
+            const ok = cardOps.submitCombatTriggerBondPayment?.(picked);
+            if (!ok) {
+                showRoomFlowNotice('【自】费用结算失败，请重试或取消。', 2600);
+                return;
+            }
+            abilityBondFlipSelectedIds.value = [];
+            if (state.activePanel.value === 'combatTriggerBondFlipPick' || state.activePanel.value === 'combatTriggerGravePick') {
+                return;
+            }
+            closeActivePanel();
+        };
+
+        const confirmBondFlipCostPanel = () => {
+            if (state.activePanel.value === 'combatTriggerBondFlipPick') {
+                confirmCombatTriggerBondFlipSelection();
+                return;
+            }
+            confirmAbilityBondFlipSelection();
         };
 
         const openCombatCostPicker = () => {
@@ -751,8 +859,18 @@ createApp({
             const card = state.selectedCard.value;
             const ability = selectedCardActivatableAbilities.value[index] || null;
             if (!card || !ability || !cardOps.activateUnitAbility) return;
-            const ok = cardOps.activateUnitAbility(card, ability.title);
-            if (!ok) {
+            const ret = cardOps.activateUnitAbility(card, ability.title);
+            if (ret === 'pending') {
+                const p = state.pendingUnitAbility?.value;
+                abilityBondFlipSelectedIds.value = [];
+                if (p?.flipNeeded > 0) {
+                    state.activePanel.value = 'abilityBondFlipPick';
+                } else {
+                    state.activePanel.value = 'abilityGraveRecoverPick';
+                }
+                return;
+            }
+            if (!ret) {
                 showRoomFlowNotice('能力发动失败：费用不足或条件不满足。', 2400);
             }
         };
@@ -813,8 +931,13 @@ createApp({
             state.roomReady.value = nextRoomState.ready;
             state.roomGameInProgress.value = !!nextRoomState.gameInProgress;
             state.roomIsPrivate.value = nextRoomState.isPrivate;
+            state.roomMode.value = String(nextRoomState.roomMode || 'normal');
+            state.tutorialId.value = String(nextRoomState.tutorialId || '');
             if (!nextRoomState.roomId) {
                 state.roomGameInProgress.value = false;
+                state.roomMode.value = 'normal';
+                state.tutorialId.value = '';
+                tutorialEngine.resetTutorial();
             } else if (state.connectionScene.value === 'recovering') {
                 state.connectionScene.value = 'connected';
             }
@@ -871,35 +994,88 @@ createApp({
 
             saveRoomCache({
                 roomId: nextRoomState.roomId,
+                roomMode: state.roomMode.value,
+                tutorialId: state.tutorialId.value,
                 password: cachedRoomPassword.value || ''
             });
         };
 
-        const createRoom = () => {
+        const loadRoomTutorialList = async () => {
+            try {
+                const res = await fetch(`/api/tutorials?t=${Date.now()}`);
+                const data = await res.json().catch(() => ({}));
+                const items = Array.isArray(data?.items) ? data.items : [];
+                roomTutorialList.value = items;
+                if (items.length && !String(joinTutorialIdInput.value || '').trim()) {
+                    joinTutorialIdInput.value = String(items[0].id || '');
+                }
+            } catch (err) {
+                console.warn('[room] 加载教学关列表失败', err);
+            }
+        };
+
+        const closeRoomCreateModal = () => {
+            showRoomCreateModal.value = false;
+        };
+
+        const closeRoomJoinModal = () => {
+            showRoomJoinModal.value = false;
+        };
+
+        const openRoomCreateModal = () => {
+            showRoomCreateModal.value = true;
+        };
+
+        const openRoomJoinModal = async () => {
+            await loadRoomTutorialList();
+            showRoomJoinModal.value = true;
+        };
+
+        const submitCreateRoom = () => {
             if (!EVT.ROOM_CREATE) return;
-            const password = prompt('可选：输入房间口令（留空=公开房）') || '';
-            cachedRoomPassword.value = String(password || '').trim();
+            cachedRoomPassword.value = String(createRoomPasswordInput.value || '').trim();
             if (!cachedRoomPassword.value) {
                 if (EVT.ROOM_QUICK_MATCH) {
                     state.socket.emit(EVT.ROOM_QUICK_MATCH);
                 } else {
                     state.socket.emit(EVT.ROOM_CREATE, { password: '' });
                 }
+                closeRoomCreateModal();
                 return;
             }
             state.socket.emit(EVT.ROOM_CREATE, { password: cachedRoomPassword.value });
+            closeRoomCreateModal();
         };
 
-        const joinRoom = () => {
+        const submitJoinRoom = () => {
             if (!EVT.ROOM_JOIN) return;
-            const roomId = prompt('输入房间号（6位）');
-            if (!roomId) return;
-            const password = prompt('若为私密房请输入口令（公开房可留空）') || '';
-            cachedRoomPassword.value = String(password || '').trim();
+            if (joinRoomMode.value === 'tutorial') {
+                const tutorialId = String(joinTutorialIdInput.value || '').trim();
+                if (!tutorialId) {
+                    showRoomFlowNotice('请选择或输入教学关 ID', 2200);
+                    return;
+                }
+                cachedRoomPassword.value = '';
+                joinRoomPasswordInput.value = '';
+                state.socket.emit(EVT.ROOM_JOIN, {
+                    roomMode: 'tutorial',
+                    tutorialId
+                });
+                closeRoomJoinModal();
+                return;
+            }
+            const roomId = String(joinRoomIdInput.value || '').trim();
+            if (!roomId) {
+                showRoomFlowNotice('请输入房间号', 2200);
+                return;
+            }
+            cachedRoomPassword.value = String(joinRoomPasswordInput.value || '').trim();
             state.socket.emit(EVT.ROOM_JOIN, {
-                roomId: roomId.trim(),
+                roomMode: 'normal',
+                roomId,
                 password: cachedRoomPassword.value
             });
+            closeRoomJoinModal();
         };
 
         const quickMatch = () => {
@@ -913,6 +1089,8 @@ createApp({
             state.roomGameInProgress.value = false;
             clearRoomCache();
             cachedRoomPassword.value = '';
+            joinRoomIdInput.value = '';
+            joinRoomPasswordInput.value = '';
             state.socket.emit(EVT.ROOM_LEAVE);
         };
 
@@ -932,6 +1110,34 @@ createApp({
 
         const openDeckManager = () => {
             showDeckManager.value = true;
+        };
+
+        const exportTutorialSnapshotFromDev = async () => {
+            if (!state.isDevMode.value) return;
+            const snap = cardOps.exportTutorialSnapshot();
+            const json = JSON.stringify(snap, null, 2);
+            try {
+                if (navigator.clipboard?.writeText) {
+                    await navigator.clipboard.writeText(json);
+                    showRoomFlowNotice('局面快照已复制到剪贴板，可粘贴到 data/tutorials 的 snapshot 字段', 3600);
+                    return;
+                }
+            } catch (err) {
+                console.warn('[dev] 剪贴板复制失败', err);
+            }
+            try {
+                const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `tutorial-snapshot-${Date.now()}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                showRoomFlowNotice('已下载快照 JSON（剪贴板不可用）', 3200);
+            } catch (e) {
+                console.error(e);
+                showRoomFlowNotice('导出失败', 2200);
+            }
         };
 
         const runAiDuelFromControlBar = async () => {
@@ -1129,6 +1335,10 @@ createApp({
         const applyReplayPatch = (patch, seatAName) => {
             if (!patch || typeof patch !== 'object') return;
 
+            if (Object.prototype.hasOwnProperty.call(patch, 'currentPhase') && patch.currentPhase) {
+                state.currentPhase.value = patch.currentPhase;
+            }
+
             applyReplaySeatPatch(patch.seatAState, {
                 front: state.fieldFront,
                 rear: state.fieldRear,
@@ -1159,7 +1369,7 @@ createApp({
             if (Object.prototype.hasOwnProperty.call(patch, 'activeSeat')) {
                 state.isMyTurn.value = String(patch.activeSeat || '') === String(seatAName || '');
             }
-            if (patch.turnLabel || patch.turn) {
+            if ((patch.turnLabel || patch.turn) && !patch.currentPhase) {
                 state.currentPhase.value = 'ATTACK';
             }
         };
@@ -1202,7 +1412,7 @@ createApp({
             state.supportInteraction.value = null;
             state.selectedCard.value = null;
 
-            state.currentPhase.value = 'ATTACK';
+            state.currentPhase.value = snapshot.currentPhase || 'ATTACK';
             state.isMyTurn.value = String(snapshot.activeSeat || '') === String(snapshot.seatA || '');
         };
 
@@ -1348,6 +1558,112 @@ createApp({
             applyReplayCombatState(timeline, safeCursor);
         };
 
+        const downloadRoomReplayJson = (endExtra = {}) => {
+            const blob = new Blob([JSON.stringify(buildMatchReplayPayload(endExtra), null, 2)], {
+                type: 'application/json'
+            });
+            const a = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = `fe0对战录像-${Date.now()}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        };
+
+        const promptRoomReplaySave = (endExtra = {}) => {
+            const ok = window.confirm(
+                '是否在本地保存本局对局录像？\n将下载 JSON 文件（可与 AI 回放相同方式逐步播放）。'
+            );
+            if (ok && canExportRoomReplay()) {
+                downloadRoomReplayJson(endExtra);
+            }
+            clearMatchReplaySession();
+        };
+
+        const requestRoomSurrender = () => {
+            if (!EVT.ROOM_SURRENDER) return;
+            if (!state.roomId.value || !state.roomGameInProgress.value) return;
+            if (state.roomMode.value === 'tutorial' || state.isDevMode.value) return;
+            if (!window.confirm('确定投降？本局立即结束，对方获胜。')) return;
+            state.socket.emit(EVT.ROOM_SURRENDER);
+        };
+
+        const fetchAiReplayLogIndex = async (limit = 40) => {
+            const listResponse = await fetch(`/api/ai/duel/logs?limit=${limit}`);
+            const listPayload = await listResponse.json().catch(() => ({}));
+            if (!listResponse.ok) {
+                throw new Error(listPayload?.message || '读取回放日志列表失败。');
+            }
+            return Array.isArray(listPayload?.items) ? listPayload.items : [];
+        };
+
+        const normalizeReplayLogPayload = (raw) => {
+            if (!raw || typeof raw !== 'object') return raw;
+            if (Array.isArray(raw.games) && raw.games.length) return raw;
+            if (raw.initialSnapshot && Array.isArray(raw.timeline)) {
+                const a = String(raw.session?.seatAName || raw.deckA || '录像方').trim() || '录像方';
+                const b = String(raw.session?.seatBName || raw.deckB || '').trim() || '对手';
+                return {
+                    ...raw,
+                    deckA: raw.deckA || a,
+                    deckB: raw.deckB || b,
+                    totalGames: 1,
+                    games: [
+                        {
+                            winner: raw.winner ?? null,
+                            reason: raw.reason || 'imported',
+                            initialSnapshot: raw.initialSnapshot,
+                            timeline: raw.timeline
+                        }
+                    ]
+                };
+            }
+            return raw;
+        };
+
+        const loadAiReplayLogByIdCore = async (logId) => {
+            const id = String(logId || '').trim();
+            if (!id) {
+                aiReplayLog.value = null;
+                aiReplaySelectedLogId.value = '';
+                return;
+            }
+            const detailResponse = await fetch(`/api/ai/duel/logs/${encodeURIComponent(id)}`);
+            const detailPayload = await detailResponse.json().catch(() => ({}));
+            if (!detailResponse.ok) {
+                alert(detailPayload?.message || '读取回放日志失败。');
+                return;
+            }
+            await ensureReplayCardCatalogLoaded();
+            aiReplayLog.value = normalizeReplayLogPayload(detailPayload);
+            aiReplaySelectedLogId.value = id;
+            aiReplayGameIndex.value = 0;
+            aiReplayCursor.value = 0;
+            applyCurrentReplayCursor();
+        };
+
+        const loadAiReplayLogById = async (logId) => {
+            if (!state.isDevMode.value) {
+                alert('仅开发者模式可使用 AI 回放功能。');
+                return;
+            }
+            isAiReplayLoading.value = true;
+            try {
+                await loadAiReplayLogByIdCore(logId);
+            } catch (err) {
+                console.error('[AI Replay] 加载失败', err);
+                alert('加载 AI 回放失败，请查看控制台。');
+            } finally {
+                isAiReplayLoading.value = false;
+            }
+        };
+
+        const selectAiReplayLogFile = async (logId) => {
+            const id = String(logId || '').trim();
+            if (!id) return;
+            await loadAiReplayLogById(id);
+        };
+
         const loadLatestAiReplayLog = async () => {
             if (!state.isDevMode.value) {
                 alert('仅开发者模式可使用 AI 回放功能。');
@@ -1356,34 +1672,42 @@ createApp({
 
             isAiReplayLoading.value = true;
             try {
-                const listResponse = await fetch('/api/ai/duel/logs?limit=1');
-                const listPayload = await listResponse.json().catch(() => ({}));
-                if (!listResponse.ok) {
-                    alert(listPayload?.message || '读取回放日志列表失败。');
-                    return;
-                }
-                const latest = Array.isArray(listPayload?.items) ? listPayload.items[0] : null;
-                if (!latest?.id) {
+                const items = await fetchAiReplayLogIndex();
+                aiReplayLogList.value = items;
+                if (!items.length) {
                     aiReplayLog.value = null;
+                    aiReplaySelectedLogId.value = '';
                     alert('暂无 AI 对战日志，请先运行一次 AI 对战。');
                     return;
                 }
+                await loadAiReplayLogByIdCore(items[0].id);
+            } catch (err) {
+                console.error('[AI Replay] 列表/加载失败', err);
+                alert(String(err?.message || err || '读取回放列表失败'));
+            } finally {
+                isAiReplayLoading.value = false;
+            }
+        };
 
-                const detailResponse = await fetch(`/api/ai/duel/logs/${encodeURIComponent(latest.id)}`);
-                const detailPayload = await detailResponse.json().catch(() => ({}));
-                if (!detailResponse.ok) {
-                    alert(detailPayload?.message || '读取回放日志失败。');
-                    return;
-                }
-
+        const importLocalReplayFile = async (file) => {
+            if (!state.isDevMode.value) {
+                alert('仅开发者模式可导入回放文件。');
+                return;
+            }
+            if (!file) return;
+            isAiReplayLoading.value = true;
+            try {
+                const text = await file.text();
+                const parsed = JSON.parse(text);
                 await ensureReplayCardCatalogLoaded();
-                aiReplayLog.value = detailPayload;
+                aiReplayLog.value = normalizeReplayLogPayload(parsed);
+                aiReplaySelectedLogId.value = '';
                 aiReplayGameIndex.value = 0;
                 aiReplayCursor.value = 0;
                 applyCurrentReplayCursor();
             } catch (err) {
-                console.error('[AI Replay] 加载失败', err);
-                alert('加载 AI 回放失败，请查看控制台。');
+                console.error('[Replay] 本地导入失败', err);
+                alert('导入失败：请确认文件为有效的 AI/房间录像 JSON。');
             } finally {
                 isAiReplayLoading.value = false;
             }
@@ -1523,7 +1847,54 @@ createApp({
             }
         };
 
+        const supportEmblemAttackerLabel = computed(() => {
+            const p = deserializeSupportEffectResult(state.combatStats.value?.pendingAttackerSupportEffect);
+            return requiresEmblemActivationChoice(p) ? getSupportEffectDisplayLabel(p) : '';
+        });
+        const supportEmblemDefenderLabel = computed(() => {
+            const p = deserializeSupportEffectResult(state.combatStats.value?.pendingDefenderSupportEffect);
+            return requiresEmblemActivationChoice(p) ? getSupportEffectDisplayLabel(p) : '';
+        });
+
+        const handleSupportEmblemChoice = (role, choice) => {
+            cardOps.submitSupportEmblemChoice(state, role, choice);
+        };
+
         const handleRegionPanelCardClick = (card) => {
+            if (state.activePanel.value === 'abilityBondFlipPick' || state.activePanel.value === 'combatTriggerBondFlipPick') {
+                const p = state.activePanel.value === 'abilityBondFlipPick'
+                    ? state.pendingUnitAbility?.value
+                    : state.pendingCombatTriggerPayment?.value;
+                if (!p || !card || card.isFaceDown) return;
+                const need = p.flipNeeded || 0;
+                const set = new Set((abilityBondFlipSelectedIds.value || []).map(String));
+                const id = String(card.instanceId);
+                if (set.has(id)) {
+                    set.delete(id);
+                } else if (set.size < need) {
+                    set.add(id);
+                }
+                abilityBondFlipSelectedIds.value = [...set];
+                return;
+            }
+            if (state.activePanel.value === 'combatTriggerGravePick') {
+                const ok = cardOps.submitCombatTriggerGravePick?.(card.instanceId);
+                if (ok) {
+                    closeActivePanel();
+                } else {
+                    showRoomFlowNotice('无法选择该卡：请选符合条件的退避区卡牌。', 2800);
+                }
+                return;
+            }
+            if (state.activePanel.value === 'abilityGraveRecoverPick') {
+                const r = cardOps.submitPendingUnitAbilityGraveSelection?.(card.instanceId);
+                if (r === 'done') {
+                    closeActivePanel();
+                } else {
+                    showRoomFlowNotice('无法选择该卡：需满足能力文本中的退避区条件。', 2800);
+                }
+                return;
+            }
             if (state.activePanel.value === 'combatCostHand') {
                 selectedCombatCostCardId.value = card.instanceId;
                 selectedCombatCostCardName.value = card.cardName || card.name || '';
@@ -1713,6 +2084,7 @@ createApp({
         };
         watch([() => state.mulliganState.value, () => state.opponentMulliganState.value], ([myState, oppState]) => {
             if (roomMulliganDone.value) return;
+            if (state.roomMode.value === 'tutorial') return;
             if (myState === 'done' && oppState !== 'done' && !hasShownMulliganWaitNotice.value) {
                 showRoomFlowNotice('你已完成调度，等待对手完成调度...', 0);
                 hasShownMulliganWaitNotice.value = true;
@@ -1755,6 +2127,23 @@ createApp({
                 window.__fe0AlertPatched = true;
             }
 
+            installMatchReplaySocketWrapper(state.socket, () => isMatchReplaySessionActive(), () => state);
+            setPlayModeRoomOutcomeHandler((detail) => {
+                const msg = String(detail?.message || '').trim();
+                const isPlayModeRoom =
+                    !!state.roomId.value
+                    && state.roomMode.value !== 'tutorial'
+                    && !state.isDevMode.value;
+                if (!isPlayModeRoom) {
+                    if (msg) window.alert(msg);
+                    return;
+                }
+                window.setTimeout(() => {
+                    if (msg) window.alert(msg);
+                    promptRoomReplaySave({ outcome: detail?.kind || 'unknown' });
+                }, 600);
+            });
+
             // 启动网络监听
             socketHandler.setupSocketListeners();
             turnMgr.setupTurnListener();
@@ -1772,6 +2161,7 @@ createApp({
             }
             if (EVT.ROOM_GAME_STARTED) {
                 state.socket.on(EVT.ROOM_GAME_STARTED, async (payload = {}) => {
+                    if (state.roomMode.value === 'tutorial') return;
                     const eventTs = Number(payload?.ts || 0);
                     if (isHandlingRoomGameStart.value) {
                         return;
@@ -1808,13 +2198,46 @@ createApp({
                             state.firstPlayerOpeningTurnLocked.value = iAmStarter;
                         }
                         showRoomFlowNotice(iAmStarter ? '开局完成：你是先攻，请先进行调度。' : '开局完成：对手为先攻，请先进行调度。', 0);
+                        const oppLabel =
+                            state.roomRole.value === 'host'
+                                ? String(state.roomGuestName.value || '').trim() || '对手'
+                                : String(state.roomHostName.value || '').trim() || '对手';
+                        startMatchReplaySession({
+                            roomId: state.roomId.value,
+                            playerId: state.socket.id,
+                            displayName: playerDisplayName.value,
+                            seatAName: String(playerDisplayName.value || '').trim() || '我方',
+                            seatBName: oppLabel
+                        });
                     } finally {
                         isHandlingRoomGameStart.value = false;
                     }
                 });
             }
+            if (EVT.ROOM_SURRENDERED) {
+                state.socket.on(EVT.ROOM_SURRENDERED, (payload = {}) => {
+                    if (state.roomMode.value === 'tutorial') return;
+                    const myId = String(state.socket.id || '');
+                    const by = String(payload?.surrenderedBy || '');
+                    const iSurrendered = !!by && by === myId;
+                    const msg = iSurrendered ? '你已投降，本局结束。' : '对方已投降，你获得本局胜利。';
+                    window.setTimeout(() => {
+                        window.alert(msg);
+                        const isPlayModeRoom =
+                            !!state.roomId.value
+                            && state.roomMode.value !== 'tutorial'
+                            && !state.isDevMode.value;
+                        if (isPlayModeRoom) {
+                            promptRoomReplaySave({ outcome: 'surrender' });
+                        } else {
+                            clearMatchReplaySession();
+                        }
+                    }, 400);
+                });
+            }
             if (EVT.ROOM_MULLIGAN_STATE) {
                 state.socket.on(EVT.ROOM_MULLIGAN_STATE, (payload = {}) => {
+                    if (state.roomMode.value === 'tutorial') return;
                     const hostDone = !!payload?.hostDone;
                     const guestDone = !!payload?.guestDone;
                     const bothDone = hostDone && guestDone;
@@ -1834,6 +2257,7 @@ createApp({
             }
             if (EVT.ROOM_MULLIGAN_DONE) {
                 state.socket.on(EVT.ROOM_MULLIGAN_DONE, (payload = {}) => {
+                    if (state.roomMode.value === 'tutorial') return;
                     finalizeMulliganIfReady(payload?.firstPlayerId || null);
                 });
             }
@@ -1847,6 +2271,40 @@ createApp({
                     }
                 });
             }
+            if (EVT.TUTORIAL_INIT) {
+                state.socket.on(EVT.TUTORIAL_INIT, (payload = {}) => {
+                    const tutorialId = String(payload?.tutorialId || '').trim();
+                    const applyPayload = (merged) => {
+                        tutorialEngine.onInit(merged);
+                    };
+                    if (!tutorialId) {
+                        applyPayload(payload);
+                        return;
+                    }
+                    (async () => {
+                        try {
+                            const res = await fetch(`/api/tutorials/${encodeURIComponent(tutorialId)}?t=${Date.now()}`);
+                            const full = await res.json().catch(() => ({}));
+                            if (res.ok && full && typeof full === 'object' && full.id) {
+                                applyPayload({
+                                    ...payload,
+                                    tutorialId: full.id,
+                                    title: full.title ?? payload.title,
+                                    snapshot:
+                                        full.snapshot && typeof full.snapshot === 'object'
+                                            ? full.snapshot
+                                            : payload.snapshot || {},
+                                    steps: Array.isArray(full.steps) && full.steps.length ? full.steps : payload.steps || []
+                                });
+                                return;
+                            }
+                        } catch (err) {
+                            console.warn('[tutorial] 无法从 HTTP 加载完整快照，使用 socket 载荷', err);
+                        }
+                        applyPayload(payload);
+                    })();
+                });
+            }
 
             state.socket.on('connect', () => {
                 state.connectionScene.value = state.roomId.value ? 'recovering' : 'connected';
@@ -1856,8 +2314,12 @@ createApp({
                 const cache = loadRoomCache();
                 if (!cache?.roomId) return;
                 cachedRoomPassword.value = String(cache.password || '');
+                state.roomMode.value = String(cache.roomMode || 'normal');
+                state.tutorialId.value = String(cache.tutorialId || '');
                 if (EVT.ROOM_JOIN) {
                     state.socket.emit(EVT.ROOM_JOIN, {
+                        roomMode: String(state.roomMode.value || 'normal'),
+                        tutorialId: String(state.tutorialId.value || ''),
                         roomId: String(cache.roomId || '').trim(),
                         password: cachedRoomPassword.value
                     });
@@ -1874,6 +2336,10 @@ createApp({
                 state.connectionScene.value = state.socket.connected ? 'connected' : 'disconnected';
             }
         });
+        watch(() => state.currentPhase.value, (phase) => {
+            if (state.roomMode.value !== 'tutorial') return;
+            tutorialEngine.onPhaseChanged(phase);
+        });
 
         return {
             ...state,
@@ -1885,8 +2351,15 @@ createApp({
             canPerformClassChange: rules.canPerformClassChange,
             getCardFactionInfo: rules.getCardFactionInfo,
             topBarUi,
+            showSurrenderButton,
+            requestRoomSurrender,
             roomScene,
             roomFlowNotice,
+            tutorialPanelOpen: tutorialEngine.panelOpen,
+            tutorialTitle: tutorialEngine.tutorialTitle,
+            tutorialCurrentStep: computed(() => tutorialEngine.currentStep()),
+            closeTutorialPanel: tutorialEngine.closePanel,
+            nextTutorialStep: tutorialEngine.goNextManualStep,
             showBattleUi,
             showDeckDrawGuide,
             isCompactMobile,
@@ -1919,17 +2392,24 @@ createApp({
             currentPhaseName,
             showNextPhaseButton,
             highlightNextPhase,
+            deployZoneGuideActive,
             nextPhaseLabel,
             isMyCombatAttacker,
             playerPanelButtons,
             enemyPanelButtons,
             closeActivePanel,
+            abilityBondFlipSelectedIds,
+            pendingBondFlipCostNeeded,
+            confirmAbilityBondFlipSelection,
+            confirmCombatTriggerBondFlipSelection,
+            confirmBondFlipCostPanel,
             closeSelectedCard,
             openFullImage,
             openPanel,
             toggleDevMode,
             resetByControlBar,
             openDeckManager,
+            exportTutorialSnapshotFromDev,
             closeDeckManager,
             showDeckManager,
             isAiDuelPending,
@@ -1950,12 +2430,16 @@ createApp({
             currentAiReplayTimelineLength,
             isAiReplayLoading,
             aiReplayLog,
+            aiReplayLogList,
+            aiReplaySelectedLogId,
             aiReplayGameIndex,
             aiReplayCursor,
             openAiReplayFromControlBar,
             toggleAiReplayPanelHiddenFromControlBar,
             closeAiReplayPanel,
             loadLatestAiReplayLog,
+            selectAiReplayLogFile,
+            importLocalReplayFile,
             selectAiReplayGame,
             stepAiReplayPrev,
             stepAiReplayNext,
@@ -1964,8 +2448,20 @@ createApp({
             startAiReplayNavigatorDrag,
             moveAiReplayNavigatorDrag,
             endAiReplayNavigatorDrag,
-            createRoom,
-            joinRoom,
+            showRoomCreateModal,
+            showRoomJoinModal,
+            openRoomCreateModal,
+            openRoomJoinModal,
+            closeRoomCreateModal,
+            closeRoomJoinModal,
+            createRoomPasswordInput,
+            joinRoomMode,
+            joinRoomIdInput,
+            joinRoomPasswordInput,
+            joinTutorialIdInput,
+            roomTutorialList,
+            submitCreateRoom,
+            submitJoinRoom,
             quickMatch,
             leaveRoom,
             canStartRoomGame,
@@ -1975,6 +2471,10 @@ createApp({
             openBondsPanel,
             selectCard,
             handleCombatDecision,
+            handleSupportEmblemChoice,
+            combatAuxPrompt: state.combatAuxPrompt,
+            supportEmblemAttackerLabel,
+            supportEmblemDefenderLabel,
             handleRegionPanelCardClick,
             openCombatCostPicker,
             selectedCombatCostCardId,

@@ -2,6 +2,13 @@
 
 // modules/rules.js
 export function createRulesEngine(state) {
+    const getClassChangeIdentity = (card) => {
+        const chara = String(card?.charaName || '').trim();
+        if (chara) return `chara:${chara}`;
+        const full = String(card?.cardName || '').trim();
+        if (!full) return '';
+        return `card:${full}`;
+    };
     const rangeModel = globalThis.RANGE_MODEL;
     const normalizeRange = rangeModel?.normalizeRange || ((raw) => {
         const text = String(raw || '')
@@ -169,18 +176,19 @@ export function createRulesEngine(state) {
         const ccCost = parseInt(promoteCost);
         if (isNaN(ccCost) || ccCost < 0) return null;
 
-        const cardName = handCard.cardName;
-        if (!cardName) return null;
+        const identity = getClassChangeIdentity(handCard);
+        if (!identity) return null;
 
-        // 检查战场上是否有相同cardName的卡
+        // 检查战场上是否有相同角色标识（优先 charaName）
         const matchingCardOnField = [
             ...state.fieldFront.value,
             ...state.fieldRear.value
-        ].find(c => c.cardName === cardName);
+        ].find(c => getClassChangeIdentity(c) === identity);
 
         if (!matchingCardOnField) return null;
 
         // 检查羁绊费用（非dev模式）
+        const cardName = handCard.cardName || handCard.charaName || '';
         if (!state.isDevMode.value) {
             const availableBonds = state.bonds.value.length - (state.usedBondsThisTurn?.value || 0);
             if (availableBonds < ccCost) {
@@ -188,7 +196,7 @@ export function createRulesEngine(state) {
             }
 
             // 检查势力颜色羁绊
-            const cardFaction = handCard.force || hand.faction || hand.symbol || '无';
+            const cardFaction = handCard.force || handCard.faction || handCard.symbol || '无';
             if (cardFaction !== '无' && ccCost > 0) {
                 const hasMatchingBond = state.bonds.value.some(bond => {
                     if (bond.isFaceDown) return false;
@@ -204,7 +212,7 @@ export function createRulesEngine(state) {
         return {
             valid: true,
             targetCard: matchingCardOnField,
-            cardName,
+            cardName: handCard.cardName || handCard.charaName || '',
             ccCost
         };
     };

@@ -5,7 +5,7 @@ function areaLabel(a) {
         rear: '后排',
         bonds: '羁绊区',
         jewels: '宝玉区',
-        graveyard: '弃牌区',
+        graveyard: '退避区',
         deck: '牌组',
         boundless: '无限区'
     }[a] || a);

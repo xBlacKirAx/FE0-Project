@@ -30,6 +30,10 @@ export const CombatOverlay = {
             type: Function,
             required: true
         },
+        onSupportEmblemChoice: {
+            type: Function,
+            default: null
+        },
         combatDecision: {
             type: Object,
             default: () => ({})
@@ -37,9 +41,46 @@ export const CombatOverlay = {
         combatStats: {
             type: Object,
             default: () => ({})
+        },
+        supportEmblemAttackerLabel: {
+            type: String,
+            default: ''
+        },
+        supportEmblemDefenderLabel: {
+            type: String,
+            default: ''
+        },
+        combatAuxPrompt: {
+            type: Object,
+            default: null
         }
     },
     computed: {
+        isSupportEmblemStage() {
+            return this.combatDecision?.stage === 'awaiting-support-emblems';
+        },
+        supportEmblemCanAct() {
+            if (!this.isSupportEmblemStage) return false;
+            const ans = this.combatStats?.supportEmblemAnswers;
+            if (!ans) return false;
+            if (this.isMyAttacker) return ans.attacker === null;
+            return ans.defender === null;
+        },
+        supportEmblemWaitingMessage() {
+            if (!this.isSupportEmblemStage) return '';
+            const ans = this.combatStats?.supportEmblemAnswers;
+            if (!ans) return '';
+            if (this.isMyAttacker) {
+                return ans.defender === null ? '等待防御方选择是否发动支援纹章效果…' : '';
+            }
+            return ans.attacker === null ? '等待攻击方选择是否发动支援纹章效果…' : '';
+        },
+        supportEmblemPromptLabel() {
+            if (this.isMyAttacker) {
+                return this.supportEmblemAttackerLabel || '支援纹章';
+            }
+            return this.supportEmblemDefenderLabel || '支援纹章';
+        },
         canAct() {
             const role = this.isMyAttacker ? 'attacker' : 'defender';
             return this.combatDecision?.promptOwner === role;
@@ -83,6 +124,10 @@ export const CombatOverlay = {
             return '';
         },
         waitingTitle() {
+            if (this.isSupportEmblemStage) {
+                const w = this.supportEmblemWaitingMessage;
+                return w || '等待双方确认支援纹章效果…';
+            }
             if (this.combatDecision?.stage === 'awaiting-attacker-critical') {
                 return '等待攻击方选择是否发动必杀...';
             }
@@ -117,6 +162,20 @@ export const CombatOverlay = {
         },
         canActivateSkill() {
             return this.hasSkillCostCard && !!this.selectedCostCard?.instanceId;
+        },
+        attackerPowerFormula() {
+            const lines = this.combatStats?.myPowerBreakdown || [];
+            if (!lines.length) return '';
+            const parts = lines.map((l) => `${l.value}（${l.label}）`);
+            const total = this.combatStats?.myTotalPower ?? 0;
+            return `${parts.join(' + ')} = ${total}`;
+        },
+        defenderPowerFormula() {
+            const lines = this.combatStats?.oppPowerBreakdown || [];
+            if (!lines.length) return '';
+            const parts = lines.map((l) => `${l.value}（${l.label}）`);
+            const total = this.combatStats?.oppTotalPower ?? 0;
+            return `${parts.join(' + ')} = ${total}`;
         }
     },
     methods: {
@@ -126,6 +185,22 @@ export const CombatOverlay = {
         },
         declineDecision(decisionType) {
             this.onCombatDecision(decisionType, false, null);
+        },
+        submitEmblemYes() {
+            const role = this.isMyAttacker ? 'attacker' : 'defender';
+            this.onSupportEmblemChoice?.(role, 'yes');
+        },
+        submitEmblemNo() {
+            const role = this.isMyAttacker ? 'attacker' : 'defender';
+            this.onSupportEmblemChoice?.(role, 'no');
+        },
+        resolveAuxConfirm() {
+            const p = this.combatAuxPrompt;
+            if (p?.onConfirm) p.onConfirm();
+        },
+        resolveAuxCancel() {
+            const p = this.combatAuxPrompt;
+            if (p?.onCancel) p.onCancel();
         }
     },
     template: `
@@ -137,10 +212,44 @@ export const CombatOverlay = {
                 <div class="absolute top-1/2 left-0 w-full h-2 bg-red-600 shadow-[0_0_50px_20px_rgba(220,38,38,0.6)] transform -translate-y-1/2 -rotate-12"></div>
             </div>
 
-            <!-- 必杀/回避决策面板 - 绝对居中弹层，始终在屏幕内可见 -->
+            <!-- 必杀/回避 / 支援纹章 决策面板 - 绝对居中弹层，始终在屏幕内可见 -->
             <div v-if="!isReplayMode && combatDecision?.stage && combatDecision.stage !== 'idle' && combatDecision.stage !== 'resolved'"
                 class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[200] w-[calc(100%-2rem)] max-w-lg rounded-2xl border border-white/20 bg-black/55 backdrop-blur-sm px-6 py-6 text-center shadow-2xl">
-                <div v-if="canAct" class="space-y-4">
+                <div v-if="combatAuxPrompt?.kind === 'binary'" class="space-y-4 z-[210] relative">
+                    <div class="text-lg md:text-2xl font-black text-white">{{ combatAuxPrompt.title }}</div>
+                    <div class="text-sm md:text-base text-amber-200/95 whitespace-pre-wrap">{{ combatAuxPrompt.body }}</div>
+                    <div class="flex items-center justify-center gap-3 md:gap-4 mt-4">
+                        <button type="button" @click="resolveAuxConfirm()"
+                            class="px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-black transition-colors text-base md:text-lg">
+                            {{ combatAuxPrompt.confirmLabel || '确认' }}
+                        </button>
+                        <button type="button" @click="resolveAuxCancel()"
+                            class="px-6 py-3 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold transition-colors text-base md:text-lg">
+                            {{ combatAuxPrompt.cancelLabel || '取消' }}
+                        </button>
+                    </div>
+                </div>
+                <div v-else-if="isSupportEmblemStage" class="space-y-4">
+                    <div v-if="supportEmblemCanAct" class="space-y-4">
+                        <div class="text-lg md:text-2xl font-black text-white">是否发动「{{ supportEmblemPromptLabel }}」的支援能力？</div>
+                        <div v-if="combatStats.supportNotice" class="text-sm md:text-base text-amber-300">{{ combatStats.supportNotice }}</div>
+                        <div class="flex items-center justify-center gap-3 md:gap-4 mt-4">
+                            <button type="button" @click="submitEmblemYes()"
+                                class="px-6 py-3 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-black transition-colors text-base md:text-lg">
+                                发动
+                            </button>
+                            <button type="button" @click="submitEmblemNo()"
+                                class="px-6 py-3 rounded-full bg-neutral-700 hover:bg-neutral-600 text-white font-bold transition-colors text-base md:text-lg">
+                                不发动
+                            </button>
+                        </div>
+                    </div>
+                    <div v-else class="space-y-2 text-white/90">
+                        <div class="text-lg md:text-2xl font-black">{{ waitingTitle }}</div>
+                        <div v-if="combatStats.supportNotice" class="text-sm md:text-base text-amber-300">{{ combatStats.supportNotice }}</div>
+                    </div>
+                </div>
+                <div v-else-if="canAct" class="space-y-4">
                     <div class="text-lg md:text-2xl font-black text-white">{{ decisionTitle }}</div>
                     <div v-if="combatStats.supportNotice" class="text-sm md:text-base text-amber-300">{{ combatStats.supportNotice }}</div>
                     <div v-if="combatDecision.stage === 'awaiting-attacker-critical'" class="text-sm md:text-base text-yellow-300">
@@ -215,7 +324,10 @@ export const CombatOverlay = {
                         </div>
 
                         <div class="text-center font-mono mt-2">
-                            <div class="text-gray-300 text-xs md:text-sm">
+                            <div v-if="attackerPowerFormula" class="text-cyan-100/90 text-[10px] md:text-xs leading-snug px-1 max-w-[15rem] mx-auto break-words">
+                                {{ attackerPowerFormula }}
+                            </div>
+                            <div v-else class="text-gray-300 text-xs md:text-sm">
                                 Base: {{ attacker?.attack || 0 }}
                                 <span v-if="mySupportCard" class="text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]">
                                     + {{ (combatStats.attackerSupportApplied ?? mySupportCard.support) || 0 }}
@@ -244,7 +356,10 @@ export const CombatOverlay = {
                         </div>
 
                         <div class="text-center font-mono mt-2">
-                            <div class="text-gray-300 text-xs md:text-sm">
+                            <div v-if="defenderPowerFormula" class="text-rose-100/90 text-[10px] md:text-xs leading-snug px-1 max-w-[15rem] mx-auto break-words">
+                                {{ defenderPowerFormula }}
+                            </div>
+                            <div v-else class="text-gray-300 text-xs md:text-sm">
                                 Base: {{ defender?.attack || 0 }}
                                 <span v-if="oppSupportCard" class="text-yellow-400 font-bold drop-shadow-[0_0_5px_rgba(250,204,21,0.8)]">
                                     + {{ (combatStats.defenderSupportApplied ?? oppSupportCard.support) || 0 }}

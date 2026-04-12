@@ -19,6 +19,8 @@ export function createNetworkState() {
     const roomIsPrivate = ref(false);
     const roomQueueing = ref(false);
     const roomGameInProgress = ref(false);
+    const roomMode = ref('normal');
+    const tutorialId = ref('');
     const roomStatusText = ref('未加入房间');
 
     return {
@@ -33,6 +35,8 @@ export function createNetworkState() {
         roomIsPrivate,
         roomQueueing,
         roomGameInProgress,
+        roomMode,
+        tutorialId,
         roomStatusText
     };
 }

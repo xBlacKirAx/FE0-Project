@@ -360,6 +360,7 @@ export function resolveSupportEffectResult({ supportCard, role, state }) {
         return {
             ...NO_EFFECT_RESULT,
             effectId: meta.effectId,
+            effectName: meta.effectName,
             timing: meta.timing,
             note: meta.effectId ? `未实现效果处理: ${meta.effectId}` : null
         };
@@ -370,6 +371,7 @@ export function resolveSupportEffectResult({ supportCard, role, state }) {
         ...NO_EFFECT_RESULT,
         ...result,
         effectId: meta.effectId,
+        effectName: result.effectName || meta.effectName || null,
         timing: meta.timing
     };
 }

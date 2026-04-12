@@ -1,10 +1,20 @@
 // modules/socket/registerBattleListeners.js
 
 import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
-import { emitPlayerDraw, emitSyncCardMove } from '../effects/cardSocketEffects.js';
+import {
+    applyAutoSupportEmblemAtSupportFlip,
+    resetSupportEmblemCombatFields,
+    serializeSupportEffectResult
+} from '../engine/supportEmblemPhase.js';
 import { computePassivePowerBonus, buildPassiveContext } from '../engine/abilityEngine.js';
 
-const makeSupportRequestId = (tag = 'support') => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+function pushCombatPowerBreakdown(cs, side, label, value) {
+    const v = Number(value) || 0;
+    if (!v) return;
+    const key = side === 'opp' ? 'oppPowerBreakdown' : 'myPowerBreakdown';
+    if (!cs[key]) cs[key] = [];
+    cs[key].push({ label: String(label || '').trim().slice(0, 20) || '加成', value: v });
+}
 
 function applyCombatSupportEffectResult(state, result, role) {
     if (!result) return;
@@ -16,10 +26,14 @@ function applyCombatSupportEffectResult(state, result, role) {
         return;
     }
     if (result.powerDelta) {
+        const cs = state.combatStats.value;
+        const emblemLabel = result.effectName || '纹章';
         if (role === 'attacker') {
-            state.combatStats.value.myTotalPower += result.powerDelta;
+            cs.myTotalPower += result.powerDelta;
+            pushCombatPowerBreakdown(cs, 'my', emblemLabel, result.powerDelta);
         } else {
-            state.combatStats.value.oppTotalPower += result.powerDelta;
+            cs.oppTotalPower += result.powerDelta;
+            pushCombatPowerBreakdown(cs, 'opp', emblemLabel, result.powerDelta);
         }
     }
     if (result.lockAttackerCritical) {
@@ -38,225 +52,23 @@ function applyCombatSupportEffectResult(state, result, role) {
     }
 }
 
-function applyLocalSupportSideEffect(state, socket, EVT, result) {
-    if (!result || !result.sideEffect) return;
-    if (result.sideEffect === 'drawOnBreakMainCharacter') {
-        state.combatStats.value.encourageDrawOnBreakMainCharacter = true;
-        state.combatStats.value.supportNotice = '激励之纹章：若本次击破对方主人公，战斗结束时抽1张卡。';
-        return;
-    }
-
-    if (result.sideEffect === 'sealOpponentSupportEffect') {
-        state.combatStats.value.opponentSupportEffectSealed = true;
-        state.combatStats.value.supportNotice = '封咒之纹章：对手本次战斗支援能力无效。';
-        return;
-    }
-
-    if (result.sideEffect === 'drawIfHand4OrLess') {
-        if (state.hand.value.length > 4) return;
-        if (state.deck.value.length > 0) {
-            const drawnCard = state.deck.value.pop();
-            state.hand.value.push(drawnCard);
-            emitPlayerDraw(socket, { card: drawnCard });
-            state.combatStats.value.supportNotice = '筹措之纹章：已抽1张卡。';
-        }
-        return;
-    }
-
-    if (result.sideEffect === 'draw1Discard1') {
-        if (state.deck.value.length > 0) {
-            const drawnCard = state.deck.value.pop();
-            state.hand.value.push(drawnCard);
-            emitPlayerDraw(socket, { card: drawnCard });
-        }
-        state.supportInteraction.value = {
-            type: 'magic-discard',
-            source: 'support-effect'
-        };
-        state.combatStats.value.supportNotice = '魔术之纹章：请从手牌选择1张卡弃置。';
-        return;
-    }
-
-    if (result.sideEffect === 'draw1Topdeck1') {
-        if (state.deck.value.length > 0) {
-            const drawnCard = state.deck.value.pop();
-            state.hand.value.push(drawnCard);
-            emitPlayerDraw(socket, { card: drawnCard });
-        }
-        state.supportInteraction.value = {
-            type: 'courage-topdeck',
-            source: 'support-effect'
-        };
-        state.combatStats.value.supportNotice = '勇气之纹章：请从手牌选择1张卡放回牌组顶。';
-        return;
-    }
-
-    if (result.sideEffect === 'putHandCardToBond' || result.sideEffect === 'putHandCardToBondIfBehindOnBonds') {
-        state.supportInteraction.value = {
-            type: 'manakete-hand-to-bond',
-            source: 'support-effect'
-        };
-        state.combatStats.value.supportNotice = '龙血系纹章：请选择1张手牌置入羁绊区。';
-        return;
-    }
-
-    if (result.sideEffect === 'peekOwnJewel') {
-        if (!state.jewels.value.length) return;
-        state.supportInteraction.value = {
-            type: 'peek-own-jewel',
-            source: 'support-effect'
-        };
-        state.combatStats.value.supportNotice = '请选择1张自己的宝玉查看正面。';
-        return;
-    }
-
-    if (result.sideEffect === 'moveAllyExceptAttacker') {
-        state.supportInteraction.value = {
-            type: 'sky-move',
-            source: 'support-effect',
-            excludedId: state.attacker.value?.instanceId || null
-        };
-        state.combatStats.value.supportNotice = result.effectId === 'EMBLEM_COMMAND'
-            ? '指挥之纹章：请选择1名攻击单位以外的我方单位进行移动。'
-            : '天空之纹章：请选择1名攻击单位以外的我方单位进行移动。';
-        return;
-    }
-
-    if (result.sideEffect === 'untapAllyCost2OrLess') {
-        state.supportInteraction.value = {
-            type: 'dance-untap-ally',
-            source: 'support-effect',
-            excludedId: state.attacker.value?.instanceId || null
-        };
-        state.combatStats.value.supportNotice = '歌舞之纹章：请选择1名出击费用2以下的我方单位转为未行动状态。';
-        return;
-    }
-
-    if (result.sideEffect === 'peekOwnTopDeckOptionalMill') {
-        const topCard = state.deck.value[state.deck.value.length - 1] || null;
-        if (!topCard) return;
-        const topLabel = topCard.cardName || topCard.name || '未知卡牌';
-        const shouldMill = confirm(`预言之纹章：牌组顶为 ${topLabel}，是否将其置入退避区？`);
-        if (!shouldMill) {
-            state.combatStats.value.supportNotice = '预言之纹章：已查看牌组顶。';
-            return;
-        }
-        const milledCard = state.deck.value.pop();
-        state.graveyard.value.push(milledCard);
-        emitSyncCardMove(socket, { card: milledCard, from: 'deck', to: 'graveyard' });
-        state.combatStats.value.supportNotice = '预言之纹章：已将牌组顶置入退避区。';
-        return;
-    }
-
-    if (result.sideEffect === 'opponentTopDeckToGraveOptional') {
-        const shouldApply = confirm('盗贼之纹章：是否将对手牌组顶置入其退避区？');
-        if (!shouldApply) return;
-
-        const requestId = makeSupportRequestId('thief');
-        const requestPayload = {
-            requestId,
-            type: 'thief-mill-top-deck'
-        };
-        socket.emit(EVT.SYNC_SUPPORT_INTERACTION_REQUEST, requestPayload);
-        state.supportInteraction.value = {
-            type: 'thief-await-opponent',
-            source: 'support-effect',
-            requestId,
-            requestPayload
-        };
-        state.combatStats.value.supportNotice = '盗贼之纹章：等待对手公开并处理牌组顶。';
-        return;
-    }
-
-    if (result.sideEffect === 'opponentDiscard1IfHand5Plus') {
-        const requestId = makeSupportRequestId('dark');
-        const requestPayload = {
-            requestId,
-            type: 'dark-discard'
-        };
-        socket.emit(EVT.SYNC_SUPPORT_INTERACTION_REQUEST, requestPayload);
-        state.supportInteraction.value = {
-            type: 'dark-await-opponent',
-            source: 'support-effect',
-            requestId,
-            requestPayload
-        };
-        state.combatStats.value.supportNotice = '黑暗之纹章：等待对手选择并弃置1张手牌。';
-        return;
-    }
-
-    if (result.sideEffect === 'moveEnemyExceptDefender') {
-        const requestId = makeSupportRequestId('strategy');
-        state.supportInteraction.value = {
-            type: 'strategy-select-enemy',
-            source: 'support-effect',
-            requestId,
-            excludedId: state.defender.value?.instanceId || null
-        };
-        state.combatStats.value.supportNotice = '计略之纹章：请选择1名防御单位以外的敌方单位进行移动。';
-        return;
-    }
-
-    if (result.sideEffect === 'ninjutsuOptional') {
-        const shouldApply = confirm('忍术之纹章：是否从手牌选择1张卡放置到退避区？（战斗结束后将以已行动状态出击）');
-        if (!shouldApply) return;
-        state.supportInteraction.value = {
-            type: 'ninjutsu-hand-to-grave',
-            source: 'support-effect'
-        };
-        state.combatStats.value.supportNotice = '忍术之纹章：请选择1张手牌放置到退避区。';
-        return;
-    }
-
-    if (result.sideEffect === 'resistanceBattleEndStay') {
-        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
-        state.combatStats.value.postBattleEffects.push({ type: 'resistance-defender-stay', data: {} });
-        state.combatStats.value.supportNotice = '抵抗之纹章：防御单位击破时可以出击而非进入退避区。';
-        return;
-    }
-
-    if (result.sideEffect === 'trainingDefenderBreakToHand') {
-        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
-        state.combatStats.value.postBattleEffects.push({ type: 'training-defender-to-hand', data: {} });
-        state.combatStats.value.supportNotice = '锻炼之纹章：防御单位击破时可以进入手牌而非退避区。';
-        return;
-    }
-
-    if (result.sideEffect === 'supportMoveAttackerPostBattle') {
-        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
-        state.combatStats.value.postBattleEffects.push({ type: 'support-move-attacker', data: {} });
-        state.combatStats.value.supportNotice = '援护之纹章：战斗结束后可以移动攻击单位。';
-        return;
-    }
-
-    if (result.sideEffect === 'phantomBattleEndReplace') {
-        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
-        state.combatStats.value.postBattleEffects.push({
-            type: 'phantom-replace-to-area',
-            data: { charaName: result.sideEffectData?.charaName || null }
-        });
-        const charaName = result.sideEffectData?.charaName || '指定角色';
-        state.combatStats.value.supportNotice = `幻影之纹章：战斗结束后可以出击到${charaName}所在区域。`;
-        return;
-    }
-
-    if (result.sideEffect === 'resurrectZombieFromGraveyard') {
-        state.combatStats.value.postBattleEffects = state.combatStats.value.postBattleEffects || [];
-        state.combatStats.value.postBattleEffects.push({ type: 'despair-resurrect-zombie', data: {} });
-        state.combatStats.value.supportNotice = '绝望之纹章：战斗结束后可从退避区选择1张«尸兵»出击。';
-    }
-}
-
 export function registerBattleListeners({
     state,
     socket,
     EVT,
-    beginCombatResolution,
     applyCombatDecision,
     handleIncomingSupportInteractionRequest,
-    handleIncomingSupportInteractionResolve
+    handleIncomingSupportInteractionResolve,
+    tryEnterSupportEmblemPhase,
+    mergeRemoteSupportEmblemChoice
 }) {
-    socket.on(EVT.OPPONENT_ATTACK, ({ attacker, defender, supportCard, supportFailed, supportSealCurse }) => {
+    socket.on(EVT.OPPONENT_ATTACK, (data) => {
+        const {
+            attacker,
+            defender,
+            supportCard,
+            supportFailed
+        } = data || {};
         if (state.hasBattledThisTurn) {
             state.hasBattledThisTurn.value = true;
         }
@@ -276,7 +88,7 @@ export function registerBattleListeners({
         state.attacker.value = attacker;
         state.mySupportCard.value = supportCard;
         state.defender.value = defender;
-        state.combatStats.value = {
+        const csInit = {
             myCardPower: attacker.attack || 0,
             mySupportPower: supportFailed ? 0 : (supportCard?.support || 0),
             myTotalPower: (attacker.attack || 0) + (supportFailed ? 0 : (supportCard?.support || 0)),
@@ -284,18 +96,35 @@ export function registerBattleListeners({
             attackerCriticalLocked: false,
             defenderEvasionLocked: false,
             encourageDrawOnBreakMainCharacter: false,
-            opponentSupportEffectSealed: !!supportSealCurse,
+            opponentSupportEffectSealed: false,
             jewelBreakCount: 1,
             attackerSupportApplied: supportFailed ? 0 : (supportCard?.support || 0),
             defenderSupportApplied: 0,
             postBattleEffects: [],
-            supportNotice: supportFailed ? '支援失效：支援单位与被支援单位角色名相同。' : null
+            supportNotice: supportFailed ? '支援失效：支援单位与被支援单位角色名相同。' : null,
+            myPowerBreakdown: [
+                { label: '战', value: Number(attacker.attack) || 0 },
+                ...(!supportFailed && (supportCard?.support || 0)
+                    ? [{ label: '支', value: Number(supportCard.support) || 0 }]
+                    : [])
+            ],
+            oppPowerBreakdown: [{ label: '战', value: Number(defender.attack) || 0 }]
         };
+        state.combatStats.value = csInit;
+        resetSupportEmblemCombatFields(state.combatStats.value);
+        if (state.combatAuxPrompt) state.combatAuxPrompt.value = null;
 
+        const cs = state.combatStats.value;
         const attackerTemp = parseInt(attacker?._tempAbilityPowerThisTurn || 0, 10) || 0;
         const defenderTemp = parseInt(defender?._tempAbilityPowerThisTurn || 0, 10) || 0;
-        if (attackerTemp) state.combatStats.value.myTotalPower += attackerTemp;
-        if (defenderTemp) state.combatStats.value.oppTotalPower += defenderTemp;
+        if (attackerTemp) {
+            cs.myTotalPower += attackerTemp;
+            pushCombatPowerBreakdown(cs, 'my', '战前加算', attackerTemp);
+        }
+        if (defenderTemp) {
+            cs.oppTotalPower += defenderTemp;
+            pushCombatPowerBreakdown(cs, 'opp', '战前加算', defenderTemp);
+        }
         if (attacker?._tempCannotBeEvadedThisTurn) {
             state.combatStats.value.defenderEvasionLocked = true;
         }
@@ -306,13 +135,19 @@ export function registerBattleListeners({
         const attackerPassiveCtx = buildPassiveContext(state, attacker, attacker, defender, supportCard || null);
         const attackerPassive = computePassivePowerBonus(attacker, attackerPassiveCtx);
         if (attackerPassive.totalDelta) {
-            state.combatStats.value.myTotalPower += attackerPassive.totalDelta;
+            cs.myTotalPower += attackerPassive.totalDelta;
+            attackerPassive.breakdown
+                .filter((b) => b.powerDelta)
+                .forEach((b) => pushCombatPowerBreakdown(cs, 'my', b.title, b.powerDelta));
         }
 
         const defenderPassiveCtx = buildPassiveContext(state, defender, attacker, defender, supportCard || null);
         const defenderPassive = computePassivePowerBonus(defender, defenderPassiveCtx);
         if (defenderPassive.totalDelta) {
-            state.combatStats.value.oppTotalPower += defenderPassive.totalDelta;
+            cs.oppTotalPower += defenderPassive.totalDelta;
+            defenderPassive.breakdown
+                .filter((b) => b.powerDelta)
+                .forEach((b) => pushCombatPowerBreakdown(cs, 'opp', b.title, b.powerDelta));
         }
         state.combatDecision.value = {
             stage: 'idle',
@@ -323,50 +158,53 @@ export function registerBattleListeners({
             finalAttackerWins: null
         };
 
+        state.combatStats.value.attackerSupportRevealDone = true;
         if (!supportFailed && supportCard) {
             const attackerSupportEffect = resolveSupportEffectResult({
                 supportCard,
                 role: 'attacker',
                 state
             });
-            applyCombatSupportEffectResult(state, attackerSupportEffect, 'attacker');
+            applyAutoSupportEmblemAtSupportFlip(state, attackerSupportEffect, 'attacker', applyCombatSupportEffectResult);
+            state.combatStats.value.pendingAttackerSupportEffect = serializeSupportEffectResult(attackerSupportEffect);
         }
 
         state.isCombatActive.value = true;
 
         setTimeout(() => {
             let defenseSupport = null;
-            let defenseSupportFailed = false;
+            state.combatStats.value.defenderSupportRevealDone = true;
             if (state.deck.value.length > 0) {
                 defenseSupport = state.deck.value.pop();
                 state.oppSupportCard.value = defenseSupport;
-                defenseSupportFailed = isSupportFailed(defenseSupport, state.defender.value);
+                const defenseSupportFailed = isSupportFailed(defenseSupport, state.defender.value);
                 const appliedSupport = defenseSupportFailed ? 0 : (defenseSupport.support || 0);
                 state.combatStats.value.defenderSupportApplied = appliedSupport;
                 state.combatStats.value.oppTotalPower += appliedSupport;
+                if (appliedSupport) {
+                    pushCombatPowerBreakdown(state.combatStats.value, 'opp', '支', appliedSupport);
+                }
 
                 if (defenseSupportFailed) {
                     state.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
+                    state.combatStats.value.pendingDefenderSupportEffect = null;
+                } else if (state.combatStats.value.opponentSupportEffectSealed) {
+                    state.combatStats.value.supportNotice = '封咒之纹章生效：本次防御方支援能力无效。';
+                    state.combatStats.value.pendingDefenderSupportEffect = null;
+                } else {
+                    const supportEffectResult = resolveSupportEffectResult({
+                        supportCard: defenseSupport,
+                        role: 'defender',
+                        state
+                    });
+                    applyAutoSupportEmblemAtSupportFlip(state, supportEffectResult, 'defender', applyCombatSupportEffectResult);
+                    state.combatStats.value.pendingDefenderSupportEffect = serializeSupportEffectResult(supportEffectResult);
                 }
-
-                if (!defenseSupportFailed) {
-                    if (state.combatStats.value.opponentSupportEffectSealed) {
-                        state.combatStats.value.supportNotice = '封咒之纹章生效：本次防御方支援能力无效。';
-                    } else {
-                        const supportEffectResult = resolveSupportEffectResult({
-                            supportCard: defenseSupport,
-                            role: 'defender',
-                            state
-                        });
-                        applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
-                        applyLocalSupportSideEffect(state, socket, EVT, supportEffectResult);
-                    }
-                }
+            } else {
+                state.combatStats.value.pendingDefenderSupportEffect = null;
             }
             socket.emit(EVT.SYNC_DEFENSE_SUPPORT, { supportCard: defenseSupport });
-            setTimeout(() => {
-                if (beginCombatResolution) beginCombatResolution(state);
-            }, 1000);
+            if (tryEnterSupportEmblemPhase) tryEnterSupportEmblemPhase(state);
         }, 800);
     });
 
@@ -399,27 +237,30 @@ export function registerBattleListeners({
     socket.on(EVT.OPPONENT_DEFENSE_SUPPORT, ({ supportCard }) => {
         const supportFailed = isSupportFailed(supportCard, state.defender.value);
         state.oppSupportCard.value = supportCard;
+        state.combatStats.value.defenderSupportRevealDone = true;
         const appliedSupport = supportFailed ? 0 : (supportCard?.support || 0);
         state.combatStats.value.defenderSupportApplied = appliedSupport;
         state.combatStats.value.oppTotalPower += appliedSupport;
         if (supportFailed) {
             state.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
+            state.combatStats.value.pendingDefenderSupportEffect = null;
+        } else if (state.combatStats.value.opponentSupportEffectSealed) {
+            state.combatStats.value.supportNotice = '封咒之纹章生效：本次防御方支援能力无效。';
+            state.combatStats.value.pendingDefenderSupportEffect = null;
+        } else {
+            const supportEffectResult = resolveSupportEffectResult({
+                supportCard,
+                role: 'defender',
+                state
+            });
+            applyAutoSupportEmblemAtSupportFlip(state, supportEffectResult, 'defender', applyCombatSupportEffectResult);
+            state.combatStats.value.pendingDefenderSupportEffect = serializeSupportEffectResult(supportEffectResult);
         }
-        if (!supportFailed) {
-            if (state.combatStats.value.opponentSupportEffectSealed) {
-                state.combatStats.value.supportNotice = '封咒之纹章生效：本次防御方支援能力无效。';
-            } else {
-                const supportEffectResult = resolveSupportEffectResult({
-                    supportCard,
-                    role: 'defender',
-                    state
-                });
-                applyCombatSupportEffectResult(state, supportEffectResult, 'defender');
-            }
-        }
-        setTimeout(() => {
-            if (beginCombatResolution) beginCombatResolution(state);
-        }, 1000);
+        if (tryEnterSupportEmblemPhase) tryEnterSupportEmblemPhase(state);
+    });
+
+    socket.on(EVT.OPPONENT_COMBAT_SUPPORT_EMBLEM_CHOICE, (payload) => {
+        if (mergeRemoteSupportEmblemChoice) mergeRemoteSupportEmblemChoice(state, payload);
     });
 
     socket.on(EVT.OPPONENT_COMBAT_DECISION, (payload) => {

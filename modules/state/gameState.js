@@ -38,10 +38,14 @@ export function createGameFlowState() {
         encourageDrawOnBreakMainCharacter: false,
         opponentSupportEffectSealed: false,
         jewelBreakCount: 1,
-        postBattleEffects: []
+        postBattleEffects: [],
+        myPowerBreakdown: [],
+        oppPowerBreakdown: []
     });
     const combatDecision = ref(createInitialCombatDecision());
     const supportInteraction = ref(null);
+    /** 战斗内二次确认（预言之纹章/盗贼/忍术等），样式与 CombatOverlay 一致 */
+    const combatAuxPrompt = ref(null);
 
     const mulliganState = ref('idle'); // idle, awaiting, done
     const hasMulliganed = ref(false);
@@ -66,6 +70,7 @@ export function createGameFlowState() {
         combatStats,
         combatDecision,
         supportInteraction,
+        combatAuxPrompt,
         mulliganState,
         hasMulliganed,
         opponentMulliganState

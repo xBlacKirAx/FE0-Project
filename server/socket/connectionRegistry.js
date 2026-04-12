@@ -1,7 +1,9 @@
-function createConnectionRegistry(io, EVT) {
+function createConnectionRegistry(io, EVT, options = {}) {
     const playerMap = new Map();
     const socketRoomMap = new Map();
-    const rooms = new Map(); // roomId -> { hostId, guestId, password }
+    const rooms = new Map(); // roomId -> { hostId, guestId, password, roomMode, tutorialId }
+    const tutorialRegistry = options.tutorialRegistry || null;
+    const normalizeRoomMode = (value) => (String(value || '').trim().toLowerCase() === 'tutorial' ? 'tutorial' : 'normal');
 
     const sanitizePlayerName = (raw) => String(raw || '').trim().slice(0, 24);
     const playerLabel = (socketId) => playerMap.get(socketId) || `用户${String(socketId || '').slice(-4)}`;
@@ -29,7 +31,9 @@ function createConnectionRegistry(io, EVT) {
                 playerCount: 0,
                 ready: false,
                 gameInProgress: false,
-                queueing: false
+                queueing: false,
+                roomMode: 'normal',
+                tutorialId: ''
             };
         }
         const hostConnected = !!room.hostId && io.sockets.sockets.has(room.hostId);
@@ -48,8 +52,24 @@ function createConnectionRegistry(io, EVT) {
             ready: playerCount === 2,
             gameInProgress: !!room.gameInProgress,
             isPrivate: !!room.password,
-            queueing: false
+            queueing: false,
+            roomMode: normalizeRoomMode(room.roomMode),
+            tutorialId: String(room.tutorialId || '')
         };
+    };
+
+    const emitTutorialInit = (socket, room) => {
+        if (!socket || !room || normalizeRoomMode(room.roomMode) !== 'tutorial') return;
+        const tutorialId = String(room.tutorialId || '').trim();
+        if (!tutorialId || !tutorialRegistry?.getTutorial) return;
+        const tutorial = tutorialRegistry.getTutorial(tutorialId);
+        if (!tutorial) return;
+        socket.emit(EVT.TUTORIAL_INIT, {
+            tutorialId: tutorial.id,
+            title: tutorial.title,
+            snapshot: tutorial.snapshot || {},
+            steps: Array.isArray(tutorial.steps) ? tutorial.steps : []
+        });
     };
 
     const emitRoomStateToMember = (socketId) => {
@@ -67,11 +87,16 @@ function createConnectionRegistry(io, EVT) {
                 ready: false,
                 gameInProgress: false,
                 isPrivate: false,
-                queueing: false
+                queueing: false,
+                roomMode: 'normal',
+                tutorialId: ''
             });
             return;
         }
-        socket.emit(EVT.ROOM_STATE, getRoomStatePayload(roomId));
+        const payload = getRoomStatePayload(roomId);
+        socket.emit(EVT.ROOM_STATE, payload);
+        const room = rooms.get(roomId);
+        emitTutorialInit(socket, room);
     };
 
     const emitRoomStateToRoom = (roomId) => {
@@ -115,10 +140,14 @@ function createConnectionRegistry(io, EVT) {
 
         const roomId = generateRoomId();
         const password = String(payload.password || '').trim();
+        const roomMode = normalizeRoomMode(payload.roomMode);
+        const tutorialId = String(payload.tutorialId || '').trim();
         rooms.set(roomId, {
             hostId: socket.id,
             guestId: null,
             password: password || null,
+            roomMode,
+            tutorialId: roomMode === 'tutorial' ? tutorialId : '',
             lastGameStartAt: 0,
             gameInProgress: false,
             firstPlayerId: null,
@@ -127,11 +156,39 @@ function createConnectionRegistry(io, EVT) {
         socket.join(roomId);
         socketRoomMap.set(socket.id, roomId);
         emitRoomStateToRoom(roomId);
-        log(socket.id, `创建房间 ${roomId}${password ? '（私密）' : ''}`);
+        log(socket.id, `创建房间 ${roomId}${password ? '（私密）' : ''} mode=${roomMode}${tutorialId ? ` tutorial=${tutorialId}` : ''}`);
         return roomId;
     };
 
     const joinRoom = (socket, rawRoomId, payload = {}) => {
+        const requestedMode = normalizeRoomMode(payload.roomMode);
+        if (requestedMode === 'tutorial') {
+            const tutorialId = String(payload.tutorialId || '').trim();
+            const tutorial = tutorialRegistry?.getTutorial ? tutorialRegistry.getTutorial(tutorialId) : null;
+            if (!tutorial) {
+                socket.emit(EVT.ROOM_ERROR, { message: `教学关 ${tutorialId || '(未指定)'} 不存在` });
+                return false;
+            }
+            leaveCurrentRoom(socket);
+            const roomId = generateRoomId();
+            rooms.set(roomId, {
+                hostId: socket.id,
+                guestId: null,
+                password: null,
+                roomMode: 'tutorial',
+                tutorialId: tutorial.id,
+                lastGameStartAt: 0,
+                gameInProgress: true,
+                firstPlayerId: null,
+                mulliganDoneMap: {}
+            });
+            socket.join(roomId);
+            socketRoomMap.set(socket.id, roomId);
+            emitRoomStateToMember(socket.id);
+            log(socket.id, `进入教学关 ${tutorial.id} (room=${roomId})`);
+            return true;
+        }
+
         const roomId = String(rawRoomId || '').trim().toUpperCase();
         if (!roomId) {
             socket.emit(EVT.ROOM_ERROR, { message: '房间号不能为空' });
@@ -170,7 +227,7 @@ function createConnectionRegistry(io, EVT) {
         socket.join(roomId);
         socketRoomMap.set(socket.id, roomId);
         emitRoomStateToRoom(roomId);
-        log(socket.id, `加入房间 ${roomId}`);
+        log(socket.id, `加入房间 ${roomId} mode=${normalizeRoomMode(room.roomMode)}`);
         return true;
     };
 
@@ -182,6 +239,7 @@ function createConnectionRegistry(io, EVT) {
 
         // 新匹配逻辑：优先加入人数为1的公开房（password 为空）
         for (const [roomId, room] of rooms.entries()) {
+            if (normalizeRoomMode(room.roomMode) !== 'normal') continue;
             if (room.password) continue;
             if (room.gameInProgress) continue;
 
@@ -212,6 +270,8 @@ function createConnectionRegistry(io, EVT) {
             hostId: socket.id,
             guestId: null,
             password: null,
+            roomMode: 'normal',
+            tutorialId: '',
             lastGameStartAt: 0,
             gameInProgress: false,
             firstPlayerId: null,
@@ -242,6 +302,10 @@ function createConnectionRegistry(io, EVT) {
             return false;
         }
         if (!room.hostId || !room.guestId) {
+            if (normalizeRoomMode(room.roomMode) === 'tutorial') {
+                socket.emit(EVT.ROOM_ERROR, { message: '教学关无需常规开局' });
+                return false;
+            }
             socket.emit(EVT.ROOM_ERROR, { message: '人数不足，无法开局' });
             return false;
         }
@@ -304,6 +368,27 @@ function createConnectionRegistry(io, EVT) {
         return true;
     };
 
+    const handleRoomSurrender = (socket) => {
+        const roomId = socketRoomMap.get(socket.id);
+        if (!roomId) return false;
+        const room = rooms.get(roomId);
+        if (!room || !room.gameInProgress) return false;
+        if (normalizeRoomMode(room.roomMode) === 'tutorial') return false;
+
+        room.gameInProgress = false;
+        room.firstPlayerId = null;
+        room.mulliganDoneMap = {};
+
+        io.to(roomId).emit(EVT.ROOM_SURRENDERED, {
+            roomId,
+            surrenderedBy: socket.id,
+            ts: Date.now()
+        });
+        emitRoomStateToRoom(roomId);
+        log(socket.id, `房间 ${roomId} 投降结束对局`);
+        return true;
+    };
+
     const onConnect = (socket) => {
         const label = sanitizePlayerName(socket.handshake?.auth?.playerName) || `用户${socket.id.slice(-4)}`;
         playerMap.set(socket.id, label);
@@ -318,7 +403,9 @@ function createConnectionRegistry(io, EVT) {
             ready: false,
             gameInProgress: false,
             isPrivate: false,
-            queueing: false
+            queueing: false,
+            roomMode: 'normal',
+            tutorialId: ''
         });
     };
 
@@ -368,7 +455,8 @@ function createConnectionRegistry(io, EVT) {
         leaveCurrentRoom,
         relayToRoomPeers,
         startRoomGame,
-        handleMulliganDecision
+        handleMulliganDecision,
+        handleRoomSurrender
     };
 }
 

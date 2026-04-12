@@ -3,10 +3,23 @@
 import { isAttackerFromMyField, getCombatWinner } from '../engine/combatEngine.js';
 import { createInitialCombatDecision, getInitialCombatDecisionContext } from '../engine/combatDecisionEngine.js';
 import { resolveSupportEffectResult, isSupportFailed } from '../engine/supportEffectEngine.js';
-import { emitSyncAttack, emitSyncCardMove, emitPlayerDraw, emitSyncCardUntap } from '../effects/cardSocketEffects.js';
+import { getSupportEffectDisplayLabel } from '../engine/supportSideEffectConfirm.js';
+import {
+    applyAutoSupportEmblemAtSupportFlip,
+    deserializeSupportEffectResult,
+    initialSupportEmblemAnswers,
+    requiresEmblemActivationChoice,
+    resetSupportEmblemCombatFields,
+    serializeSupportEffectResult
+} from '../engine/supportEmblemPhase.js';
+import { isTutorialSoloRoom, scheduleTutorialSoloDefenseSupport } from '../tutorial/tutorialSoloCombat.js';
+import { notifyPlayModeRoomOutcome } from '../playModeRoomOutcome.js';
+import { flushRoomReplayAbilityStep } from '../roomReplayTimeline.js';
+import { emitSyncAttack, emitSyncCardMove, emitPlayerDraw, emitSyncCardUntap, emitSyncBondFlip } from '../effects/cardSocketEffects.js';
 import { computePassivePowerBonus, buildPassiveContext, getAutoTriggers } from '../engine/abilityEngine.js';
 import {
     emitSyncCombatDecision,
+    emitSyncCombatSupportEmblemChoice,
     emitSyncSupportInteractionRequest,
     emitSyncSupportInteractionResolve
 } from '../effects/combatSocketEffects.js';
@@ -14,6 +27,15 @@ import {
 export function createCombatCommands({ state, socket }) {
     const makeSupportRequestId = (tag = 'support') => `${tag}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const safeGetAutoTriggers = typeof getAutoTriggers === 'function' ? getAutoTriggers : () => [];
+
+    const pushCombatPowerBreakdown = (cs, side, label, value) => {
+        const v = Number(value) || 0;
+        if (!v) return;
+        const key = side === 'opp' ? 'oppPowerBreakdown' : 'myPowerBreakdown';
+        if (!cs[key]) cs[key] = [];
+        const shortLabel = String(label || '').trim().slice(0, 20) || '加成';
+        cs[key].push({ label: shortLabel, value: v });
+    };
 
     const getCardCharaName = (card) => {
         const direct = (card?.charaName || '').trim();
@@ -76,10 +98,14 @@ export function createCombatCommands({ state, socket }) {
             return;
         }
         if (result.powerDelta) {
+            const cs = currentState.combatStats.value;
+            const emblemLabel = result.effectName || '纹章';
             if (role === 'attacker') {
-                currentState.combatStats.value.myTotalPower += result.powerDelta;
+                cs.myTotalPower += result.powerDelta;
+                pushCombatPowerBreakdown(cs, 'my', emblemLabel, result.powerDelta);
             } else {
-                currentState.combatStats.value.oppTotalPower += result.powerDelta;
+                cs.oppTotalPower += result.powerDelta;
+                pushCombatPowerBreakdown(cs, 'opp', emblemLabel, result.powerDelta);
             }
         }
         if (result.lockAttackerCritical) {
@@ -98,8 +124,9 @@ export function createCombatCommands({ state, socket }) {
         }
     };
 
-    const applyLocalSupportSideEffect = (currentState, result) => {
-        if (!result || !result.sideEffect) return;
+    const applyLocalSupportSideEffect = (currentState, result, opts = {}) => {
+        if (!result || !result.sideEffect) return undefined;
+        const emblemPhaseConfirmed = !!opts.emblemPhaseConfirmed;
         if (result.sideEffect === 'drawOnBreakMainCharacter') {
             currentState.combatStats.value.encourageDrawOnBreakMainCharacter = true;
             currentState.combatStats.value.supportNotice = '激励之纹章：若本次击破对方主人公，战斗结束时抽1张卡。';
@@ -176,6 +203,7 @@ export function createCombatCommands({ state, socket }) {
                 source: 'support-effect'
             };
             currentState.combatStats.value.supportNotice = '请选择1张自己的宝玉查看正面。';
+            scheduleTutorialAutoPeekOwnJewel(currentState);
             return;
         }
 
@@ -204,23 +232,65 @@ export function createCombatCommands({ state, socket }) {
 
         if (result.sideEffect === 'peekOwnTopDeckOptionalMill') {
             const topCard = currentState.deck.value[currentState.deck.value.length - 1] || null;
-            if (!topCard) return;
+            if (!topCard) return undefined;
             const topLabel = topCard.cardName || topCard.name || '未知卡牌';
+            if (emblemPhaseConfirmed && currentState.combatAuxPrompt) {
+                currentState.combatAuxPrompt.value = {
+                    kind: 'binary',
+                    title: '预言之纹章',
+                    body: `牌组顶为 ${topLabel}，是否将其置入退避区？`,
+                    confirmLabel: '置入退避区',
+                    cancelLabel: '仅查看',
+                    onConfirm: () => {
+                        const milledCard = currentState.deck.value.pop();
+                        currentState.graveyard.value.push(milledCard);
+                        emitSyncCardMove(socket, { card: milledCard, from: 'deck', to: 'graveyard' });
+                        currentState.combatStats.value.supportNotice = '预言之纹章：已将牌组顶置入退避区。';
+                    },
+                    onCancel: () => {
+                        currentState.combatStats.value.supportNotice = '预言之纹章：已查看牌组顶。';
+                    }
+                };
+                return { deferredBinaryAux: true };
+            }
             const shouldMill = confirm(`预言之纹章：牌组顶为 ${topLabel}，是否将其置入退避区？`);
             if (!shouldMill) {
                 currentState.combatStats.value.supportNotice = '预言之纹章：已查看牌组顶。';
-                return;
+                return undefined;
             }
             const milledCard = currentState.deck.value.pop();
             currentState.graveyard.value.push(milledCard);
             emitSyncCardMove(socket, { card: milledCard, from: 'deck', to: 'graveyard' });
             currentState.combatStats.value.supportNotice = '预言之纹章：已将牌组顶置入退避区。';
-            return;
+            return undefined;
         }
 
         if (result.sideEffect === 'opponentTopDeckToGraveOptional') {
+            if (emblemPhaseConfirmed && currentState.combatAuxPrompt) {
+                currentState.combatAuxPrompt.value = {
+                    kind: 'binary',
+                    title: '盗贼之纹章',
+                    body: '是否将对手牌组顶置入其退避区？',
+                    confirmLabel: '是',
+                    cancelLabel: '否',
+                    onConfirm: () => {
+                        const requestId = makeSupportRequestId('thief');
+                        const requestPayload = { requestId, type: 'thief-mill-top-deck' };
+                        emitSyncSupportInteractionRequest(socket, requestPayload);
+                        currentState.supportInteraction.value = {
+                            type: 'thief-await-opponent',
+                            source: 'support-effect',
+                            requestId,
+                            requestPayload
+                        };
+                        currentState.combatStats.value.supportNotice = '盗贼之纹章：等待对手公开并处理牌组顶。';
+                    },
+                    onCancel: () => {}
+                };
+                return { deferredBinaryAux: true };
+            }
             const shouldApply = confirm('盗贼之纹章：是否将对手牌组顶置入其退避区？');
-            if (!shouldApply) return;
+            if (!shouldApply) return undefined;
 
             const requestId = makeSupportRequestId('thief');
             const requestPayload = {
@@ -268,14 +338,32 @@ export function createCombatCommands({ state, socket }) {
         }
 
         if (result.sideEffect === 'ninjutsuOptional') {
+            if (emblemPhaseConfirmed && currentState.combatAuxPrompt) {
+                currentState.combatAuxPrompt.value = {
+                    kind: 'binary',
+                    title: '忍术之纹章',
+                    body: '是否从手牌选择1张卡放置到退避区？（战斗结束后将以已行动状态出击）',
+                    confirmLabel: '是',
+                    cancelLabel: '否',
+                    onConfirm: () => {
+                        currentState.supportInteraction.value = {
+                            type: 'ninjutsu-hand-to-grave',
+                            source: 'support-effect'
+                        };
+                        currentState.combatStats.value.supportNotice = '忍术之纹章：请选择1张手牌放置到退避区。';
+                    },
+                    onCancel: () => {}
+                };
+                return { deferredBinaryAux: true };
+            }
             const shouldApply = confirm('忍术之纹章：是否从手牌选择1张卡放置到退避区？（战斗结束后将以已行动状态出击）');
-            if (!shouldApply) return;
+            if (!shouldApply) return undefined;
             currentState.supportInteraction.value = {
                 type: 'ninjutsu-hand-to-grave',
                 source: 'support-effect'
             };
             currentState.combatStats.value.supportNotice = '忍术之纹章：请选择1张手牌放置到退避区。';
-            return;
+            return undefined;
         }
 
         if (result.sideEffect === 'resistanceBattleEndStay') {
@@ -331,10 +419,17 @@ export function createCombatCommands({ state, socket }) {
     };
 
     const applyTempAbilityCombatModifiers = (currentState, attackerCard, defenderCard) => {
+        const cs = currentState.combatStats.value;
         const attackerTemp = parseInt(attackerCard?._tempAbilityPowerThisTurn || 0, 10) || 0;
         const defenderTemp = parseInt(defenderCard?._tempAbilityPowerThisTurn || 0, 10) || 0;
-        if (attackerTemp) currentState.combatStats.value.myTotalPower += attackerTemp;
-        if (defenderTemp) currentState.combatStats.value.oppTotalPower += defenderTemp;
+        if (attackerTemp) {
+            cs.myTotalPower += attackerTemp;
+            pushCombatPowerBreakdown(cs, 'my', '战前加算', attackerTemp);
+        }
+        if (defenderTemp) {
+            cs.oppTotalPower += defenderTemp;
+            pushCombatPowerBreakdown(cs, 'opp', '战前加算', defenderTemp);
+        }
 
         if (attackerCard?._tempCannotBeEvadedThisTurn) {
             currentState.combatStats.value.defenderEvasionLocked = true;
@@ -348,7 +443,19 @@ export function createCombatCommands({ state, socket }) {
         }
     };
 
-    const tryPayAutoTriggerCost = (currentState, unit, costRaw) => {
+    const parseCostFlipNeed = (costRaw) => {
+        const raw = String(costRaw || '').replace(/[\[\]]/g, '');
+        const m = raw.match(/翻面(\d+)/);
+        return m ? parseInt(m[1], 10) || 0 : 0;
+    };
+
+    const findUnitOnMyFieldById = (currentState, instanceId) => {
+        const id = String(instanceId || '');
+        return [...currentState.fieldFront.value, ...currentState.fieldRear.value]
+            .find((c) => String(c.instanceId) === id) || null;
+    };
+
+    const tryPayAutoTriggerCost = (currentState, unit, costRaw, bondInstanceIds = null) => {
         if (!costRaw) return true;
         const raw = String(costRaw).replace(/[\[\]]/g, '').trim();
         if (!raw) return true;
@@ -356,10 +463,19 @@ export function createCombatCommands({ state, socket }) {
         const flipMatch = raw.match(/翻面(\d+)/);
         if (flipMatch) {
             const need = parseInt(flipMatch[1], 10) || 0;
-            const faceUp = currentState.bonds.value.filter(card => !card.isFaceDown);
-            if (faceUp.length < need) return false;
-            for (let i = 0; i < need; i++) {
-                faceUp[i].isFaceDown = true;
+            if (need > 0) {
+                if (!Array.isArray(bondInstanceIds) || bondInstanceIds.length !== need) return false;
+                const idSet = new Set(bondInstanceIds.map((x) => String(x)));
+                if (idSet.size !== need) return false;
+                for (const bid of bondInstanceIds) {
+                    const b = currentState.bonds.value.find((x) => String(x.instanceId) === String(bid));
+                    if (!b || b.isFaceDown) return false;
+                }
+                for (const bid of bondInstanceIds) {
+                    const b = currentState.bonds.value.find((x) => String(x.instanceId) === String(bid));
+                    b.isFaceDown = true;
+                    emitSyncBondFlip(socket, { instanceId: b.instanceId, isFaceDown: true });
+                }
             }
         }
 
@@ -373,8 +489,19 @@ export function createCombatCommands({ state, socket }) {
         return true;
     };
 
-    const applySimpleAutoTriggerEffect = (currentState, unit, trigger) => {
+    const applySimpleAutoTriggerEffect = (currentState, unit, trigger, opts = {}) => {
         const text = trigger.effectText || '';
+        const { skipGravePick, queueCtx, onlyFinishAfterGrave } = opts;
+
+        if (onlyFinishAfterGrave) {
+            if (!unit._abilityUsedThisTurn) unit._abilityUsedThisTurn = {};
+            unit._abilityUsedThisTurn[trigger.title] = true;
+            flushRoomReplayAbilityStep(
+                currentState,
+                `【自】『${trigger.title}』（退避区选择结算） ${String(text).slice(0, 120)}`.trim()
+            );
+            return;
+        }
 
         const battlePowerMatch = text.match(/直到战斗结束为止.*?战斗力\+(\d+)/);
         if (battlePowerMatch) {
@@ -403,22 +530,131 @@ export function createCombatCommands({ state, socket }) {
             emitPlayerDraw(socket, { card: drawn });
         }
 
-        if (text.includes('从自己的退避区选择1张') && text.includes('加入手牌')) {
-            const pickIdx = currentState.graveyard.value.findIndex(card => {
-                const cardCost = parseInt(card.cost, 10) || 0;
-                const costLimitMatch = text.match(/出击费用(\d+)以下/);
-                if (!costLimitMatch) return true;
-                return cardCost <= (parseInt(costLimitMatch[1], 10) || 0);
-            });
-            if (pickIdx > -1) {
-                const picked = currentState.graveyard.value.splice(pickIdx, 1)[0];
-                currentState.hand.value.push(picked);
-                emitSyncCardMove(socket, { card: picked, from: 'graveyard', to: 'hand' });
+        if (!skipGravePick && text.includes('从自己的退避区选择1张') && text.includes('加入手牌')) {
+            const costLimitMatch = text.match(/出击费用(\d+)以下/);
+            const maxCost = costLimitMatch ? parseInt(costLimitMatch[1], 10) : null;
+            if (state.pendingCombatTriggerPayment) {
+                state.pendingCombatTriggerPayment.value = {
+                    mode: 'grave-effect',
+                    unitInstanceId: unit.instanceId,
+                    trigger,
+                    maxCost: Number.isFinite(maxCost) ? maxCost : null,
+                    resume: queueCtx || null
+                };
+                state.activePanel.value = 'combatTriggerGravePick';
             }
+            return 'deferred-grave';
         }
+
+        flushRoomReplayAbilityStep(
+            currentState,
+            `【自】『${trigger.title}』 ${String(text).slice(0, 160)}`.trim()
+        );
 
         if (!unit._abilityUsedThisTurn) unit._abilityUsedThisTurn = {};
         unit._abilityUsedThisTurn[trigger.title] = true;
+    };
+
+    const processCombatAutoTriggerQueue = (currentState, attackerCard, defenderCard, triggers, startIndex) => {
+        for (let i = startIndex; i < triggers.length; i++) {
+            const trigger = triggers[i];
+            const queueCtx = { triggers, index: i };
+
+            if (!trigger.hasCost) {
+                const r = applySimpleAutoTriggerEffect(currentState, attackerCard, trigger, { queueCtx });
+                if (r === 'deferred-grave') return;
+                continue;
+            }
+
+            const shouldPay = confirm(`是否支付费用发动【自】${trigger.title}？`);
+            if (!shouldPay) continue;
+
+            const flipNeed = parseCostFlipNeed(trigger.costRaw);
+            if (flipNeed > 0 && state.pendingCombatTriggerPayment) {
+                state.pendingCombatTriggerPayment.value = {
+                    mode: 'bond-cost',
+                    triggers,
+                    nextIndex: i,
+                    unitInstanceId: attackerCard.instanceId,
+                    flipNeeded: flipNeed,
+                    costRaw: trigger.costRaw,
+                    trigger,
+                    queueCtx
+                };
+                state.activePanel.value = 'combatTriggerBondFlipPick';
+                return;
+            }
+
+            const paid = tryPayAutoTriggerCost(currentState, attackerCard, trigger.costRaw, []);
+            if (!paid) continue;
+
+            const r = applySimpleAutoTriggerEffect(currentState, attackerCard, trigger, { queueCtx });
+            if (r === 'deferred-grave') return;
+        }
+    };
+
+    const submitCombatTriggerBondPayment = (bondIds) => {
+        const p = state.pendingCombatTriggerPayment?.value;
+        if (!p || p.mode !== 'bond-cost') return false;
+        if (!Array.isArray(bondIds) || bondIds.length !== p.flipNeeded) return false;
+
+        const unit = findUnitOnMyFieldById(state, p.unitInstanceId);
+        if (!unit) {
+            state.pendingCombatTriggerPayment.value = null;
+            state.activePanel.value = null;
+            return false;
+        }
+
+        if (!tryPayAutoTriggerCost(state, unit, p.costRaw, bondIds)) return false;
+
+        const defender = state.defender.value;
+        const r = applySimpleAutoTriggerEffect(state, unit, p.trigger, { queueCtx: p.queueCtx });
+        if (r === 'deferred-grave') {
+            return true;
+        }
+
+        state.pendingCombatTriggerPayment.value = null;
+        state.activePanel.value = null;
+        processCombatAutoTriggerQueue(state, unit, defender, p.triggers, p.nextIndex + 1);
+        return true;
+    };
+
+    const submitCombatTriggerGravePick = (cardInstanceId) => {
+        const p = state.pendingCombatTriggerPayment?.value;
+        if (!p || p.mode !== 'grave-effect') return false;
+
+        const unit = findUnitOnMyFieldById(state, p.unitInstanceId);
+        if (!unit) {
+            state.pendingCombatTriggerPayment.value = null;
+            state.activePanel.value = null;
+            return false;
+        }
+
+        const idx = state.graveyard.value.findIndex((c) => String(c.instanceId) === String(cardInstanceId));
+        if (idx === -1) return false;
+        const picked = state.graveyard.value[idx];
+        const cardCost = parseInt(picked.cost, 10) || 0;
+        if (p.maxCost !== null && cardCost > p.maxCost) return false;
+
+        state.graveyard.value.splice(idx, 1);
+        state.hand.value.push(picked);
+        emitSyncCardMove(socket, { card: picked, from: 'graveyard', to: 'hand' });
+
+        const resume = p.resume;
+        state.pendingCombatTriggerPayment.value = null;
+        state.activePanel.value = null;
+
+        applySimpleAutoTriggerEffect(state, unit, p.trigger, { onlyFinishAfterGrave: true });
+
+        if (resume) {
+            const defender = state.defender.value;
+            processCombatAutoTriggerQueue(state, unit, defender, resume.triggers, resume.index + 1);
+        }
+        return true;
+    };
+
+    const cancelCombatTriggerPayment = () => {
+        state.pendingCombatTriggerPayment.value = null;
     };
 
     const triggerAutoOnAttack = (currentState, attackerCard, defenderCard) => {
@@ -432,15 +668,7 @@ export function createCombatCommands({ state, socket }) {
             fieldArea: currentState.fieldFront.value.some(c => c.instanceId === attackerCard.instanceId) ? 'front' : 'rear'
         });
 
-        triggers.forEach(trigger => {
-            if (trigger.hasCost) {
-                const shouldPay = confirm(`是否支付费用发动【自】${trigger.title}？`);
-                if (!shouldPay) return;
-                const paid = tryPayAutoTriggerCost(currentState, attackerCard, trigger.costRaw);
-                if (!paid) return;
-            }
-            applySimpleAutoTriggerEffect(currentState, attackerCard, trigger);
-        });
+        processCombatAutoTriggerQueue(currentState, attackerCard, defenderCard, triggers, 0);
     };
 
     const triggerAutoOnBreak = (currentState, attackerCard, defenderCard) => {
@@ -454,15 +682,7 @@ export function createCombatCommands({ state, socket }) {
             fieldArea: currentState.fieldFront.value.some(c => c.instanceId === attackerCard.instanceId) ? 'front' : 'rear'
         });
 
-        triggers.forEach(trigger => {
-            if (trigger.hasCost) {
-                const shouldPay = confirm(`是否支付费用发动【自】${trigger.title}？`);
-                if (!shouldPay) return;
-                const paid = tryPayAutoTriggerCost(currentState, attackerCard, trigger.costRaw);
-                if (!paid) return;
-            }
-            applySimpleAutoTriggerEffect(currentState, attackerCard, trigger);
-        });
+        processCombatAutoTriggerQueue(currentState, attackerCard, defenderCard, triggers, 0);
     };
 
     const resolveSupportInteraction = (currentState, targetCardId) => {
@@ -513,6 +733,7 @@ export function createCombatCommands({ state, socket }) {
             if (remaining > 0 && currentState.jewels.value.length > 0) {
                 interaction.remainingCount = remaining;
                 currentState.combatStats.value.supportNotice = `主人公被击破：请继续选择宝玉加入手牌（剩余${remaining}张）`;
+                scheduleTutorialAutoMainCharacterJewelPick(currentState);
                 return true;
             }
 
@@ -806,6 +1027,27 @@ export function createCombatCommands({ state, socket }) {
         }
     };
 
+    const scheduleTutorialAutoMainCharacterJewelPick = (currentState) => {
+        if (!isTutorialSoloRoom(currentState)) return;
+        if (getIsMyAttacker(currentState)) return;
+        if (currentState.supportInteraction.value?.type !== 'main-character-jewel-select') return;
+        setTimeout(() => {
+            if (currentState.supportInteraction.value?.type !== 'main-character-jewel-select') return;
+            const j = currentState.jewels.value[0];
+            if (j) resolveSupportInteraction(currentState, j.instanceId);
+        }, 220);
+    };
+
+    const scheduleTutorialAutoPeekOwnJewel = (currentState) => {
+        if (!isTutorialSoloRoom(currentState)) return;
+        if (currentState.supportInteraction.value?.type !== 'peek-own-jewel') return;
+        setTimeout(() => {
+            if (currentState.supportInteraction.value?.type !== 'peek-own-jewel') return;
+            const j = currentState.jewels.value[0];
+            if (j) resolveSupportInteraction(currentState, j.instanceId);
+        }, 220);
+    };
+
     const handleIncomingSupportInteractionResolve = (currentState, payload = {}) => {
         const requestId = payload.requestId || null;
         const interaction = currentState.supportInteraction.value;
@@ -835,6 +1077,7 @@ export function createCombatCommands({ state, socket }) {
         currentState.mySupportCard.value = null;
         currentState.oppSupportCard.value = null;
         currentState.supportInteraction.value = null;
+        if (currentState.combatAuxPrompt) currentState.combatAuxPrompt.value = null;
         currentState.combatDecision.value = createInitialCombatDecision();
     };
 
@@ -868,7 +1111,10 @@ export function createCombatCommands({ state, socket }) {
                             currentState.oppStats.value.hand++;
                         }
                     } else {
-                        setTimeout(() => alert('🏆 决杀！你击破了对手没有宝玉的主人公，获得胜利！'), 600);
+                        notifyPlayModeRoomOutcome({
+                            message: '🏆 决杀！你击破了对手没有宝玉的主人公，获得胜利！',
+                            kind: 'win-decisive'
+                        });
                     }
                 } else if (currentState.jewels.value.length > 0) {
                     const jewelBreakCount = currentState.combatStats.value.jewelBreakCount || 1;
@@ -879,8 +1125,12 @@ export function createCombatCommands({ state, socket }) {
                         remainingCount: selectableCount
                     };
                     currentState.combatStats.value.supportNotice = `主人公被击破：请选择1张宝玉加入手牌（共${selectableCount}张）`;
+                    scheduleTutorialAutoMainCharacterJewelPick(currentState);
                 } else {
-                    setTimeout(() => alert('💀 败北... 你的主人公在没有宝玉的情况下被击破。'), 600);
+                    notifyPlayModeRoomOutcome({
+                        message: '💀 败北... 你的主人公在没有宝玉的情况下被击破。',
+                        kind: 'loss-decisive'
+                    });
                 }
             } else {
                 // 检查是否有post-battle effect改变defender的处理
@@ -1079,6 +1329,7 @@ export function createCombatCommands({ state, socket }) {
                 promptOwner: 'defender',
                 criticalUsed: true
             };
+            scheduleTutorialAutoOpponentDefenderCombat(currentState);
             return;
         }
 
@@ -1099,6 +1350,20 @@ export function createCombatCommands({ state, socket }) {
             };
             resolveCombat(currentState, true);
         }
+    };
+
+    const scheduleTutorialAutoOpponentDefenderCombat = (currentState) => {
+        if (!isTutorialSoloRoom(currentState)) return;
+        if (!getIsMyAttacker(currentState)) return;
+        const stage = currentState.combatDecision.value?.stage;
+        if (stage !== 'awaiting-defender-evasion' && stage !== 'awaiting-defender-evasion-after-critical') return;
+        const expectStage = stage;
+        setTimeout(() => {
+            if (currentState.combatDecision.value?.stage !== expectStage) return;
+            const payload = { decisionType: 'evasion', useSkill: false };
+            emitSyncCombatDecision(socket, payload);
+            applyCombatDecision(currentState, payload);
+        }, 220);
     };
 
     const beginCombatResolution = (currentState) => {
@@ -1141,7 +1406,148 @@ export function createCombatCommands({ state, socket }) {
 
         if (decisionContext.stage === 'auto-miss') {
             resolveCombat(currentState, false);
+            return;
         }
+        scheduleTutorialAutoOpponentDefenderCombat(currentState);
+    };
+
+    const stripAutoEmblemPowerForDeferredApply = (serialized) => {
+        const r = deserializeSupportEffectResult(serialized);
+        if (!r) return null;
+        const x = { ...r };
+        if (x.effectId === 'EMBLEM_ATTACK' || x.effectId === 'EMBLEM_DEFENSE') {
+            x.powerDelta = 0;
+        }
+        return x;
+    };
+
+    const isTerminalEmblemAnswer = (v) => v === 'yes' || v === 'no' || v === 'n/a';
+
+    const wrapAuxPromptCompletion = (currentState, promiseResolve) => {
+        const p = currentState.combatAuxPrompt.value;
+        if (!p || p.kind !== 'binary') {
+            promiseResolve();
+            return;
+        }
+        const oc = p.onConfirm;
+        const ox = p.onCancel;
+        p.onConfirm = () => {
+            if (typeof oc === 'function') oc();
+            currentState.combatAuxPrompt.value = null;
+            promiseResolve();
+        };
+        p.onCancel = () => {
+            if (typeof ox === 'function') ox();
+            currentState.combatAuxPrompt.value = null;
+            promiseResolve();
+        };
+    };
+
+    const applyDeferredSupportEmblemBlock = (currentState, serialized, role, activate) => {
+        if (!activate || !serialized) return Promise.resolve();
+        const r = stripAutoEmblemPowerForDeferredApply(serialized);
+        if (!r || r.timingMismatch) return Promise.resolve();
+        applyCombatSupportEffectResult(currentState, r, role);
+        const aux = applyLocalSupportSideEffect(currentState, r, { emblemPhaseConfirmed: true });
+        if (aux?.deferredBinaryAux) {
+            return new Promise((resolve) => wrapAuxPromptCompletion(currentState, resolve));
+        }
+        return Promise.resolve();
+    };
+
+    const finalizeSupportEmblemPhaseAndBeginCombat = (currentState) => {
+        const cs = currentState.combatStats.value;
+        if (cs.supportEmblemFinalized) return;
+        cs.supportEmblemFinalized = true;
+
+        const ans = cs.supportEmblemAnswers;
+        const pa = cs.pendingAttackerSupportEffect;
+        const pd = cs.pendingDefenderSupportEffect;
+        const dpa = deserializeSupportEffectResult(pa);
+        const dpd = deserializeSupportEffectResult(pd);
+
+        if (ans.attacker === 'no' && requiresEmblemActivationChoice(dpa)) {
+            const label = getSupportEffectDisplayLabel(dpa);
+            cs.supportNotice = cs.supportNotice || `已选择不发动${label}的支援能力。`;
+        }
+        if (ans.defender === 'no' && requiresEmblemActivationChoice(dpd)) {
+            const label = getSupportEffectDisplayLabel(dpd);
+            cs.supportNotice = cs.supportNotice || `已选择不发动${label}的支援能力。`;
+        }
+
+        const finishChain = () => {
+            currentState.combatDecision.value = createInitialCombatDecision();
+            setTimeout(() => beginCombatResolution(currentState), 1000);
+        };
+
+        applyDeferredSupportEmblemBlock(currentState, pa, 'attacker', ans.attacker === 'yes')
+            .then(() => applyDeferredSupportEmblemBlock(
+                currentState,
+                pd,
+                'defender',
+                ans.defender === 'yes' && !cs.opponentSupportEffectSealed
+            ))
+            .then(finishChain);
+    };
+
+    const tryFinalizeSupportEmblemIfAnswered = (currentState) => {
+        const ans = currentState.combatStats.value.supportEmblemAnswers;
+        if (!ans) return;
+        if (!isTerminalEmblemAnswer(ans.attacker) || !isTerminalEmblemAnswer(ans.defender)) return;
+        finalizeSupportEmblemPhaseAndBeginCombat(currentState);
+    };
+
+    const tryEnterSupportEmblemPhase = (currentState) => {
+        const cs = currentState.combatStats.value;
+        if (!currentState.isCombatActive.value) return;
+        if (!cs.attackerSupportRevealDone || !cs.defenderSupportRevealDone) return;
+        if (cs.supportEmblemFinalized) return;
+        if (currentState.combatDecision.value?.stage === 'awaiting-support-emblems') return;
+
+        const pa = deserializeSupportEffectResult(cs.pendingAttackerSupportEffect);
+        const pd = deserializeSupportEffectResult(cs.pendingDefenderSupportEffect);
+        currentState.combatDecision.value = {
+            stage: 'awaiting-support-emblems',
+            promptOwner: null,
+            criticalPower: 0,
+            criticalUsed: false,
+            evaded: false,
+            finalAttackerWins: null
+        };
+        cs.supportEmblemAnswers = initialSupportEmblemAnswers(pa, pd);
+        if (isTerminalEmblemAnswer(cs.supportEmblemAnswers.attacker)
+            && isTerminalEmblemAnswer(cs.supportEmblemAnswers.defender)) {
+            finalizeSupportEmblemPhaseAndBeginCombat(currentState);
+        }
+    };
+
+    const submitSupportEmblemChoice = (currentState, role, choice) => {
+        if (currentState.combatDecision.value?.stage !== 'awaiting-support-emblems') return false;
+        const isMyAttacker = getIsMyAttacker(currentState);
+        const soloTutorial = currentState.roomMode?.value === 'tutorial'
+            && (currentState.roomPlayerCount?.value || 0) < 2;
+        if (!soloTutorial) {
+            if (role === 'attacker' && !isMyAttacker) return false;
+            if (role === 'defender' && isMyAttacker) return false;
+        }
+        const ans = currentState.combatStats.value.supportEmblemAnswers;
+        if (ans[role] !== null) return false;
+        ans[role] = choice;
+        emitSyncCombatSupportEmblemChoice(socket, { role, choice });
+        tryFinalizeSupportEmblemIfAnswered(currentState);
+        return true;
+    };
+
+    const mergeRemoteSupportEmblemChoice = (currentState, payload) => {
+        const role = payload?.role;
+        const choice = payload?.choice;
+        if (role !== 'attacker' && role !== 'defender') return;
+        if (choice !== 'yes' && choice !== 'no') return;
+        if (currentState.combatDecision.value?.stage !== 'awaiting-support-emblems') return;
+        const ans = currentState.combatStats.value.supportEmblemAnswers;
+        if (ans[role] !== null) return;
+        ans[role] = choice;
+        tryFinalizeSupportEmblemIfAnswered(currentState);
     };
 
     const respondCombatDecision = (currentState, decisionType, useSkill, costCardId = null) => {
@@ -1191,64 +1597,98 @@ export function createCombatCommands({ state, socket }) {
             jewelBreakCount: 1,
             attackerSupportApplied: 0,
             defenderSupportApplied: 0,
-            supportNotice: null
+            postBattleEffects: [],
+            supportNotice: null,
+            myPowerBreakdown: [],
+            oppPowerBreakdown: []
         };
+        resetSupportEmblemCombatFields(currentState.combatStats.value);
+        if (currentState.combatAuxPrompt) currentState.combatAuxPrompt.value = null;
         currentState.combatDecision.value = createInitialCombatDecision();
         currentState.isCombatActive.value = true;
 
         setTimeout(() => {
+            const cs = currentState.combatStats.value;
+            cs.myPowerBreakdown = [{ label: '战', value: Number(attackerCard.attack) || 0 }];
+            cs.oppPowerBreakdown = [{ label: '战', value: Number(defenderCard.attack) || 0 }];
+
             applyTempAbilityCombatModifiers(currentState, attackerCard, defenderCard);
             triggerAutoOnAttack(currentState, attackerCard, defenderCard);
                 // ── 【常】被动战斗力加成（攻击方）
                 const attackerPassiveCtx = buildPassiveContext(currentState, attackerCard, attackerCard, defenderCard, null);
                 const attackerPassive = computePassivePowerBonus(attackerCard, attackerPassiveCtx);
                 if (attackerPassive.totalDelta) {
-                    currentState.combatStats.value.myTotalPower += attackerPassive.totalDelta;
-                    currentState.combatStats.value.passiveNotice = attackerPassive.breakdown
+                    cs.myTotalPower += attackerPassive.totalDelta;
+                    cs.passiveNotice = attackerPassive.breakdown
                         .filter(b => b.powerDelta)
                         .map(b => `${b.title}：+${b.powerDelta}`)
                         .join('；');
+                    attackerPassive.breakdown
+                        .filter(b => b.powerDelta)
+                        .forEach((b) => pushCombatPowerBreakdown(cs, 'my', b.title, b.powerDelta));
                 }
 
                 // ── 【常】被动战斗力加成（防御方）
                 const defenderPassiveCtx = buildPassiveContext(currentState, defenderCard, attackerCard, defenderCard, null);
                 const defenderPassive = computePassivePowerBonus(defenderCard, defenderPassiveCtx);
                 if (defenderPassive.totalDelta) {
-                    currentState.combatStats.value.oppTotalPower += defenderPassive.totalDelta;
+                    cs.oppTotalPower += defenderPassive.totalDelta;
+                    defenderPassive.breakdown
+                        .filter(b => b.powerDelta)
+                        .forEach((b) => pushCombatPowerBreakdown(cs, 'opp', b.title, b.powerDelta));
                 }
 
                 let mySupport = null;
-            let supportFailed = false;
-            if (currentState.deck.value.length > 0) {
-                mySupport = currentState.deck.value.pop();
-                currentState.mySupportCard.value = mySupport;
-                supportFailed = isSupportFailed(mySupport, attackerCard);
-                const sp = supportFailed ? 0 : (mySupport.support || 0);
-                currentState.combatStats.value.mySupportPower = sp;
-                currentState.combatStats.value.attackerSupportApplied = sp;
-                currentState.combatStats.value.myTotalPower += sp;
+                let supportFailed = false;
+                if (currentState.deck.value.length > 0) {
+                    mySupport = currentState.deck.value.pop();
+                    currentState.mySupportCard.value = mySupport;
+                    supportFailed = isSupportFailed(mySupport, attackerCard);
+                    const sp = supportFailed ? 0 : (mySupport.support || 0);
+                    cs.mySupportPower = sp;
+                    cs.attackerSupportApplied = sp;
+                    cs.myTotalPower += sp;
+                    if (sp) pushCombatPowerBreakdown(cs, 'my', '支', sp);
 
-                if (supportFailed) {
-                    currentState.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
+                    if (supportFailed) {
+                        currentState.combatStats.value.supportNotice = '支援失效：支援单位与被支援单位角色名相同。';
+                    }
+
+                    if (!supportFailed) {
+                        const rawSupportEffect = resolveSupportEffectResult({
+                            supportCard: mySupport,
+                            role: 'attacker',
+                            state: currentState
+                        });
+                        applyAutoSupportEmblemAtSupportFlip(
+                            currentState,
+                            rawSupportEffect,
+                            'attacker',
+                            applyCombatSupportEffectResult
+                        );
+                        currentState.combatStats.value.pendingAttackerSupportEffect = serializeSupportEffectResult(
+                            rawSupportEffect
+                        );
+                    }
                 }
-
-                if (!supportFailed) {
-                    const supportEffectResult = resolveSupportEffectResult({
-                        supportCard: mySupport,
-                        role: 'attacker',
-                        state: currentState
+                currentState.combatStats.value.attackerSupportRevealDone = true;
+                emitSyncAttack(socket, {
+                    attacker: attackerCard,
+                    defender: defenderCard,
+                    supportCard: mySupport,
+                    supportFailed
+                });
+                if (isTutorialSoloRoom(currentState)) {
+                    scheduleTutorialSoloDefenseSupport(currentState, {
+                        tryEnterSupportEmblemPhase,
+                        submitSupportEmblemChoice,
+                        isSupportFailed,
+                        resolveSupportEffectResult,
+                        applyCombatSupportEffectResult,
+                        applyAutoSupportEmblemAtSupportFlip,
+                        serializeSupportEffectResult
                     });
-                    applyCombatSupportEffectResult(currentState, supportEffectResult, 'attacker');
-                    applyLocalSupportSideEffect(currentState, supportEffectResult);
                 }
-            }
-            emitSyncAttack(socket, {
-                attacker: attackerCard,
-                defender: defenderCard,
-                supportCard: mySupport,
-                supportFailed,
-                supportSealCurse: !!currentState.combatStats.value.opponentSupportEffectSealed
-            });
         }, 800);
     };
 
@@ -1268,6 +1708,12 @@ export function createCombatCommands({ state, socket }) {
         handleIncomingSupportInteractionRequest,
         handleIncomingSupportInteractionResolve,
         respondCombatDecision,
-        applyCombatDecision
+        applyCombatDecision,
+        submitSupportEmblemChoice,
+        mergeRemoteSupportEmblemChoice,
+        tryEnterSupportEmblemPhase,
+        submitCombatTriggerBondPayment,
+        submitCombatTriggerGravePick,
+        cancelCombatTriggerPayment
     };
 }

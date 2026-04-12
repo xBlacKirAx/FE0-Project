@@ -26,6 +26,18 @@ export const AiReplayPanel = {
             type: Function,
             required: true
         },
+        logList: {
+            type: Array,
+            default: () => []
+        },
+        selectedLogId: {
+            type: String,
+            default: ''
+        },
+        onSelectLog: {
+            type: Function,
+            required: true
+        },
         onSelectGame: {
             type: Function,
             required: true
@@ -41,6 +53,10 @@ export const AiReplayPanel = {
         onJumpTo: {
             type: Function,
             required: true
+        },
+        onImportLocalReplay: {
+            type: Function,
+            default: null
         }
     },
     data() {
@@ -63,6 +79,14 @@ export const AiReplayPanel = {
                 }))
                 : [];
         },
+        logFileOptions() {
+            return Array.isArray(this.logList)
+                ? this.logList.map((item) => ({
+                    id: String(item?.id || '').trim(),
+                    label: `${item?.deckA || '?'} vs ${item?.deckB || '?'} · ${item?.createdAt || ''} · ${item?.id || ''}`
+                }))
+                : [];
+        },
         currentGame() {
             if (!Array.isArray(this.replayLog?.games)) return null;
             return this.replayLog.games[this.selectedGameIndex] || null;
@@ -81,6 +105,15 @@ export const AiReplayPanel = {
             if (!Number.isFinite(parsed)) return;
             this.onJumpTo(parsed - 1);
             this.jumpInput = '';
+        },
+        openLocalReplayPicker() {
+            this.$refs.localReplayFile?.click?.();
+        },
+        handleLocalReplayChange(event) {
+            const file = event?.target?.files?.[0];
+            if (!file || !this.onImportLocalReplay) return;
+            this.onImportLocalReplay(file);
+            event.target.value = '';
         }
     },
     template: `
@@ -90,49 +123,73 @@ export const AiReplayPanel = {
                     <div class="text-[11px] text-fuchsia-200 font-bold">AI 对战回放</div>
                     <div class="text-[10px] text-fuchsia-300/80" v-if="replayLog">log: {{ replayLog.id }}</div>
                 </div>
-                <div class="flex items-center gap-1">
-                    <button @click="onLoadLatest()" class="text-[10px] px-2 py-1 rounded border border-fuchsia-500/40 text-fuchsia-100 hover:bg-fuchsia-900/40">刷新</button>
-                    <button @click="showFullLog = !showFullLog" class="text-[10px] px-2 py-1 rounded border border-fuchsia-500/40 text-fuchsia-100 hover:bg-fuchsia-900/40">完整日志</button>
+                <div class="flex items-center gap-1 flex-wrap justify-end">
+                    <input
+                        v-if="onImportLocalReplay"
+                        ref="localReplayFile"
+                        type="file"
+                        accept="application/json,.json"
+                        class="hidden"
+                        @change="handleLocalReplayChange">
+                    <button
+                        v-if="onImportLocalReplay"
+                        type="button"
+                        @click="openLocalReplayPicker()"
+                        class="text-[10px] px-2 py-1 rounded border border-cyan-500/40 text-cyan-100 hover:bg-cyan-900/40">导入本地</button>
+                    <button @click="onLoadLatest()" class="text-[10px] px-2 py-1 rounded border border-fuchsia-500/40 text-fuchsia-100 hover:bg-fuchsia-900/40">刷新列表</button>
+                    <button type="button" :disabled="!replayLog" @click="showFullLog = !showFullLog" :class="replayLog ? 'text-fuchsia-100 hover:bg-fuchsia-900/40' : 'text-fuchsia-400/40 cursor-not-allowed'" class="text-[10px] px-2 py-1 rounded border border-fuchsia-500/40">完整日志</button>
                     <button @click="onClose()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">关闭</button>
                 </div>
             </div>
 
             <div v-if="loading" class="px-3 py-5 text-[11px] text-slate-300 text-center">加载回放中...</div>
-            <div v-else-if="!replayLog" class="px-3 py-5 text-[11px] text-slate-300 text-center">暂无回放日志</div>
             <div v-else class="p-3 space-y-2 text-[10px] h-full overflow-y-auto">
-                <div class="text-slate-300">{{ replayLog.deckA }} vs {{ replayLog.deckB }}</div>
-                <div class="text-slate-400">总局: {{ replayLog.totalGames }} · 创建于: {{ replayLog.createdAt }}</div>
-
+                <div class="text-slate-400">选择日志文件</div>
                 <select
                     class="w-full bg-slate-900/70 border border-slate-600/50 rounded px-2 py-1 text-[10px] text-slate-100"
-                    :value="selectedGameIndex"
-                    @change="onSelectGame(Number($event.target.value))">
-                    <option v-for="item in gameOptions" :key="item.idx" :value="item.idx">{{ item.label }}</option>
+                    :value="selectedLogId"
+                    @change="onSelectLog(String($event.target.value || ''))">
+                    <option v-if="!logFileOptions.length" value="" disabled>（无日志，请先运行 AI 对战）</option>
+                    <option v-for="opt in logFileOptions" :key="opt.id" :value="opt.id">{{ opt.label }}</option>
                 </select>
 
-                <div class="flex items-center gap-1.5 flex-wrap">
-                    <button @click="onStepPrev()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">上一步</button>
-                    <button @click="onStepNext()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">下一步</button>
-                    <input v-model="jumpInput" type="number" min="1" placeholder="步数" class="w-[64px] bg-slate-900/70 border border-slate-600/50 rounded px-2 py-1 text-[10px] text-slate-100">
-                    <button @click="jump()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">跳转</button>
-                </div>
+                <div v-if="!replayLog" class="text-slate-400 py-3 text-center">请选择上方日志或点击「刷新列表」</div>
 
-                <div class="text-slate-300">当前: {{ cursor + 1 }} / {{ timelineLength }}</div>
-                <div class="text-slate-400" v-if="currentEvent">回合: {{ currentEvent.turnLabel || ('T' + currentEvent.turn) }}</div>
-                <div class="rounded border border-slate-700/50 bg-slate-900/55 px-2 py-2 min-h-[58px]">
-                    <div class="text-[10px] text-slate-200 break-words leading-4" v-if="currentEvent">{{ currentEvent.line }}</div>
-                    <div class="text-[10px] text-slate-500" v-else>当前步无事件</div>
-                </div>
+                <template v-else>
+                    <div class="text-slate-300">{{ replayLog.deckA }} vs {{ replayLog.deckB }}</div>
+                    <div class="text-slate-400">总局: {{ replayLog.totalGames }} · 创建于: {{ replayLog.createdAt }}</div>
 
-                <div v-if="showFullLog" class="absolute inset-0 bg-black/90 p-3 text-[10px] text-slate-200">
-                    <div class="h-full overflow-y-auto" v-if="currentGame">
-                        <div v-for="(event, index) in currentGame.timeline" :key="index"
-                             class="leading-4 whitespace-pre-wrap"
-                             :class="{ 'text-amber-300': index === cursor }">
-                            {{ (index + 1) + ': ' + event.line }}
+                    <select
+                        class="w-full bg-slate-900/70 border border-slate-600/50 rounded px-2 py-1 text-[10px] text-slate-100"
+                        :value="selectedGameIndex"
+                        @change="onSelectGame(Number($event.target.value))">
+                        <option v-for="item in gameOptions" :key="item.idx" :value="item.idx">{{ item.label }}</option>
+                    </select>
+
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button type="button" @click="onStepPrev()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">上一步</button>
+                        <button type="button" @click="onStepNext()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">下一步</button>
+                        <input v-model="jumpInput" type="number" min="1" placeholder="步数" class="w-[64px] bg-slate-900/70 border border-slate-600/50 rounded px-2 py-1 text-[10px] text-slate-100">
+                        <button type="button" @click="jump()" class="text-[10px] px-2 py-1 rounded border border-slate-500/40 text-slate-100 hover:bg-slate-800/50">跳转</button>
+                    </div>
+
+                    <div class="text-slate-300">当前: {{ cursor + 1 }} / {{ timelineLength }}</div>
+                    <div class="text-slate-400" v-if="currentEvent">回合: {{ currentEvent.turnLabel || ('T' + currentEvent.turn) }}</div>
+                    <div class="rounded border border-slate-700/50 bg-slate-900/55 px-2 py-2 min-h-[58px]">
+                        <div class="text-[10px] text-slate-200 break-words leading-4" v-if="currentEvent">{{ currentEvent.line }}</div>
+                        <div class="text-[10px] text-slate-500" v-else>当前步无事件</div>
+                    </div>
+
+                    <div v-if="showFullLog" class="absolute inset-0 bg-black/90 p-3 text-[10px] text-slate-200 z-10">
+                        <div class="h-full overflow-y-auto" v-if="currentGame">
+                            <div v-for="(event, index) in currentGame.timeline" :key="index"
+                                 class="leading-4 whitespace-pre-wrap"
+                                 :class="{ 'text-amber-300': index === cursor }">
+                                {{ (index + 1) + ': ' + event.line }}
+                            </div>
                         </div>
                     </div>
-                </div>
+                </template>
             </div>
         </div>
     `
